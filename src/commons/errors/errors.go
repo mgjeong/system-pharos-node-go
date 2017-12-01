@@ -240,19 +240,19 @@ func (e *Unknown) SetMsg(msg string) {
 	e.Msg = msg
 }
 
-// Error sets an error message of IOError.
-func (e IOError) Error() string {
-	return "io error: " + e.Message
-}
-
 // Struct InternalServerError will be used for return case of error
 // which a generic error, given when an unexpected condition was encountered
 // and no more specific message is suitable.
 type InternalServerError struct {
-	Message string
+	Msg string
 }
 
 // Error sets an error message of InternalServerError.
 func (e InternalServerError) Error() string {
-	return "internal server error: " + e.Message
+	return "internal server error: " + e.Msg
+}
+
+// Set error message of InternalServerError.
+func (e *InternalServerError) SetMsg(msg string) {
+	e.Msg = msg
 }
