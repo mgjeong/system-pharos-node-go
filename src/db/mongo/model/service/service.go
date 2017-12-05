@@ -22,6 +22,7 @@ import (
 	"crypto/sha1"
 	. "db/mongo/common"
 	. "db/mongo/wrapper"
+	. "db/modelinterface"
 	"encoding/hex"
 	"encoding/json"
 	"gopkg.in/mgo.v2/bson"
@@ -42,7 +43,8 @@ type App struct {
 	State       string
 }
 
-type Service struct{
+type DBManager struct {
+	Service
 }
 
 var mgoBuilder Builder
@@ -84,12 +86,12 @@ func (app App) convertToMap() map[string]interface{} {
 // Add app description to app collection in mongo server.
 // if succeed to add, return app information as map.
 // otherwise, return error.
-func (Service) InsertComposeFile(description string) (map[string]interface{}, error) {
+func (DBManager) InsertComposeFile(description string) (map[string]interface{}, error) {
 	id, err := generateID(description)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	db, err := getDBmanager()
 	if err != nil {
 		return nil, err
@@ -114,14 +116,13 @@ func (Service) InsertComposeFile(description string) (map[string]interface{}, er
 // Getting all of app informations.
 // if succeed to get, return list of all app information as slice.
 // otherwise, return error.
-func (Service) GetAppList() ([]map[string]interface{}, error) {
+func (DBManager) GetAppList() ([]map[string]interface{}, error) {
 	db, err := getDBmanager()
 	if err != nil {
 		return nil, err
 	}
 	defer db.Close()
 
-	
 	apps := []App{}
 	err = db.GetCollection(DB_NAME, APP_COLLECTION).Find(nil).All(&apps)
 	if err != nil {
@@ -140,13 +141,13 @@ func (Service) GetAppList() ([]map[string]interface{}, error) {
 // Getting app information by app_id.
 // if succeed to get, return app information as map.
 // otherwise, return error.
-func (Service) GetApp(app_id string) (map[string]interface{}, error) {	
+func (DBManager) GetApp(app_id string) (map[string]interface{}, error) {
 	db, err := getDBmanager()
 	if err != nil {
 		return nil, err
 	}
 	defer db.Close()
-	
+
 	if len(app_id) == 0 {
 		err := errors.InvalidParam{"Invalid param error : app_id is empty."}
 		return nil, err
@@ -167,13 +168,13 @@ func (Service) GetApp(app_id string) (map[string]interface{}, error) {
 // Updating app information by app_id.
 // if succeed to update, return error as nil.
 // otherwise, return error.
-func (Service) UpdateAppInfo(app_id string, description string) error {
+func (DBManager) UpdateAppInfo(app_id string, description string) error {
 	db, err := getDBmanager()
 	if err != nil {
 		return err
 	}
 	defer db.Close()
-	
+
 	if len(app_id) == 0 {
 		err := errors.InvalidParam{"Invalid param error : app_id is empty."}
 		return err
@@ -193,13 +194,13 @@ func (Service) UpdateAppInfo(app_id string, description string) error {
 // Deleting app collection by app_id.
 // if succeed to delete, return error as nil.
 // otherwise, return error.
-func (Service) DeleteApp(app_id string) error {	
+func (DBManager) DeleteApp(app_id string) error {
 	db, err := getDBmanager()
 	if err != nil {
 		return err
 	}
 	defer db.Close()
-	
+
 	if len(app_id) == 0 {
 		err := errors.InvalidParam{"Invalid param error : app_id is empty."}
 		return err
@@ -218,7 +219,7 @@ func (Service) DeleteApp(app_id string) error {
 // Getting app state by app_id.
 // if succeed to get state, return state (e.g.DEPLOY, UP, STOP...).
 // otherwise, return error.
-func (Service) GetAppState(app_id string) (string, error) {		
+func (DBManager) GetAppState(app_id string) (string, error) {
 	db, err := getDBmanager()
 	if err != nil {
 		return "", err
@@ -244,7 +245,7 @@ func (Service) GetAppState(app_id string) (string, error) {
 // Updating app state by app_id.
 // if succeed to update state, return error as nil.
 // otherwise, return error.
-func (Service) UpdateAppState(app_id string, state string) error {	
+func (DBManager) UpdateAppState(app_id string, state string) error {
 	db, err := getDBmanager()
 	if err != nil {
 		return err

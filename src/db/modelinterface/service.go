@@ -1,8 +1,5 @@
 package modelinterface
 
-import (
-)
-
 // Interface of Service model's operations.
 type Service interface {
 	// InsertComposeFile insert docker-compose file for new service.
