@@ -28,6 +28,11 @@ func init() {
 	mgoDial = MongoDial{}
 }
 
+type Closer interface {
+	// Clean up session.
+	Close()
+}
+
 // MongoDBClient provides persistence logic for "app" collection.
 type (
 	Builder interface {
@@ -41,6 +46,7 @@ type (
 
 	MongoDBManager struct {
 		mgoSession Session
+		Closer
 	}
 )
 
