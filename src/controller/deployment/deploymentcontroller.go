@@ -17,14 +17,13 @@
 
 // Package controller provides controllability of
 // persistence database and docker(docker-compose).
-package controller
+package deployment
 
 import (
 	"commons/errors"
 	"commons/logger"
-	. "db/mongo/model/service"
 	"controller/deployment/dockercontroller"
-	
+	. "db/mongo/model/service"
 	"encoding/json"
 	"io/ioutil"
 	"os"
@@ -62,7 +61,7 @@ var dockerExecutor dockercontroller.DockerExecutorInterface
 
 func init() {
 	dockerExecutor = dockercontroller.Executor
-	dbManager =  DBManager{}
+	dbManager = DBManager{}
 }
 
 var Controller controller
@@ -105,7 +104,7 @@ func (controller) DeployApp(body string) (map[string]interface{}, error) {
 		}
 		return nil, errors.InvalidYaml{"invalid yaml syntax"}
 	}
-	
+
 	data, err := dbManager.InsertComposeFile(string(convertedData))
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
@@ -128,7 +127,7 @@ func (controller) DeployApp(body string) (map[string]interface{}, error) {
 func (controller) Apps() (map[string]interface{}, error) {
 	logger.Logging(logger.DEBUG, "IN")
 	defer logger.Logging(logger.DEBUG, "OUT")
-	
+
 	apps, err := dbManager.GetAppList()
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
@@ -504,7 +503,7 @@ func restoreState(state string) error {
 // if setting YAML is succeeded, return error as nil
 // otherwise, return error.
 func setYamlFile(appId string) error {
-	
+
 	app, err := dbManager.GetApp(appId)
 	if err != nil {
 		return convertDBError(err, appId)
