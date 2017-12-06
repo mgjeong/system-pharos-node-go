@@ -19,7 +19,7 @@
 package compose
 
 import "commons/logger"
-import "dockercontroller/shellcommand"
+import "controller/shellcommand"
 
 var Executor composeExecutorImpl
 var shellExecutor func(command string, args ...string) (string, error)

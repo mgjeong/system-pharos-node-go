@@ -21,8 +21,8 @@ package dockercontroller
 import (
 	"commons/errors"
 	"commons/logger"
-	"dockercontroller/compose"
-	"dockercontroller/shellcommand"
+	"controller/deployment/dockercontroller/compose"
+	"controller/shellcommand"
 	"encoding/json"
 	"reflect"
 )
