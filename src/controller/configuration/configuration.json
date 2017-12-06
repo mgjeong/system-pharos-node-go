@@ -1,4 +1,11 @@
 {
-  "server": "10.113.65.47",
-  "devicename": "Jihun's Linux Machine"
+	"serveraddress"  : "edgemanager.sec.samsung.net:48099",
+	"devicename"     : "Edge #1",
+	"deviceid"       : "54919CA5-4101-4AE4-595B-353C51AA983C",
+	"manufacturer"   : "Manufacturer Name",
+	"modelnumber"    : "Model number as designated by the manufacturer",
+	"serialnumber"   : "Serial number",
+	"platform"       : "Platform name and version",
+	"os"             : "Operationg system name and version",
+	"location"       : "Human readable location"
 }

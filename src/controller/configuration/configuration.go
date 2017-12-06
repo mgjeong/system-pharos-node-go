@@ -19,10 +19,8 @@
 package main
 
 import (
-	//"commons/errors"
-	//"commons/logger"
-	"os"
-	"fmt"
+	"commons/errors"
+	"commons/logger"
 	"encoding/json"
 	"io/ioutil"
 )
@@ -40,58 +38,59 @@ type Command interface {
 
 // Configuration schema
 type Configuration struct {
-    ServerAddress   string `json:"server"`
+    ServerAddress   string `json:"serveraddress"`
     DeviceName		string `json:"devicename"`
+    DeviceID		string `json:"deviceid"`
+    Manufacturer	string `json:"manufacturer"`
+    ModelNumber		string `json:"modelnumber"`
+    SerialNumber	string `json:"serialnumber"`
+    Platform		string `json:"platform"`
+    OS				string `json:"os"`
+    Location		string `json:"location"`
 }
 
 func (conf Configuration) convertToMap() map[string]interface{} {
 	return map[string]interface{}{
-		"server":    		conf.ServerAddress,
-		"devicename":		conf.DeviceName,
+		"serveraddress"  : conf.ServerAddress,
+		"devicename"     : conf.DeviceName,
+		"deviceid"       : conf.DeviceID,
+		"manufacturer"   : conf.Manufacturer,
+		"modelnumber"    : conf.ModelNumber,
+		"serialnumber"   : conf.SerialNumber,
+		"platform"       : conf.Platform,
+		"os"             : conf.OS,
+		"location"       : conf.Location,
 	}
-}
-
-func main() {
-	
-	conf, _:= GetConfiguration();   
-    
-    fmt.Println(conf["server"])
-    
-    newConf := Configuration{"10.113.65.119", "Jihun's Windows Desktop"}
-	
-    _ = SetConfiguration(newConf.convertToMap())
 }
 
 func GetConfiguration() (map[string]interface{}, error) {
 	
 	raw, err := ioutil.ReadFile(configurationFileName)
     if err != nil {
-    	/*
-        logger.Logging(logger.DEBUG, "Configuration file is not found.")		
+        logger.Logging(logger.DEBUG, "Configuration file is not found.")
 		return nil, errors.NotFound{configurationFileName}
-		*/
-    	os.Exit(1);
     }
-    
+
     var conf map[string]interface{}
-    _= json.Unmarshal(raw, &conf)
-    
+    res := json.Unmarshal(raw, &conf)
+
+    if res != nil {
+        logger.Logging(logger.DEBUG, "Unmarshaling is failed")
+		return nil, errors.Unknown{"Unmarshaling is failed"}
+    }
+
     return conf, nil
 }
 
 func SetConfiguration (conf map[string]interface{}) error {
 	
-	jsonBytes, err := json.Marshal(conf)
+	_, err := json.Marshal(conf)
     if err != nil {
-    	/*
-        logger.Logging(logger.DEBUG, "Converting map to JSON is failed")		
+        logger.Logging(logger.DEBUG, "Converting map to JSON is failed")
 		return errors.InvalidParam{"Converting map to JSON is failed"}
-		*/
-        os.Exit(1);
     }
-    
-    jsonString := string(jsonBytes)
-    fmt.Println(jsonString)
-    
-    return nil	
+
+    // TODO: Configuration file update may be needed
+
+    return err
 }
