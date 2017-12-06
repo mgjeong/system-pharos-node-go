@@ -22,8 +22,9 @@ package controller
 import (
 	"commons/errors"
 	"commons/logger"
-	"db"
-	"dockercontroller"
+	. "db/mongo/model/service"
+	"controller/deployment/dockercontroller"
+	
 	"encoding/json"
 	"io/ioutil"
 	"os"
@@ -43,7 +44,7 @@ const (
 	STATE        = "state"
 )
 
-type ControllerInterface interface {
+type DeploymentInterface interface {
 	DeployApp(body string) (map[string]interface{}, error)
 	Apps() (map[string]interface{}, error)
 	App(appId string) (map[string]interface{}, error)
@@ -55,13 +56,13 @@ type ControllerInterface interface {
 }
 
 var fileMode = os.FileMode(0755)
+var dbManager DBManager
 
 var dockerExecutor dockercontroller.DockerExecutorInterface
-var dbConnector db.DBConnection
 
 func init() {
 	dockerExecutor = dockercontroller.Executor
-	dbConnector = db.DBConnector{}
+	dbManager =  DBManager{}
 }
 
 var Controller controller
@@ -78,14 +79,7 @@ func (controller) DeployApp(body string) (map[string]interface{}, error) {
 	logger.Logging(logger.DEBUG, "IN")
 	defer logger.Logging(logger.DEBUG, "OUT")
 
-	db, err := dbConnector.Connect()
-	if err != nil {
-		logger.Logging(logger.ERROR, err.Error())
-		return nil, errors.ConnectionError{"can't find db server"}
-	}
-	defer db.Close()
-
-	err = ioutil.WriteFile(COMPOSE_FILE, []byte(body), fileMode)
+	err := ioutil.WriteFile(COMPOSE_FILE, []byte(body), fileMode)
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
 		return nil, errors.IOError{"file io fail"}
@@ -111,8 +105,8 @@ func (controller) DeployApp(body string) (map[string]interface{}, error) {
 		}
 		return nil, errors.InvalidYaml{"invalid yaml syntax"}
 	}
-
-	data, err := db.InsertComposeFile(string(convertedData))
+	
+	data, err := dbManager.InsertComposeFile(string(convertedData))
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
 		e := dockerExecutor.DownWithRemoveImages(COMPOSE_FILE)
@@ -134,15 +128,8 @@ func (controller) DeployApp(body string) (map[string]interface{}, error) {
 func (controller) Apps() (map[string]interface{}, error) {
 	logger.Logging(logger.DEBUG, "IN")
 	defer logger.Logging(logger.DEBUG, "OUT")
-
-	db, err := dbConnector.Connect()
-	if err != nil {
-		logger.Logging(logger.ERROR, err.Error())
-		return nil, errors.ConnectionError{"can't find db server"}
-	}
-	defer db.Close()
-
-	apps, err := db.GetAppList()
+	
+	apps, err := dbManager.GetAppList()
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
 		return nil, errors.Unknown{"db operation fail"}
@@ -169,14 +156,7 @@ func (controller) App(appId string) (map[string]interface{}, error) {
 	logger.Logging(logger.DEBUG, "IN", appId)
 	defer logger.Logging(logger.DEBUG, "OUT")
 
-	db, err := dbConnector.Connect()
-	if err != nil {
-		logger.Logging(logger.ERROR, err.Error())
-		return nil, errors.ConnectionError{"can't find db server"}
-	}
-	defer db.Close()
-
-	app, err := db.GetApp(appId)
+	app, err := dbManager.GetApp(appId)
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
 		return nil, convertDBError(err, appId)
@@ -238,20 +218,13 @@ func (controller) UpdateAppInfo(appId string, body string) error {
 	logger.Logging(logger.DEBUG, "IN", appId)
 	defer logger.Logging(logger.DEBUG, "OUT")
 
-	db, err := dbConnector.Connect()
-	if err != nil {
-		logger.Logging(logger.ERROR, err.Error())
-		return errors.ConnectionError{"can't find db server"}
-	}
-	defer db.Close()
-
 	convertedData, err := yaml.YAMLToJSON([]byte(body))
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
 		return errors.InvalidYaml{"invalid yaml syntax"}
 	}
 
-	err = db.UpdateAppInfo(appId, string(convertedData))
+	err = dbManager.UpdateAppInfo(appId, string(convertedData))
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
 		return convertDBError(err, appId)
@@ -269,15 +242,8 @@ func (controller) StartApp(appId string) error {
 	logger.Logging(logger.DEBUG, "IN", appId)
 	defer logger.Logging(logger.DEBUG, "OUT")
 
-	db, err := dbConnector.Connect()
+	state, err := dbManager.GetAppState(appId)
 	if err != nil {
-		logger.Logging(logger.ERROR, err.Error())
-		return errors.ConnectionError{"can't find db server"}
-	}
-	defer db.Close()
-
-	state, errGetState := db.GetAppState(appId)
-	if errGetState != nil {
 		logger.Logging(logger.ERROR, err.Error())
 		return convertDBError(err, appId)
 	}
@@ -302,7 +268,7 @@ func (controller) StartApp(appId string) error {
 		return err
 	}
 
-	err = db.UpdateAppState(appId, "START")
+	err = dbManager.UpdateAppState(appId, "START")
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
 		return convertDBError(err, appId)
@@ -318,15 +284,8 @@ func (controller) StopApp(appId string) error {
 	logger.Logging(logger.DEBUG, "IN", appId)
 	defer logger.Logging(logger.DEBUG, "OUT")
 
-	db, err := dbConnector.Connect()
+	state, err := dbManager.GetAppState(appId)
 	if err != nil {
-		logger.Logging(logger.ERROR, err.Error())
-		return errors.ConnectionError{"can't find db server"}
-	}
-	defer db.Close()
-
-	state, errGetState := db.GetAppState(appId)
-	if errGetState != nil {
 		logger.Logging(logger.ERROR, err.Error())
 		return convertDBError(err, appId)
 	}
@@ -351,7 +310,7 @@ func (controller) StopApp(appId string) error {
 		return err
 	}
 
-	err = db.UpdateAppState(appId, "STOP")
+	err = dbManager.UpdateAppState(appId, "STOP")
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
 		return convertDBError(err, appId)
@@ -373,20 +332,13 @@ func (controller) UpdateApp(appId string) error {
 	logger.Logging(logger.DEBUG, "IN", appId)
 	defer logger.Logging(logger.DEBUG, "OUT")
 
-	db, err := dbConnector.Connect()
-	if err != nil {
-		logger.Logging(logger.ERROR, err.Error())
-		return errors.ConnectionError{"can't find db server"}
-	}
-	defer db.Close()
-
-	err = setYamlFile(appId)
+	err := setYamlFile(appId)
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
 		return err
 	}
 
-	app, e := db.GetApp(appId)
+	app, e := dbManager.GetApp(appId)
 	if e != nil {
 		logger.Logging(logger.DEBUG, e.Error())
 		return convertDBError(e, appId)
@@ -425,14 +377,7 @@ func (controller) DeleteApp(appId string) error {
 	logger.Logging(logger.DEBUG, "IN", appId)
 	defer logger.Logging(logger.DEBUG, "OUT")
 
-	db, err := dbConnector.Connect()
-	if err != nil {
-		logger.Logging(logger.ERROR, err.Error())
-		return errors.ConnectionError{"can't find db server"}
-	}
-	defer db.Close()
-
-	err = setYamlFile(appId)
+	err := setYamlFile(appId)
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
 		return err
@@ -441,7 +386,7 @@ func (controller) DeleteApp(appId string) error {
 	err = dockerExecutor.DownWithRemoveImages(COMPOSE_FILE)
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
-		state, e := db.GetAppState(appId)
+		state, e := dbManager.GetAppState(appId)
 		if e != nil {
 			logger.Logging(logger.ERROR, e.Error())
 			return err
@@ -453,7 +398,7 @@ func (controller) DeleteApp(appId string) error {
 		return err
 	}
 
-	err = db.DeleteApp(appId)
+	err = dbManager.DeleteApp(appId)
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
 		return convertDBError(err, appId)
@@ -559,14 +504,8 @@ func restoreState(state string) error {
 // if setting YAML is succeeded, return error as nil
 // otherwise, return error.
 func setYamlFile(appId string) error {
-	db, err := dbConnector.Connect()
-	if err != nil {
-		logger.Logging(logger.ERROR, err.Error())
-		return errors.ConnectionError{"can't find db server"}
-	}
-	defer db.Close()
-
-	app, err := db.GetApp(appId)
+	
+	app, err := dbManager.GetApp(appId)
 	if err != nil {
 		return convertDBError(err, appId)
 	}
