@@ -16,7 +16,7 @@
  *******************************************************************************/
 
 // Package configuration provide virtual functionality of configuration.
-package main
+package configuration
 
 import (
 	"commons/errors"
@@ -25,72 +25,88 @@ import (
 	"io/ioutil"
 )
 
-var configurationFileName = "./configuration.json"
+const configurationFileName = "./configuration.json"
 
 // Interface of configuration operations.
-type Command interface {
-	// GetConfiguration returns a map of configuration stored in predefined configuration file.
-	GetConfiguration() (map[string]interface{}, error)
-	
-	// SetConfiguration updates one of configurations
-	SetConfiguration(map[string]interface{}) error
-}
+type (
+	Command interface {
+		// GetConfiguration returns a map of configuration stored in predefined configuration file.
+		GetConfiguration() (map[string]interface{}, error)
+
+		// SetConfiguration updates one of configurations
+		SetConfiguration(map[string]interface{}) error
+	}
+	Configurator struct{}
+)
 
 // Configuration schema
 type Configuration struct {
-    ServerAddress   string `json:"serveraddress"`
-    DeviceName		string `json:"devicename"`
-    DeviceID		string `json:"deviceid"`
-    Manufacturer	string `json:"manufacturer"`
-    ModelNumber		string `json:"modelnumber"`
-    SerialNumber	string `json:"serialnumber"`
-    Platform		string `json:"platform"`
-    OS				string `json:"os"`
-    Location		string `json:"location"`
+	ServerAddress string `json:"serveraddress"`
+	DeviceName    string `json:"devicename"`
+	DeviceID      string `json:"deviceid"`
+	Manufacturer  string `json:"manufacturer"`
+	ModelNumber   string `json:"modelnumber"`
+	SerialNumber  string `json:"serialnumber"`
+	Platform      string `json:"platform"`
+	OS            string `json:"os"`
+	Location      string `json:"location"`
 }
 
 func (conf Configuration) convertToMap() map[string]interface{} {
 	return map[string]interface{}{
-		"serveraddress"  : conf.ServerAddress,
-		"devicename"     : conf.DeviceName,
-		"deviceid"       : conf.DeviceID,
-		"manufacturer"   : conf.Manufacturer,
-		"modelnumber"    : conf.ModelNumber,
-		"serialnumber"   : conf.SerialNumber,
-		"platform"       : conf.Platform,
-		"os"             : conf.OS,
-		"location"       : conf.Location,
+		"serveraddress": conf.ServerAddress,
+		"devicename":    conf.DeviceName,
+		"deviceid":      conf.DeviceID,
+		"manufacturer":  conf.Manufacturer,
+		"modelnumber":   conf.ModelNumber,
+		"serialnumber":  conf.SerialNumber,
+		"platform":      conf.Platform,
+		"os":            conf.OS,
+		"location":      conf.Location,
 	}
 }
 
-func GetConfiguration() (map[string]interface{}, error) {
-	
+func (Configurator) GetConfiguration() (map[string]interface{}, error) {
+
 	raw, err := ioutil.ReadFile(configurationFileName)
-    if err != nil {
-        logger.Logging(logger.DEBUG, "Configuration file is not found.")
+	if err != nil {
+		logger.Logging(logger.DEBUG, "Configuration file is not found.")
 		return nil, errors.NotFound{configurationFileName}
-    }
+	}
 
-    var conf map[string]interface{}
-    res := json.Unmarshal(raw, &conf)
-
-    if res != nil {
-        logger.Logging(logger.DEBUG, "Unmarshaling is failed")
+	var conf map[string]interface{}
+	res = json.Unmarshal(raw, &conf)
+	if res != nil {
+		logger.Logging(logger.DEBUG, "Unmarshaling is failed")
 		return nil, errors.Unknown{"Unmarshaling is failed"}
-    }
+	}
 
-    return conf, nil
+	return conf, nil
 }
 
-func SetConfiguration (conf map[string]interface{}) error {
-	
-	_, err := json.Marshal(conf)
-    if err != nil {
-        logger.Logging(logger.DEBUG, "Converting map to JSON is failed")
+func (configurator Configurator) SetConfiguration(newConf map[string]interface{}) error {
+	// Load a configuration file, first
+	curConf, err := configurator.GetConfiguration()
+	if err != nil {
+		return err
+	}
+
+	// Merge a current and new configuration into a single map
+	for k, v := range newConf {
+		curConf[k] = v
+	}
+
+	jsonBytes, err := json.Marshal(curConf)
+	if err != nil {
+		logger.Logging(logger.DEBUG, "Converting map to JSON is failed")
 		return errors.InvalidParam{"Converting map to JSON is failed"}
-    }
+	}
 
-    // TODO: Configuration file update may be needed
+	err = ioutil.WriteFile(configurationFileName, jsonBytes, 0644)
+	if err != nil {
+		logger.Logging(logger.DEBUG, "Writing configuration file is failed")
+		return errors.IOError{"Writing configuration file is failed"}
+	}
 
-    return err
+	return err
 }
