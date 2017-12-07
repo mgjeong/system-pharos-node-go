@@ -18,8 +18,10 @@
 // Package compose provide functionlity of docker-compose commands.
 package compose
 
-import "commons/logger"
-import "controller/shellcommand"
+import (
+	"commons/logger"
+	"controller/shellcommand"
+)
 
 var Executor composeExecutorImpl
 var shellExecutor func(command string, args ...string) (string, error)
