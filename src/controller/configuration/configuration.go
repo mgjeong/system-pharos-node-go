@@ -67,7 +67,6 @@ func (conf Configuration) convertToMap() map[string]interface{} {
 }
 
 func (Configurator) GetConfiguration() (map[string]interface{}, error) {
-
 	raw, err := ioutil.ReadFile(configurationFileName)
 	if err != nil {
 		logger.Logging(logger.DEBUG, "Configuration file is not found.")
