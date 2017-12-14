@@ -23,6 +23,7 @@ import (
 	"commons/errors"
 	"commons/logger"
 	"commons/url"
+	"controller/configuration"
 	"encoding/json"
 	"messenger"
 	"strconv"
@@ -41,64 +42,52 @@ const (
 )
 
 var (
-	// TODO: agentId should be managed in configuration file.
-	agentId        string
 	quit           chan bool
 	ticker         *time.Ticker
-	interval       string
 	managerAddress string
-	agentAddress   string
 )
 
 type RegistrationInterface interface {
-	Register(body string) error
 	Unregister() error
 }
 
 type Registration struct{}
 
 var httpRequester messenger.MessengerInterface
+var configurator configuration.Command
 
 func init() {
 	httpRequester = messenger.NewMessenger()
+	configurator = configuration.Configurator{}
+
+	// Register
+	err := register()
+	if err != nil {
+		logger.Logging(logger.ERROR, err.Error())
+	}
 }
 
-// Register to system-edge-manger service.
-// should know the system-edge-manger address(ip:port)
+// register to system-edge-manager service.
+// should know the system-edge-manager address(ip:port)
 // if succeed to register, return error as nil
 // otherwise, return error.
-func (Registration) Register(body string) error {
+func register() error {
 	logger.Logging(logger.DEBUG, "IN")
 	defer logger.Logging(logger.DEBUG, "OUT")
 
-	if agentId != "" {
-		return errors.Unknown{"already registered, unregister it and try registration again"}
-	}
-
-	bodyMap, err := convertJsonToMap(body)
+	config, err := configurator.GetConfiguration()
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
 		return err
 	}
 
-	if _, exists := bodyMap[IP]; !exists {
-		return errors.InvalidParam{"ip field is required"}
-	}
+	// Get system-edge-manager address from configuration.
+	managerAddress = config["serveraddress"].(string)
 
-	if _, exists := bodyMap[HEALTH_CHECK]; !exists {
-		return errors.InvalidParam{"healthCheck field is required"}
-	}
+	// Make a request body for registration.
+	body := makeRegistrationBody(config)
 
-	if _, exists := bodyMap[HEALTH_CHECK].(map[string]interface{})[INTERVAL]; !exists {
-		return errors.InvalidParam{"interval field is required"}
-	}
-
-	managerAddress = bodyMap[IP].(map[string]interface{})[MANAGER].(string)
-	agentAddress = bodyMap[IP].(map[string]interface{})[AGENT].(string)
-	healthCheck := bodyMap[HEALTH_CHECK].(map[string]interface{})
-	interval = healthCheck[INTERVAL].(string)
-
-	code, respStr, err := sendRegisterRequest()
+	code, respStr, err := sendRegisterRequest(body)
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
 		return err
@@ -112,44 +101,42 @@ func (Registration) Register(body string) error {
 
 	if code != 200 {
 		message := respMap["message"].(string)
-		return errors.Unknown{"received error message from sdam" + message}
+		return errors.Unknown{"received error message from system-edge-manager" + message}
+	}
+
+	// Insert agent id in configuration file.
+	newConfig := make(map[string]interface{})
+	newConfig["agentid"] = respMap["id"]
+
+	err = configurator.SetConfiguration(newConfig)
+	if err != nil {
+		logger.Logging(logger.ERROR, err.Error())
+		return err
 	}
 
 	// Start a new ticker and send a ping message repeatedly at regular intervals.
-	agentId = respMap["id"].(string)
-	startHealthCheck(interval)
+	startHealthCheck(respMap["id"].(string))
 	return nil
 }
 
-// Unregister to system-edge-manger service.
+// Unregister to system-edge-manager service.
 // if succeed to unregister, return error as nil
 // otherwise, return error.
 func (Registration) Unregister() error {
 	logger.Logging(logger.DEBUG, "IN")
 	defer logger.Logging(logger.DEBUG, "OUT")
 
-	if agentId == "" {
-		return errors.Unknown{"already unregistered"}
-	}
+	// Reset agent id.
+	newConfig := make(map[string]interface{})
+	newConfig["agentid"] = ""
 
-	code, respStr, err := sendUnregisterRequest()
+	err := configurator.SetConfiguration(newConfig)
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
 		return err
 	}
 
-	if code != 200 {
-		respMap, err := convertJsonToMap(respStr)
-		if err != nil {
-			logger.Logging(logger.ERROR, err.Error())
-			return err
-		}
-
-		message := respMap["message"].(string)
-		return errors.Unknown{"received error message from sdam:" + message}
-	}
-
-	agentId = ""
+	// Stop a ticker to send ping request.
 	if quit != nil {
 		quit <- true
 	}
@@ -161,9 +148,16 @@ func stopHealthCheck() {
 	quit = nil
 }
 
-func startHealthCheck(interval string) {
+func startHealthCheck(agentID string) {
 	logger.Logging(logger.DEBUG, "IN")
 	defer logger.Logging(logger.DEBUG, "OUT")
+
+	// Get interval from configuration file.
+	config, err := configurator.GetConfiguration()
+	if err != nil {
+		logger.Logging(logger.ERROR, err.Error())
+	}
+	interval := config["pinginterval"].(string)
 
 	quit = make(chan bool)
 	intervalInt, _ := strconv.Atoi(interval)
@@ -172,7 +166,7 @@ func startHealthCheck(interval string) {
 		for {
 			select {
 			case <-ticker.C:
-				sendPingRequest(interval)
+				sendPingRequest(agentID, interval)
 			case <-quit:
 				ticker.Stop()
 				stopHealthCheck()
@@ -182,7 +176,7 @@ func startHealthCheck(interval string) {
 	}()
 }
 
-func sendPingRequest(interval string) (int, error) {
+func sendPingRequest(agentID string, interval string) (int, error) {
 	logger.Logging(logger.DEBUG, "IN")
 	defer logger.Logging(logger.DEBUG, "OUT")
 
@@ -197,7 +191,7 @@ func sendPingRequest(interval string) (int, error) {
 
 	logger.Logging(logger.DEBUG, "try to send ping request")
 
-	url := makeRequestUrl(url.Agents(), "/", agentId, url.Ping())
+	url := makeRequestUrl(url.Agents(), "/", agentID, url.Ping())
 	code, _, err := httpRequester.SendHttpRequest("POST", url, []byte(jsonData))
 	if err != nil {
 		logger.Logging(logger.ERROR, "failed to send ping request")
@@ -208,16 +202,13 @@ func sendPingRequest(interval string) (int, error) {
 	return code, nil
 }
 
-func sendRegisterRequest() (int, string, error) {
+func sendRegisterRequest(body map[string]interface{}) (int, string, error) {
 	logger.Logging(logger.DEBUG, "IN")
 	defer logger.Logging(logger.DEBUG, "OUT")
 
 	url := makeRequestUrl(url.Agents(), url.Register())
 
-	data := make(map[string]interface{})
-	data["ip"] = agentAddress
-
-	jsonData, err := convertMapToJson(data)
+	jsonData, err := convertMapToJson(body)
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
 		return 500, "", err
@@ -225,11 +216,11 @@ func sendRegisterRequest() (int, string, error) {
 	return httpRequester.SendHttpRequest("POST", url, []byte(jsonData))
 }
 
-func sendUnregisterRequest() (int, string, error) {
+func sendUnregisterRequest(agentID string) (int, string, error) {
 	logger.Logging(logger.DEBUG, "IN")
 	defer logger.Logging(logger.DEBUG, "OUT")
 
-	url := makeRequestUrl(url.Agents(), "/", agentId, url.Unregister())
+	url := makeRequestUrl(url.Agents(), "/", agentID, url.Unregister())
 	return httpRequester.SendHttpRequest("POST", url)
 }
 
@@ -268,4 +259,21 @@ func convertRespToMap(respStr string) (map[string]interface{}, error) {
 		return nil, errors.Unknown{"Json Converting Failed"}
 	}
 	return resp, err
+}
+
+func makeRegistrationBody(config map[string]interface{}) map[string]interface{} {
+	data := make(map[string]interface{})
+
+	// Set device address from configuration.
+	data["ip"] = config["deviceaddress"].(string)
+
+	// Delete unused field.
+	delete(config, "serveraddress")
+	delete(config, "deviceaddress")
+	delete(config, "agentid")
+
+	// Set configuration information in request body.
+	data["config"] = config
+
+	return data
 }

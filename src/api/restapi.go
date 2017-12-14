@@ -76,9 +76,6 @@ func (sda *_SDAApisHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) 
 		logger.Logging(logger.DEBUG, "Unknown URL")
 		makeErrorResponse(w, errors.NotFoundURL{reqUrl})
 
-	case strings.Contains(reqUrl, url.Register()):
-		sda.handleRegister(w, req)
-
 	case strings.Contains(reqUrl, url.Unregister()):
 		sda.handleUnregister(w, req)
 
@@ -88,32 +85,6 @@ func (sda *_SDAApisHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) 
 	case strings.Contains(reqUrl, url.Apps()):
 		sda.handleApps(w, req)
 	}
-}
-
-// Handling requests which is to register to manager service.
-func (sda *_SDAApisHandler) handleRegister(w http.ResponseWriter, req *http.Request) {
-	logger.Logging(logger.DEBUG)
-	defer logger.Logging(logger.DEBUG, "OUT")
-
-	if !checkSupportedMethod(w, req.Method, POST) {
-		return
-	}
-
-	bodyStr, err := getBodyFromReq(req)
-	if err != nil {
-		makeErrorResponse(w, errors.InvalidYaml{"body is empty"})
-		return
-	}
-
-	e := registerCtrl.Register(bodyStr)
-	if e != nil {
-		makeErrorResponse(w, e)
-		return
-	}
-
-	response := make(map[string]interface{})
-	response["result"] = "success"
-	makeResponse(w, changeToJson(response))
 }
 
 // Handling requests which is to unregister to manager service.

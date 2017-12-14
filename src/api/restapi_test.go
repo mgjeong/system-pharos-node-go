@@ -73,7 +73,6 @@ func getInvalidMethodList() map[string][]string {
 	urlList["/api/v1/apps/11/update"] = []string{GET, PUT, DELETE}
 	urlList["/api/v1/apps/11/stop"] = []string{GET, PUT, DELETE}
 	urlList["/api/v1/apps/11/start"] = []string{GET, PUT, DELETE}
-	urlList["/api/v1/register"] = []string{GET, PUT, DELETE}
 	urlList["/api/v1/unregister"] = []string{GET, PUT, DELETE}
 
 	return urlList
@@ -163,11 +162,6 @@ func makeMockingHci() mockinghci {
 	mock := mockinghci{}
 	mock.err = nil
 	return mock
-}
-
-func (m mockinghci) Register(body string) error {
-	doSomethingFunc2(&m)
-	return m.err
 }
 
 func (m mockinghci) Unregister() error {
@@ -355,32 +349,6 @@ func TestApps(t *testing.T) {
 		t.Run("Error/"+test.name, func(t *testing.T) {
 			r := returnValue{id: "", err: test.err, path: ""}
 			executeFunc(t, GET, urls.Base()+urls.Apps(), r, false)
-			if status != test.expectCode {
-				t.Error()
-			}
-		})
-	}
-}
-
-func TestRegister(t *testing.T) {
-	mock := makeMockingHci()
-	tearDown := setup2(t, mock)
-	defer tearDown(t)
-
-	t.Run("Success", func(t *testing.T) {
-		r := returnValue{id: "", err: nil, path: ""}
-		executeFunc2(t, POST, urls.Base()+urls.Register(), r, true)
-
-		if status != http.StatusOK {
-			t.Error()
-		}
-	})
-
-	testList := getErrorTestList()
-	for _, test := range testList {
-		t.Run("Error/"+test.name, func(t *testing.T) {
-			r := returnValue{id: "", err: test.err, path: ""}
-			executeFunc2(t, POST, urls.Base()+urls.Register(), r, true)
 			if status != test.expectCode {
 				t.Error()
 			}

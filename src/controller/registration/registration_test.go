@@ -17,10 +17,28 @@
 package registration
 
 import (
-	"commons/errors"
+	configmocks "controller/configuration/mocks"
+	"errors"
 	"github.com/golang/mock/gomock"
 	msgmocks "messenger/mocks"
 	"testing"
+)
+
+var (
+	CONFIGURATION = map[string]interface{}{
+		"serveraddress": "192.168.0.1",
+		"devicename":    "Edge Device #1",
+		"deviceid":      "54919CA5-4101-4AE4-595B-353C51AA983C",
+		"manufacturer":  "Manufacturer Name",
+		"modelnumber":   "Model number as designated by the manufacturer",
+		"serialnumber":  "Serial number",
+		"platform":      "Platform name and version",
+		"os":            "Operationg system name and version",
+		"location":      "Human readable location",
+		"pinginterval":  "10",
+		"deviceaddress": "192.168.0.1",
+		"agentid":       "Pharos Agent ID",
+	}
 )
 
 var regObj RegistrationInterface
@@ -29,201 +47,46 @@ func init() {
 	regObj = Registration{}
 }
 
-func TestCalledRegisterWhenAlreadyRegistered_ExpectErrorReturn(t *testing.T) {
-	agentId = "id"
-	err := regObj.Register("")
-
-	if err == nil {
-		t.Errorf("Expected err: %s, actual err: %s", "Unknown", "nil")
-	}
-}
-
-func TestCalledRegisterWithoutBody_ExpectErrorReturn(t *testing.T) {
-	agentId = ""
-	err := regObj.Register("")
-
-	if err == nil {
-		t.Errorf("Expected err: %s, actual err: %s", "InvalidParam", "nil")
-	}
-}
-
-func TestCalledRegisterWithInvalidBodyNotIncludingIPField_ExpectErrorReturn(t *testing.T) {
-	agentId = ""
-	invalidBody := `{"key":"value"}`
-	err := regObj.Register(invalidBody)
-
-	if err == nil {
-		t.Errorf("Expected err: %s, actual err: %s", "InvalidParam", "nil")
-	}
-}
-
-func TestCalledRegisterWithInvalidBodyNotIncludingHealthCheckField_ExpectErrorReturn(t *testing.T) {
-	agentId = ""
-	invalidBody := `{"ip":"value", "key":"value"}`
-	err := regObj.Register(invalidBody)
-
-	if err == nil {
-		t.Errorf("Expected err: %s, actual err: %s", "InvalidParam", "nil")
-	}
-}
-
-func TestCalledRegisterWithInvalidBodyNotIncludingIntervalField_ExpectErrorReturn(t *testing.T) {
-	agentId = ""
-	invalidBody := `{"ip":"value", "healthCheck":{"key":"value"}}`
-	err := regObj.Register(invalidBody)
-
-	if err == nil {
-		t.Errorf("Expected err: %s, actual err: %s", "InvalidParam", "nil")
-	}
-}
-
-func TestCalledRegisterWhenFailedToSendRegisterRequest_ExpectErrorReturn(t *testing.T) {
+func TestCalledRegisterWhenFailedToGetConfiguration_ExpectErrorReturn(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	msgMockObj := msgmocks.NewMockMessengerInterface(ctrl)
-
-	agentId = ""
-	expectedBody := `{"ip":"2"}`
-	url := "http://1:48099/api/v1/agents/register"
-	unknownErr := errors.Unknown{"error"}
+	configMockObj := configmocks.NewMockCommand(ctrl)
 
 	gomock.InOrder(
-		msgMockObj.EXPECT().SendHttpRequest("POST", url, []byte(expectedBody)).Return(500, "", unknownErr),
+		configMockObj.EXPECT().GetConfiguration().Return(CONFIGURATION, errors.New("Error")),
 	)
-	
-	httpRequester = msgMockObj
-	
-	body := `{"ip":{"manager":"1", "agent":"2"}, "healthCheck":{"interval":"1"}}`
-	err := regObj.Register(body)
+	configurator = configMockObj
+
+	err := register()
 
 	if err == nil {
 		t.Errorf("Expected err: %s, actual err: %s", "Unknown", "nil")
 	}
 }
 
-func TestCalledRegisterWhenReceiveInvalidResponseBodyFromSDAM_ExpectErrorReturn(t *testing.T) {
+func TestCalledRegisterWhenFailedToSetConfiguration_ExpectErrorReturn(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
+	configMockObj := configmocks.NewMockCommand(ctrl)
 	msgMockObj := msgmocks.NewMockMessengerInterface(ctrl)
 
-	agentId = ""
-	expectedBody := `{"ip":"2"}`
-	url := "http://1:48099/api/v1/agents/register"
-	invalidResp := `{"response"}`
+	url := "http://192.168.0.1:48099/api/v1/agents/register"
+	expectedResp := `{"id":"agentid"}`
+	expectedNewConfig := map[string]interface{}{
+		"agentid": "agentid",
+	}
 
 	gomock.InOrder(
-		msgMockObj.EXPECT().SendHttpRequest("POST", url, []byte(expectedBody)).Return(200, invalidResp, nil),
+		configMockObj.EXPECT().GetConfiguration().Return(CONFIGURATION, nil),
+		msgMockObj.EXPECT().SendHttpRequest("POST", url, gomock.Any()).Return(200, expectedResp, nil),
+		configMockObj.EXPECT().SetConfiguration(expectedNewConfig).Return(errors.New("Error")),
 	)
-
+	configurator = configMockObj
 	httpRequester = msgMockObj
-	
-	body := `{"ip":{"manager":"1", "agent":"2"}, "healthCheck":{"interval":"1"}}`
-	err := regObj.Register(body)
 
-	if err == nil {
-		t.Errorf("Expected err: %s, actual err: %s", "Unknown", "nil")
-	}
-}
-
-func TestCalledRegisterWhenReceiveErrorResponseFromSDAM_ExpectErrorReturn(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	msgMockObj := msgmocks.NewMockMessengerInterface(ctrl)
-
-	agentId = ""
-	expectedBody := `{"ip":"2"}`
-	url := "http://1:48099/api/v1/agents/register"
-	resp := `{"message":"error"}`
-
-	gomock.InOrder(
-		msgMockObj.EXPECT().SendHttpRequest("POST", url, []byte(expectedBody)).Return(500, resp, nil),
-	)
-	
-	httpRequester = msgMockObj
-	
-	body := `{"ip":{"manager":"1", "agent":"2"}, "healthCheck":{"interval":"1"}}`
-	err := regObj.Register(body)
-	
-	if err == nil {
-		t.Errorf("Expected err: %s, actual err: %s", "Unknown", "nil")
-	}
-}
-
-func TestCalledUnregisterWhenAlreadyUnregistered_ExpectErrorReturn(t *testing.T) {
-	agentId = ""
-	err := regObj.Unregister()
-
-	if err == nil {
-		t.Errorf("Expected err: %s, actual err: %s", "Unknown", "nil")
-	}
-}
-
-func TestCalledUnregisterWhenFailedToSendUnregisterRequest_ExpectErrorReturn(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	msgMockObj := msgmocks.NewMockMessengerInterface(ctrl)
-	
-	agentId = "id"
-	url := "http://1:48099/api/v1/agents/id/unregister"
-	unknownErr := errors.Unknown{"error"}
-
-	gomock.InOrder(
-		msgMockObj.EXPECT().SendHttpRequest("POST", url).Return(500, "", unknownErr),
-	)
-	
-	httpRequester = msgMockObj
-	
-	err := regObj.Unregister()
-
-	if err == nil {
-		t.Errorf("Expected err: %s, actual err: %s", "Unknown", "nil")
-	}
-}
-
-func TestCalledUnregisterWhenReceiveErrorResponseFromSDAM_ExpectErrorReturn(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	msgMockObj := msgmocks.NewMockMessengerInterface(ctrl)
-
-	agentId = "id"
-	url := "http://1:48099/api/v1/agents/id/unregister"
-	resp := `{"message":"error"}`
-
-	gomock.InOrder(
-		msgMockObj.EXPECT().SendHttpRequest("POST", url).Return(500, resp, nil),
-	)
-	
-	httpRequester = msgMockObj
-	
-	err := regObj.Unregister()
-
-	if err == nil {
-		t.Errorf("Expected err: %s, actual err: %s", "Unknown", "nil")
-	}
-}
-
-func TestCalledUnregisterWhenReceiveInvalidErrorResponseFromSDAM_ExpectErrorReturn(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	msgMockObj := msgmocks.NewMockMessengerInterface(ctrl)
-	
-	agentId = "id"
-	url := "http://1:48099/api/v1/agents/id/unregister"
-	invalidResp := `{"response"}`
-
-	gomock.InOrder(
-		msgMockObj.EXPECT().SendHttpRequest("POST", url).Return(500, invalidResp, nil),
-	)
-	
-	httpRequester = msgMockObj
-	
-	err := regObj.Unregister()
+	err := register()
 
 	if err == nil {
 		t.Errorf("Expected err: %s, actual err: %s", "Unknown", "nil")
@@ -234,18 +97,17 @@ func TestCalledUnregister_ExpectSuccess(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	msgMockObj := msgmocks.NewMockMessengerInterface(ctrl)
-	
-	agentId = "id"
-	interval = "1"
-	url := "http://1:48099/api/v1/agents/id/unregister"
+	configMockObj := configmocks.NewMockCommand(ctrl)
+
+	expectedNewConfig := map[string]interface{}{
+		"agentid": "",
+	}
 
 	gomock.InOrder(
-		msgMockObj.EXPECT().SendHttpRequest("POST", url).Return(200, "", nil),
+		configMockObj.EXPECT().SetConfiguration(expectedNewConfig).Return(nil),
 	)
+	configurator = configMockObj
 
-	httpRequester = msgMockObj
-	
 	err := regObj.Unregister()
 
 	if err != nil {
@@ -258,23 +120,21 @@ func TestCalledSendPingRequestWhenFailedToSendHttpRequest_ExpectErrorReturn(t *t
 	defer ctrl.Finish()
 
 	msgMockObj := msgmocks.NewMockMessengerInterface(ctrl)
-	
-	agentId = "id"
+
 	interval := "1"
-	url := "http://1:48099/api/v1/agents/id/ping"
+	url := "http://192.168.0.1:48099/api/v1/agents/id/ping"
 	expectedBody := `{"interval":"1"}`
-	unknownErr := errors.Unknown{"error"}
 
 	gomock.InOrder(
-		msgMockObj.EXPECT().SendHttpRequest("POST", url, []byte(expectedBody)).Return(500, "", unknownErr),
+		msgMockObj.EXPECT().SendHttpRequest("POST", url, []byte(expectedBody)).Return(500, "", errors.New("Error")),
 	)
 
 	httpRequester = msgMockObj
-	
-	_, err := sendPingRequest(interval)
+
+	_, err := sendPingRequest("id", interval)
 
 	if err == nil {
-		t.Errorf("Expected err: %s, actual err: %s", "Unknown", "nil")
+		t.Errorf("Expected err: %s", err.Error())
 	}
 }
 
@@ -283,19 +143,17 @@ func TestCalledSendPingRequest_ExpectSuccess(t *testing.T) {
 	defer ctrl.Finish()
 
 	msgMockObj := msgmocks.NewMockMessengerInterface(ctrl)
-	
-	agentId = "id"
+
 	interval := "1"
-	url := "http://1:48099/api/v1/agents/id/ping"
+	url := "http://192.168.0.1:48099/api/v1/agents/id/ping"
 	expectedBody := `{"interval":"1"}`
 
 	gomock.InOrder(
 		msgMockObj.EXPECT().SendHttpRequest("POST", url, []byte(expectedBody)).Return(200, "", nil),
 	)
-
 	httpRequester = msgMockObj
-	
-	_, err := sendPingRequest(interval)
+
+	_, err := sendPingRequest("id", interval)
 
 	if err != nil {
 		t.Errorf("Unexpected err: %s", err.Error())
@@ -307,21 +165,17 @@ func TestCalledSendRegisterRequestWhenFailedToSendHttpRequest_ExpectErrorReturn(
 	defer ctrl.Finish()
 
 	msgMockObj := msgmocks.NewMockMessengerInterface(ctrl)
-	
-	agentId = ""
-	url := "http://1:48099/api/v1/agents/register"
-	expectedBody := `{"ip":"2"}`
-	unknownErr := errors.Unknown{"error"}
+
+	url := "http://192.168.0.1:48099/api/v1/agents/register"
 
 	gomock.InOrder(
-		msgMockObj.EXPECT().SendHttpRequest("POST", url, []byte(expectedBody)).Return(500, "", unknownErr),
+		msgMockObj.EXPECT().SendHttpRequest("POST", url, gomock.Any()).Return(500, "", errors.New("Error")),
 	)
-	
 	httpRequester = msgMockObj
-	
-	_, _, err := sendRegisterRequest()
+
+	_, _, err := sendRegisterRequest(CONFIGURATION)
 
 	if err == nil {
-		t.Errorf("Expected err: %s, actual err: %s", "Unknown", "nil")
+		t.Errorf("Expected err: %s", err.Error())
 	}
 }
