@@ -44,12 +44,15 @@ type Configuration struct {
 	ServerAddress string `json:"serveraddress"`
 	DeviceName    string `json:"devicename"`
 	DeviceID      string `json:"deviceid"`
+	DeviceAddress string `json:"deviceaddress"`
 	Manufacturer  string `json:"manufacturer"`
 	ModelNumber   string `json:"modelnumber"`
 	SerialNumber  string `json:"serialnumber"`
 	Platform      string `json:"platform"`
 	OS            string `json:"os"`
 	Location      string `json:"location"`
+	PingInterval  string `json:"pinginterval"`
+	AgentID       string `json:"agentid"`
 }
 
 func (conf Configuration) convertToMap() map[string]interface{} {
@@ -63,6 +66,9 @@ func (conf Configuration) convertToMap() map[string]interface{} {
 		"platform":      conf.Platform,
 		"os":            conf.OS,
 		"location":      conf.Location,
+		"pinginterval":  conf.PingInterval,
+		"deviceaddress": conf.DeviceAddress,
+		"agentid":       conf.AgentID,
 	}
 }
 

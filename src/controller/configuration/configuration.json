@@ -7,5 +7,8 @@
 	"serialnumber"   : "Serial number",
 	"platform"       : "Platform name and version",
 	"os"             : "Operationg system name and version",
-	"location"       : "Human readable location"
+	"location"       : "Human readable location",
+	"pinginterval"   : "10(in minute)",
+	"deviceaddress"  : "Device IP address (e.g. 192.168.0.10)",
+	"agentid"        : "Pharos Agent ID"
 }
