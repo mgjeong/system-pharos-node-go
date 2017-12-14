@@ -80,7 +80,7 @@ func (Configurator) GetConfiguration() (map[string]interface{}, error) {
 	}
 
 	var conf map[string]interface{}
-	res = json.Unmarshal(raw, &conf)
+	res := json.Unmarshal(raw, &conf)
 	if res != nil {
 		logger.Logging(logger.DEBUG, "Unmarshaling is failed")
 		return nil, errors.Unknown{"Unmarshaling is failed"}
