@@ -2,7 +2,6 @@
 // Source: configuration.go
 
 package mocks
-package controller/configuration
 
 import (
         gomock "github.com/golang/mock/gomock"
