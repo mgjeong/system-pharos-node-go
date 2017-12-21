@@ -25,6 +25,7 @@ import (
 	"commons/url"
 	. "controller/deployment"
 	. "controller/registration"
+	. "controller/resource"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -44,6 +45,7 @@ func RunSDAWebServer(addr string, port int) {
 
 var deploymentCtrl DeploymentInterface
 var registerCtrl RegistrationInterface
+var resourceCtrl ResourceInterface
 
 var _SDAApis _SDAApisHandler
 
@@ -59,6 +61,7 @@ const (
 func init() {
 	deploymentCtrl = Controller
 	registerCtrl = Registration{}
+	resourceCtrl = Resource
 }
 
 // Implements of http serve interface.
@@ -84,6 +87,9 @@ func (sda *_SDAApisHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) 
 
 	case strings.Contains(reqUrl, url.Apps()):
 		sda.handleApps(w, req)
+
+	case strings.Contains(reqUrl, url.Resource()):
+		sda.handleResource(w, req)
 	}
 }
 
@@ -160,6 +166,23 @@ func (sda *_SDAApisHandler) handleApps(w http.ResponseWriter, req *http.Request)
 
 	case len(split) == 4:
 		sda.apps(w, req)
+
+	default:
+		logger.Logging(logger.DEBUG, "Unmatched url")
+		makeErrorResponse(w, errors.NotFoundURL{reqUrl})
+	}
+}
+
+// Handling requests which is getting device resource or performance information
+func (sda *_SDAApisHandler) handleResource(w http.ResponseWriter, req *http.Request) {
+	logger.Logging(logger.DEBUG)
+	defer logger.Logging(logger.DEBUG, "OUT")
+
+	switch reqUrl, split := req.URL.Path, strings.Split(req.URL.Path, "/"); {
+	case len(split) == 5:
+		sda.resource(w, req)
+	case len(split) == 6:
+		sda.performance(w, req)
 
 	default:
 		logger.Logging(logger.DEBUG, "Unmatched url")
@@ -279,6 +302,42 @@ func (sda *_SDAApisHandler) start(w http.ResponseWriter, req *http.Request, appI
 	makeResponse(w, changeToJson(response))
 }
 
+// Handling requests which is getting resources information
+func (sda *_SDAApisHandler) resource(w http.ResponseWriter, req *http.Request) {
+	logger.Logging(logger.DEBUG)
+	defer logger.Logging(logger.DEBUG, "OUT")
+
+	if !checkSupportedMethod(w, req.Method, GET) {
+		return
+	}
+
+	response, e := resourceCtrl.GetResourceInfo()
+
+	if e != nil {
+		makeErrorResponse(w, e)
+		return
+	}
+	makeResponse(w, changeToJson(response))
+}
+
+// Handling requests which is getting performance information
+func (sda *_SDAApisHandler) performance(w http.ResponseWriter, req *http.Request) {
+	logger.Logging(logger.DEBUG)
+	defer logger.Logging(logger.DEBUG, "OUT")
+
+	if !checkSupportedMethod(w, req.Method, GET) {
+		return
+	}
+
+	response, e := resourceCtrl.GetPerformanceInfo()
+
+	if e != nil {
+		makeErrorResponse(w, e)
+		return
+	}
+	makeResponse(w, changeToJson(response))
+}
+
 // Making non succeed response by error type.
 func makeErrorResponse(w http.ResponseWriter, err error) {
 	var code int
@@ -287,6 +346,7 @@ func makeErrorResponse(w http.ResponseWriter, err error) {
 
 	case errors.NotFoundURL:
 		code = http.StatusNotFound
+		
 	case errors.InvalidMethod:
 		code = http.StatusMethodNotAllowed
 

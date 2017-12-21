@@ -47,3 +47,9 @@ func Register() string { return "/register" }
 
 // Returning Unregister url as string.
 func Unregister() string { return "/unregister" }
+
+//Returning Resoucres url as string.
+func Resource() string { return "/resource" }
+
+//Returning Performance url as string.
+func Performance() string { return "/performance" }
