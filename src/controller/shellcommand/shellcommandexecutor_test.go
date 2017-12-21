@@ -49,7 +49,7 @@ func (m *mockShellExecutor) getOutput() ([]byte, error) {
 }
 
 var mockShell mockShellExecutor
-var oldShell shellInterface
+var oldShell shellInnerInterface
 
 var testCommand string
 var testArgs []string
@@ -83,7 +83,7 @@ func runShellCommand(str string) (string, error) {
 	doSomething = func() ([]byte, error) {
 		return testRet, err
 	}
-	return ExecuteCommand(testCommand, testArgs...)
+	return Executor.ExecuteCommand(testCommand, testArgs...)
 }
 
 func expectReturnErrorNotFoundError(t *testing.T, e string) {
