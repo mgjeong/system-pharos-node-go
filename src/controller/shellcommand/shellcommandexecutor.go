@@ -98,8 +98,8 @@ func (shellExecutor) ExecuteCommand(command string, args ...string) (string, err
 	}
 }
 
-var notFoundCPUInfoFile string = "/proc/cpuinfo: No such file or directory" //khj
-var notFoundMemInfoFile string = "/proc/meminfo: No such file or directory" //khj
+var notFoundCPUInfoFile string = "/proc/cpuinfo: No such file or directory"
+var notFoundMemInfoFile string = "/proc/meminfo: No such file or directory"
 var notFoundDockerComposeFile string = "Can't find a suitable configuration file in this directory or any" +
 	"parent. Are you in the right directory?"
 var notFoundFile string = ".IOError: [Errno 2] No such file or directory:"
