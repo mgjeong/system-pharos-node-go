@@ -179,9 +179,9 @@ func (sda *_SDAApisHandler) handleResource(w http.ResponseWriter, req *http.Requ
 	defer logger.Logging(logger.DEBUG, "OUT")
 
 	switch reqUrl, split := req.URL.Path, strings.Split(req.URL.Path, "/"); {
-	case len(split) == 5:
+	case len(split) == 4:
 		sda.resource(w, req)
-	case len(split) == 6:
+	case len(split) == 5:
 		sda.performance(w, req)
 
 	default:
