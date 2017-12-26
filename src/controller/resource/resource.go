@@ -165,8 +165,8 @@ func getCPUUsage() (string, error) {
 	totalTime := user + nice + system + idle + iowait + irq + softirq + steal
 	idleTime := idle + iowait
 
-	cpuUsagePerc := 100 * (totalTime - idleTime) / totalTime
-	return strconv.Itoa(cpuUsagePerc) + "%%", err
+	cpuUsagePerc := strconv.FormatFloat(100*float64(totalTime-idleTime)/float64(totalTime), 'f', 2, 64)
+	return cpuUsagePerc + "%%", err
 }
 
 func getMemUsage() (string, error) {
@@ -194,8 +194,8 @@ func getMemUsage() (string, error) {
 	memTotal, _ := strconv.Atoi(strings.TrimSpace(total))
 	memFree, _ := strconv.Atoi(strings.TrimSpace(free))
 
-	memUsagePerc := 100 * (memTotal - memFree) / memTotal
-	return strconv.Itoa(memUsagePerc) + "%%", err
+	memUsagePerc := strconv.FormatFloat(100*float64(memTotal-memFree)/float64(memTotal), 'f', 2, 64)
+	return memUsagePerc + "%%", err
 }
 
 func getDiskUsage() (string, error) {
@@ -234,6 +234,6 @@ func getDiskUsage() (string, error) {
 		}
 	}
 
-	diskUsagePerc := 100 * (diskTotalSum - diskAvailableSum) / diskTotalSum
-	return strconv.Itoa(diskUsagePerc) + "%%", err
+	diskUsagePerc := strconv.FormatFloat(100*float64(diskTotalSum-diskAvailableSum)/float64(diskTotalSum), 'f', 2, 64)
+	return diskUsagePerc + "%%", err
 }
