@@ -78,6 +78,8 @@ func (shellExecutor) ExecuteCommand(command string, args ...string) (string, err
 		return ret, errors.NotFound{ret}
 	case isNotFoundDockerEngine(&ret):
 		return ret, errors.NotFound{ret}
+	case isNotFoundStatFile(&ret):
+		return ret, errors.NotFound{ret}
 	case isNotFoundCPUInfoFile(&ret):
 		return ret, errors.NotFound{ret}
 	case isNotFoundMemInfoFile(&ret):
@@ -100,6 +102,7 @@ func (shellExecutor) ExecuteCommand(command string, args ...string) (string, err
 
 var notFoundCPUInfoFile string = "/proc/cpuinfo: No such file or directory"
 var notFoundMemInfoFile string = "/proc/meminfo: No such file or directory"
+var notFoundStatFile string = "/proc/stat: No such file or directory"
 var notFoundDockerComposeFile string = "Can't find a suitable configuration file in this directory or any" +
 	"parent. Are you in the right directory?"
 var notFoundFile string = ".IOError: [Errno 2] No such file or directory:"
@@ -109,6 +112,13 @@ var notFoundDockerImage string = "No such object:"
 var alreayUsedContainerName string = "is already in use by container"
 var alreadyAllocatedPort string = "port is already allocated"
 var invalidContainerName string = "Invalid container name"
+
+// Check output message for not found proc file.
+// if output message has string such as "/proc/stat: no such file",  return true
+// otherwise, return false.
+func isNotFoundStatFile(msg *string) bool {
+	return strings.Contains(*msg, notFoundStatFile)
+}
 
 // Check output message for not found proc file.
 // if output message has string such as "/proc/cpuinfo: no such file",  return true
