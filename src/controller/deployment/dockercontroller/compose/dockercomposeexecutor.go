@@ -20,11 +20,11 @@ package compose
 
 import (
 	"commons/logger"
-	"controller/shellcommand"
+	shell "controller/shellcommand"
 )
 
 var Executor composeExecutorImpl
-var shellExecutor func(command string, args ...string) (string, error)
+var shellExecutor shell.ShellInterface
 
 type composeExecutorImpl struct {
 	composeCommand string
@@ -34,7 +34,7 @@ type composeExecutorImpl struct {
 func init() {
 	Executor.composeCommand = "docker-compose"
 	Executor.firstArg = "-f"
-	shellExecutor = shellcommand.ExecuteCommand
+	shellExecutor = shell.Executor
 }
 
 // Implement of dockercontroller.Create().
@@ -183,7 +183,7 @@ func (c composeExecutorImpl) executeCommand(args ...string) error {
 	tmpArgs = append(tmpArgs, args...)
 	logger.Logging(logger.DEBUG, tmpArgs...)
 
-	_, err := shellExecutor(c.composeCommand, tmpArgs...)
+	_, err := shell.Executor.ExecuteCommand(c.composeCommand, tmpArgs...)
 
 	return err
 }
@@ -196,7 +196,7 @@ func (c composeExecutorImpl) executeCommandWithMsg(args ...string) (string, erro
 	tmpArgs = append(tmpArgs, args...)
 	logger.Logging(logger.DEBUG, tmpArgs...)
 
-	msg, err := shellExecutor(c.composeCommand, tmpArgs...)
+	msg, err := shell.Executor.ExecuteCommand(c.composeCommand, tmpArgs...)
 
 	return msg, err
 }

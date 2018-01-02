@@ -16,8 +16,10 @@
  *******************************************************************************/
 package dockercontroller
 
-import "commons/errors"
-import "testing"
+import (
+	"commons/errors"
+	"testing"
+)
 
 var doSomething func(incommand string, inargs ...string) (string, error)
 
@@ -27,18 +29,7 @@ func mockExecuteCommand(command string, args ...string) (string, error) {
 
 type shellFunc func(command string, args ...string) (string, error)
 
-var oldShellExecutor shellFunc
-
-type tearDown func(t *testing.T)
-
-func setUp(t *testing.T) tearDown {
-	oldShellExecutor = shellExecutor
-	shellExecutor = mockExecuteCommand
-
-	return func(t *testing.T) {
-		shellExecutor = oldShellExecutor
-	}
-}
+var oldShellInnerExecutor shellFunc
 
 const (
 	inspect = iota
@@ -64,9 +55,6 @@ func getExecutor() map[int]func(string) (string, error) {
 }
 
 func TestExpectEqualCommandList(t *testing.T) {
-	tearDown := setUp(t)
-	defer tearDown(t)
-
 	imageName := "ubuntu"
 	commandList := getCommandList(imageName)
 	executor := getExecutor()

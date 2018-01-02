@@ -25,36 +25,44 @@ import (
 	"strings"
 )
 
-type shellInterface interface {
+type ShellInterface interface {
+	ExecuteCommand(command string, args ...string) (string, error)
+}
+
+type shellExecutor struct {}
+
+var Executor shellExecutor
+
+type shellInnerInterface interface {
 	executeCommand(name string, arg ...string)
 	getOutput() ([]byte, error)
 }
 
-type shellExecutor struct {
+type shellInnerExecutor struct {
 	cmd *exec.Cmd
 }
 
+var shell shellInnerInterface
+
 // Executing command to shell (private function).
-func (e *shellExecutor) executeCommand(name string, arg ...string) {
+func (e *shellInnerExecutor) executeCommand(name string, arg ...string) {
 	e.cmd = exec.Command(name, arg...)
 }
 
 // Getting command response  shell.
 // return stdout of shell command.
-func (e *shellExecutor) getOutput() ([]byte, error) {
+func (e *shellInnerExecutor) getOutput() ([]byte, error) {
 	return e.cmd.CombinedOutput()
 }
 
-var shell shellInterface
-
 func init() {
-	shell = &shellExecutor{}
+	shell = &shellInnerExecutor{}
 }
 
 // Executing command to shell.
 // if succeed to executing, return message of stdout
 // otherwise, return error.
-func ExecuteCommand(command string, args ...string) (string, error) {
+func (shellExecutor) ExecuteCommand(command string, args ...string) (string, error) {
 	logger.Logging(logger.DEBUG, args...)
 	shell.executeCommand(command, args...)
 	out, err := shell.getOutput()
@@ -70,6 +78,10 @@ func ExecuteCommand(command string, args ...string) (string, error) {
 		return ret, errors.NotFound{ret}
 	case isNotFoundDockerEngine(&ret):
 		return ret, errors.NotFound{ret}
+	case isNotFoundCPUInfoFile(&ret):
+		return ret, errors.NotFound{ret}
+	case isNotFoundMemInfoFile(&ret):
+		return ret, errors.NotFound{ret}
 	case isInvalidYaml(&ret):
 		return ret, errors.InvalidYaml{ret}
 	case isNotFoundDockerImage(&ret):
@@ -80,11 +92,14 @@ func ExecuteCommand(command string, args ...string) (string, error) {
 		return ret, errors.AlreadyUsedName{ret}
 	case isInvalidContainerName(&ret):
 		return ret, errors.InvalidContainerName{ret}
+	
 	default:
 		return ret, errors.Unknown{ret}
 	}
 }
 
+var notFoundCPUInfoFile string = "/proc/cpuinfo: No such file or directory"
+var notFoundMemInfoFile string = "/proc/meminfo: No such file or directory"
 var notFoundDockerComposeFile string = "Can't find a suitable configuration file in this directory or any" +
 	"parent. Are you in the right directory?"
 var notFoundFile string = ".IOError: [Errno 2] No such file or directory:"
@@ -95,6 +110,19 @@ var alreayUsedContainerName string = "is already in use by container"
 var alreadyAllocatedPort string = "port is already allocated"
 var invalidContainerName string = "Invalid container name"
 
+// Check output message for not found proc file.
+// if output message has string such as "/proc/cpuinfo: no such file",  return true
+// otherwise, return false.
+func isNotFoundCPUInfoFile(msg *string) bool {
+	return strings.Contains(*msg, notFoundCPUInfoFile)
+}
+
+// Check output message for not found proc file.
+// if output message has string such as "/proc/meminfo: no such file", return true
+// otherwise, return false.
+func isNotFoundMemInfoFile(msg *string) bool {
+	return strings.Contains(*msg, notFoundMemInfoFile)
+}
 // Check output message for not found yaml file.
 // if output message has string such as "not found yaml file", return true
 // otherwise, return false.

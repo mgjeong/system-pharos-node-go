@@ -16,7 +16,12 @@
  *******************************************************************************/
 package compose
 
-import "testing"
+import (
+	"testing"
+	shell "controller/shellcommand"
+)
+
+//type shellExecutor struct {}
 
 var doSomething func(incommand string, inargs ...string) (string, error)
 
@@ -24,15 +29,14 @@ func mockExecuteCommand(command string, args ...string) (string, error) {
 	return doSomething(command, args...)
 }
 
-type shellFunc func(command string, args ...string) (string, error)
+//type shellFunc func(command string, args ...string) (string, error)
 
-var oldShellExecutor shellFunc
+var oldShellExecutor shell.ShellInterface
 
 type tearDown func(t *testing.T)
 
 func setUp(t *testing.T) tearDown {
-	oldShellExecutor = shellExecutor
-	shellExecutor = mockExecuteCommand
+	oldShellExecutor = shell.Executor
 
 	return func(t *testing.T) {
 		shellExecutor = oldShellExecutor

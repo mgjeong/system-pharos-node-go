@@ -22,7 +22,7 @@ import (
 	"commons/errors"
 	"commons/logger"
 	"controller/deployment/dockercontroller/compose"
-	"controller/shellcommand"
+	shell "controller/shellcommand"
 	"encoding/json"
 	"reflect"
 )
@@ -43,12 +43,15 @@ type DockerExecutorInterface interface {
 }
 
 var Executor dockerExecutorImpl
-var shellExecutor func(command string, args ...string) (string, error)
+var shellExecutor shell.ShellInterface
 
 type dockerExecutorImpl struct {
 	dockerCommand string
 }
 
+func init() {
+	shellExecutor = shell.Executor
+}
 // Creating containers of service list in the yaml description.
 // if succeed to create, return error as nil
 // otherwise, return error.
@@ -124,7 +127,7 @@ func (dockerExecutorImpl) Ps(path string, args ...string) (string, error) {
 
 func init() {
 	Executor.dockerCommand = "docker"
-	shellExecutor = shellcommand.ExecuteCommand
+	//shellExecutor = shellcommand.ExecuteCommand
 }
 
 // Getting image information by input image name.
@@ -176,5 +179,5 @@ func (d dockerExecutorImpl) executeCommand(args ...string) (string, error) {
 	tmpArgs = append(tmpArgs, args...)
 	logger.Logging(logger.DEBUG, tmpArgs...)
 
-	return shellExecutor(Executor.dockerCommand, tmpArgs...)
+	return shellExecutor.ExecuteCommand(Executor.dockerCommand, tmpArgs...)
 }
