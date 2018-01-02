@@ -117,6 +117,7 @@ func getProcessorModel() (string, error) {
 		return "", err
 	}
 	if len(modelName) == 0 {
+		logger.Logging(logger.ERROR, "can't find cpu model name info")
 		return "", errors.Unknown{"can't find cpu model name info"}
 	}
 	modelInfo := strings.Split(modelName, ":")
@@ -148,11 +149,11 @@ func getCPUUsage() (string, error) {
 		return "", err
 	}
 	if len(procStatCPU) == 0 {
+		logger.Logging(logger.ERROR, "can't find cpu usage info")
 		return "", errors.Unknown{"can't find cpu usage info"}
 	}
 
 	procStatCPUSlice := strings.Split(procStatCPU, " ")
-
 	user, _ := strconv.Atoi(procStatCPUSlice[1])
 	nice, _ := strconv.Atoi(procStatCPUSlice[2])
 	system, _ := strconv.Atoi(procStatCPUSlice[3])
@@ -161,10 +162,10 @@ func getCPUUsage() (string, error) {
 	irq, _ := strconv.Atoi(procStatCPUSlice[6])
 	softirq, _ := strconv.Atoi(procStatCPUSlice[7])
 	steal, _ := strconv.Atoi(procStatCPUSlice[8])
-
+	
 	totalTime := user + nice + system + idle + iowait + irq + softirq + steal
 	idleTime := idle + iowait
-
+	
 	cpuUsagePerc := strconv.FormatFloat(100*float64(totalTime-idleTime)/float64(totalTime), 'f', 2, 64)
 	return cpuUsagePerc + "%%", err
 }
@@ -179,6 +180,7 @@ func getMemUsage() (string, error) {
 		return "", err
 	}
 	if len(total) == 0 {
+		logger.Logging(logger.ERROR, "can't find total memory info")
 		return "", errors.Unknown{"can't find total memory info"}
 	}
 
@@ -188,6 +190,7 @@ func getMemUsage() (string, error) {
 		return "", err
 	}
 	if len(free) == 0 {
+		logger.Logging(logger.ERROR, "can't find used memory info")
 		return "", errors.Unknown{"can't find used memory info"}
 	}
 
@@ -208,6 +211,7 @@ func getDiskUsage() (string, error) {
 		return "", err
 	}
 	if len(total) == 0 {
+		logger.Logging(logger.ERROR, "can't find total disk info")
 		return "", errors.Unknown{"can't find total disk info"}
 	}
 
@@ -216,6 +220,7 @@ func getDiskUsage() (string, error) {
 		return "", err
 	}
 	if len(available) == 0 {
+		logger.Logging(logger.ERROR, "can't find available disk info")
 		return "", errors.Unknown{"can't find availble disk info"}
 	}
 
