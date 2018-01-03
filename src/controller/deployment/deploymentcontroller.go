@@ -23,7 +23,7 @@ import (
 	"commons/errors"
 	"commons/logger"
 	"controller/deployment/dockercontroller"
-	. "db/mongo/model/service"
+	"db/mongo/service"
 	"encoding/json"
 	"io/ioutil"
 	"os"
@@ -55,13 +55,13 @@ type DeploymentInterface interface {
 }
 
 var fileMode = os.FileMode(0755)
-var dbManager DBManager
+var dbManager service.Command
 
 var dockerExecutor dockercontroller.DockerExecutorInterface
 
 func init() {
 	dockerExecutor = dockercontroller.Executor
-	dbManager = DBManager{}
+	dbManager = service.Executor{}
 }
 
 var Controller controller
