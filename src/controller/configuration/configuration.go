@@ -28,16 +28,14 @@ import (
 const configurationFileName = "./configuration.json"
 
 // Interface of configuration operations.
-type (
-	Command interface {
-		// GetConfiguration returns a map of configuration stored in predefined configuration file.
-		GetConfiguration() (map[string]interface{}, error)
+type Command interface {
+	// GetConfiguration returns a map of configuration stored in predefined configuration file.
+	GetConfiguration() (map[string]interface{}, error)
+	// SetConfiguration updates one of configurations
+	SetConfiguration(map[string]interface{}) error
+}
 
-		// SetConfiguration updates one of configurations
-		SetConfiguration(map[string]interface{}) error
-	}
-	Configurator struct{}
-)
+type Executor struct{}
 
 // Configuration schema
 type Configuration struct {
@@ -72,7 +70,7 @@ func (conf Configuration) convertToMap() map[string]interface{} {
 	}
 }
 
-func (Configurator) GetConfiguration() (map[string]interface{}, error) {
+func (Executor) GetConfiguration() (map[string]interface{}, error) {
 	raw, err := ioutil.ReadFile(configurationFileName)
 	if err != nil {
 		logger.Logging(logger.DEBUG, "Configuration file is not found.")
@@ -89,7 +87,7 @@ func (Configurator) GetConfiguration() (map[string]interface{}, error) {
 	return conf, nil
 }
 
-func (configurator Configurator) SetConfiguration(newConf map[string]interface{}) error {
+func (configurator Executor) SetConfiguration(newConf map[string]interface{}) error {
 	// Load a configuration file, first
 	curConf, err := configurator.GetConfiguration()
 	if err != nil {

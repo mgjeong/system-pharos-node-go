@@ -41,10 +41,10 @@ var (
 	}
 )
 
-var regObj RegistrationInterface
+var regObj Command
 
 func init() {
-	regObj = Registration{}
+	regObj = Executor{}
 }
 
 func TestCalledRegisterWhenFailedToGetConfiguration_ExpectErrorReturn(t *testing.T) {

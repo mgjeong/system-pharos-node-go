@@ -25,13 +25,13 @@ import (
 	"strings"
 )
 
-type ShellInterface interface {
+type Command interface {
 	ExecuteCommand(command string, args ...string) (string, error)
 }
 
-type shellExecutor struct {}
+type shellExecutorImpl struct {}
 
-var Executor shellExecutor
+var Executor shellExecutorImpl
 
 type shellInnerInterface interface {
 	executeCommand(name string, arg ...string)
@@ -62,7 +62,7 @@ func init() {
 // Executing command to shell.
 // if succeed to executing, return message of stdout
 // otherwise, return error.
-func (shellExecutor) ExecuteCommand(command string, args ...string) (string, error) {
+func (shellExecutorImpl) ExecuteCommand(command string, args ...string) (string, error) {
 	logger.Logging(logger.DEBUG, args...)
 	shell.executeCommand(command, args...)
 	out, err := shell.getOutput()

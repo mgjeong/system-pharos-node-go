@@ -27,7 +27,7 @@ import (
 	"reflect"
 )
 
-type DockerExecutorInterface interface {
+type Command interface {
 	Create(path string) error
 	Up(path string) error
 	Down(path string) error
@@ -42,15 +42,16 @@ type DockerExecutorInterface interface {
 	GetImageDigest(imageName string) (string, error)
 }
 
-var Executor dockerExecutorImpl
-var shellExecutor shell.ShellInterface
-
 type dockerExecutorImpl struct {
 	dockerCommand string
 }
 
+var Executor dockerExecutorImpl
+var shellExecutor shell.Command
+
 func init() {
 	shellExecutor = shell.Executor
+	Executor.dockerCommand = "docker"
 }
 // Creating containers of service list in the yaml description.
 // if succeed to create, return error as nil
@@ -123,11 +124,6 @@ func (dockerExecutorImpl) Pull(path string) error {
 // otherwise, return error.
 func (dockerExecutorImpl) Ps(path string, args ...string) (string, error) {
 	return compose.Executor.Ps(path, args...)
-}
-
-func init() {
-	Executor.dockerCommand = "docker"
-	//shellExecutor = shellcommand.ExecuteCommand
 }
 
 // Getting image information by input image name.

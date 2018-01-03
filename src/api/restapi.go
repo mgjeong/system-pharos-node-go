@@ -23,9 +23,9 @@ import (
 	"commons/errors"
 	"commons/logger"
 	"commons/url"
-	. "controller/deployment"
-	. "controller/registration"
-	. "controller/resource"
+	dep "controller/deployment"
+	reg "controller/registration"
+	res "controller/resource"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -43,9 +43,9 @@ func RunSDAWebServer(addr string, port int) {
 	http.ListenAndServe(addr+":"+strconv.Itoa(port), &_SDAApis)
 }
 
-var deploymentCtrl DeploymentInterface
-var registerCtrl RegistrationInterface
-var resourceCtrl ResourceInterface
+var deploymentCtrl dep.Command
+var registerCtrl reg.Command
+var resourceCtrl res.Command
 
 var _SDAApis _SDAApisHandler
 
@@ -59,9 +59,9 @@ const (
 )
 
 func init() {
-	deploymentCtrl = Controller
-	registerCtrl = Registration{}
-	resourceCtrl = Resource
+	deploymentCtrl = dep.Executor
+	registerCtrl = reg.Executor{}
+	resourceCtrl = res.Executor
 }
 
 // Implements of http serve interface.

@@ -43,7 +43,7 @@ const (
 	STATE        = "state"
 )
 
-type DeploymentInterface interface {
+type Command interface {
 	DeployApp(body string) (map[string]interface{}, error)
 	Apps() (map[string]interface{}, error)
 	App(appId string) (map[string]interface{}, error)
@@ -54,19 +54,18 @@ type DeploymentInterface interface {
 	UpdateApp(appId string) error
 }
 
+type depExecutorImpl struct{}
+
+var Executor depExecutorImpl
+var dockerExecutor dockercontroller.Command
+
 var fileMode = os.FileMode(0755)
 var dbManager DBManager
-
-var dockerExecutor dockercontroller.DockerExecutorInterface
 
 func init() {
 	dockerExecutor = dockercontroller.Executor
 	dbManager = DBManager{}
 }
-
-var Controller controller
-
-type controller struct{}
 
 // Deploy app to target by yaml description.
 // yaml description will be inserted to db server
@@ -74,7 +73,7 @@ type controller struct{}
 // and create, start containers on the target.
 // if succeed to deploy, return app_id
 // otherwise, return error.
-func (controller) DeployApp(body string) (map[string]interface{}, error) {
+func (depExecutorImpl) DeployApp(body string) (map[string]interface{}, error) {
 	logger.Logging(logger.DEBUG, "IN")
 	defer logger.Logging(logger.DEBUG, "OUT")
 
@@ -124,7 +123,7 @@ func (controller) DeployApp(body string) (map[string]interface{}, error) {
 // Getting all of app informations in the target.
 // if succeed to get, return all of app informations as map
 // otherwise, return error.
-func (controller) Apps() (map[string]interface{}, error) {
+func (depExecutorImpl) Apps() (map[string]interface{}, error) {
 	logger.Logging(logger.DEBUG, "IN")
 	defer logger.Logging(logger.DEBUG, "OUT")
 
@@ -151,7 +150,7 @@ func (controller) Apps() (map[string]interface{}, error) {
 // Getting app information in the target by input appId.
 // if succeed to get, return app information
 // otherwise, return error.
-func (controller) App(appId string) (map[string]interface{}, error) {
+func (depExecutorImpl) App(appId string) (map[string]interface{}, error) {
 	logger.Logging(logger.DEBUG, "IN", appId)
 	defer logger.Logging(logger.DEBUG, "OUT")
 
@@ -213,7 +212,7 @@ func (controller) App(appId string) (map[string]interface{}, error) {
 // only update yaml description on the db server.
 // if succeed to update, return error as nil
 // otherwise, return error.
-func (controller) UpdateAppInfo(appId string, body string) error {
+func (depExecutorImpl) UpdateAppInfo(appId string, body string) error {
 	logger.Logging(logger.DEBUG, "IN", appId)
 	defer logger.Logging(logger.DEBUG, "OUT")
 
@@ -237,7 +236,7 @@ func (controller) UpdateAppInfo(appId string, body string) error {
 // can not guarantee about valid operation of containers.
 // if succeed to start, return error as nil
 // otherwise, return error.
-func (controller) StartApp(appId string) error {
+func (depExecutorImpl) StartApp(appId string) error {
 	logger.Logging(logger.DEBUG, "IN", appId)
 	defer logger.Logging(logger.DEBUG, "OUT")
 
@@ -279,7 +278,7 @@ func (controller) StartApp(appId string) error {
 // Stop app in the target by input appId.
 // if succeed to stop, return app information
 // otherwise, return error.
-func (controller) StopApp(appId string) error {
+func (depExecutorImpl) StopApp(appId string) error {
 	logger.Logging(logger.DEBUG, "IN", appId)
 	defer logger.Logging(logger.DEBUG, "OUT")
 
@@ -327,7 +326,7 @@ func (controller) StopApp(appId string) error {
 // Agent can make sure that previous imaes by digest.
 // if succeed to update, return error as nil
 // otherwise, return error.
-func (controller) UpdateApp(appId string) error {
+func (depExecutorImpl) UpdateApp(appId string) error {
 	logger.Logging(logger.DEBUG, "IN", appId)
 	defer logger.Logging(logger.DEBUG, "OUT")
 
@@ -372,7 +371,7 @@ func (controller) UpdateApp(appId string) error {
 // See also controller.StopApp().
 // if succeed to delete, return error as nil
 // otherwise, return error.
-func (controller) DeleteApp(appId string) error {
+func (depExecutorImpl) DeleteApp(appId string) error {
 	logger.Logging(logger.DEBUG, "IN", appId)
 	defer logger.Logging(logger.DEBUG, "OUT")
 

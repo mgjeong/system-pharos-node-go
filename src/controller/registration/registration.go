@@ -47,18 +47,18 @@ var (
 	managerAddress string
 )
 
-type RegistrationInterface interface {
+type Command interface {
 	Unregister() error
 }
 
-type Registration struct{}
+type Executor struct{}
 
 var httpRequester messenger.MessengerInterface
 var configurator configuration.Command
 
 func init() {
 	httpRequester = messenger.NewMessenger()
-	configurator = configuration.Configurator{}
+	configurator = configuration.Executor{}
 
 	// Register
 	err := register()
@@ -122,7 +122,7 @@ func register() error {
 // Unregister to system-edge-manager service.
 // if succeed to unregister, return error as nil
 // otherwise, return error.
-func (Registration) Unregister() error {
+func (Executor) Unregister() error {
 	logger.Logging(logger.DEBUG, "IN")
 	defer logger.Logging(logger.DEBUG, "OUT")
 

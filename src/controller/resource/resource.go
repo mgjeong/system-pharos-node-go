@@ -24,22 +24,21 @@ import (
 	"strings"
 )
 
-type ResourceInterface interface {
+type Command interface {
 	GetResourceInfo() (map[string]interface{}, error)
 	GetPerformanceInfo() (map[string]interface{}, error)
 }
 
-type resource struct{}
+type resExecutorImpl struct{}
 
-var Resource resource
-
-var shellExecutor shell.ShellInterface
+var Executor resExecutorImpl
+var shellExecutor shell.Command
 
 func init() {
 	shellExecutor = shell.Executor
 }
 
-func (resource) GetResourceInfo() (map[string]interface{}, error) {
+func (resExecutorImpl) GetResourceInfo() (map[string]interface{}, error) {
 	logger.Logging(logger.DEBUG, "IN")
 	defer logger.Logging(logger.DEBUG, "OUT")
 
@@ -79,7 +78,7 @@ func (resource) GetResourceInfo() (map[string]interface{}, error) {
 	return resources, err
 }
 
-func (resource) GetPerformanceInfo() (map[string]interface{}, error) {
+func (resExecutorImpl) GetPerformanceInfo() (map[string]interface{}, error) {
 	logger.Logging(logger.DEBUG, "IN")
 	defer logger.Logging(logger.DEBUG, "OUT")
 
