@@ -30,7 +30,7 @@ func TestCalledSendHttpRequestWithoutData_ExpectSuccess(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	httpMockObj := msgmocks.NewMockhttpInterface(ctrl)
+	httpMockObj := msgmocks.NewMockhttpWrapper(ctrl)
 
 	gomock.InOrder(
 		httpMockObj.EXPECT().DoWrapper(gomock.Any()).Return(&http.Response{
@@ -38,7 +38,7 @@ func TestCalledSendHttpRequestWithoutData_ExpectSuccess(t *testing.T) {
 			Body:       ioutil.NopCloser(bytes.NewBufferString(""))}, nil),
 	)
 
-	messengerObj := NewMessenger()
+	messengerObj := NewExecutor()
 	messengerObj.client = httpMockObj
 
 	_, _, err := messengerObj.SendHttpRequest("POST", "/test/url")
@@ -52,7 +52,7 @@ func TestCalledSendHttpRequestWithData_ExpectSuccess(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	httpMockObj := msgmocks.NewMockhttpInterface(ctrl)
+	httpMockObj := msgmocks.NewMockhttpWrapper(ctrl)
 
 	gomock.InOrder(
 		httpMockObj.EXPECT().DoWrapper(gomock.Any()).Return(&http.Response{
@@ -60,7 +60,7 @@ func TestCalledSendHttpRequestWithData_ExpectSuccess(t *testing.T) {
 			Body:       ioutil.NopCloser(bytes.NewBufferString(""))}, nil),
 	)
 
-	messengerObj := NewMessenger()
+	messengerObj := NewExecutor()
 	messengerObj.client = httpMockObj
 
 	_, _, err := messengerObj.SendHttpRequest("POST", "/test/url", []byte("data"))
@@ -74,13 +74,13 @@ func TestCalledSendHttpRequestWhenFailedToSendHttpRequest_ExpectErrorReturn(t *t
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	httpMockObj := msgmocks.NewMockhttpInterface(ctrl)
+	httpMockObj := msgmocks.NewMockhttpWrapper(ctrl)
 
 	gomock.InOrder(
 		httpMockObj.EXPECT().DoWrapper(gomock.Any()).Return(&http.Response{}, errors.New("Error")),
 	)
 
-	messengerObj := NewMessenger()
+	messengerObj := NewExecutor()
 	messengerObj.client = httpMockObj
 
 	_, _, err := messengerObj.SendHttpRequest("POST", "/test/url", []byte("data"))

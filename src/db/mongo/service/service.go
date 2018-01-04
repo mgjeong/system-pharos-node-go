@@ -21,13 +21,36 @@ import (
 	"commons/errors"
 	"crypto/sha1"
 	. "db/mongo/wrapper"
-	. "db/modelinterface"
 	"encoding/hex"
 	"encoding/json"
 	"gopkg.in/mgo.v2/bson"
 	"sort"
 	"strings"
 )
+
+// Interface of Service model's operations.
+type Command interface {
+	// InsertComposeFile insert docker-compose file for new service.
+	InsertComposeFile(description string) (map[string]interface{}, error)
+
+	// GetAppList returns all of app's IDs.
+	GetAppList() ([]map[string]interface{}, error)
+
+	// GetApp returns docker-compose data of target app.
+	GetApp(app_id string) (map[string]interface{}, error)
+
+	// UpdateAppInfo updates docker-compose data of target app.
+	UpdateAppInfo(app_id string, description string) error
+
+	// DeleteApp delete docker-compose data of target app.
+	DeleteApp(app_id string) error
+
+	// GetAppState returns app's state
+	GetAppState(app_id string) (string, error)
+
+	// UpdateAppState updates app's State.
+	UpdateAppState(app_id string, state string) error
+}
 
 const (
 	DB_NAME        = "DeploymentAgentDB"
@@ -43,8 +66,7 @@ type App struct {
 	State       string
 }
 
-type DBManager struct {
-	Service
+type Executor struct {
 }
 
 var mgoDial Connection
@@ -91,7 +113,7 @@ func (app App) convertToMap() map[string]interface{} {
 // Add app description to app collection in mongo server.
 // if succeed to add, return app information as map.
 // otherwise, return error.
-func (DBManager) InsertComposeFile(description string) (map[string]interface{}, error) {
+func (Executor) InsertComposeFile(description string) (map[string]interface{}, error) {
 	id, err := generateID(description)
 	if err != nil {
 		return nil, err
@@ -121,7 +143,7 @@ func (DBManager) InsertComposeFile(description string) (map[string]interface{}, 
 // Getting all of app informations.
 // if succeed to get, return list of all app information as slice.
 // otherwise, return error.
-func (DBManager) GetAppList() ([]map[string]interface{}, error) {
+func (Executor) GetAppList() ([]map[string]interface{}, error) {
 	session, err := connect(DB_URL)
 	if err != nil {
 		return nil, err
@@ -146,7 +168,7 @@ func (DBManager) GetAppList() ([]map[string]interface{}, error) {
 // Getting app information by app_id.
 // if succeed to get, return app information as map.
 // otherwise, return error.
-func (DBManager) GetApp(app_id string) (map[string]interface{}, error) {
+func (Executor) GetApp(app_id string) (map[string]interface{}, error) {
 	session, err := connect(DB_URL)
 	if err != nil {
 		return nil, err
@@ -173,7 +195,7 @@ func (DBManager) GetApp(app_id string) (map[string]interface{}, error) {
 // Updating app information by app_id.
 // if succeed to update, return error as nil.
 // otherwise, return error.
-func (DBManager) UpdateAppInfo(app_id string, description string) error {
+func (Executor) UpdateAppInfo(app_id string, description string) error {
 	if len(app_id) == 0 {
 		err := errors.InvalidParam{"Invalid param error : app_id is empty."}
 		return err
@@ -200,7 +222,7 @@ func (DBManager) UpdateAppInfo(app_id string, description string) error {
 // Deleting app collection by app_id.
 // if succeed to delete, return error as nil.
 // otherwise, return error.
-func (DBManager) DeleteApp(app_id string) error {
+func (Executor) DeleteApp(app_id string) error {
 	if len(app_id) == 0 {
 		err := errors.InvalidParam{"Invalid param error : app_id is empty."}
 		return err
@@ -226,7 +248,7 @@ func (DBManager) DeleteApp(app_id string) error {
 // Getting app state by app_id.
 // if succeed to get state, return state (e.g.DEPLOY, UP, STOP...).
 // otherwise, return error.
-func (DBManager) GetAppState(app_id string) (string, error) {
+func (Executor) GetAppState(app_id string) (string, error) {
 	if len(app_id) == 0 {
 		err := errors.InvalidParam{"Invalid param error : app_id is empty."}
 		return "", err
@@ -253,7 +275,7 @@ func (DBManager) GetAppState(app_id string) (string, error) {
 // Updating app state by app_id.
 // if succeed to update state, return error as nil.
 // otherwise, return error.
-func (DBManager) UpdateAppState(app_id string, state string) error {
+func (Executor) UpdateAppState(app_id string, state string) error {
 	if len(state) == 0 {
 		err := errors.InvalidParam{"Invalid param error : state is empty."}
 		return err

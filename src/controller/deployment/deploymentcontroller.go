@@ -23,7 +23,7 @@ import (
 	"commons/errors"
 	"commons/logger"
 	"controller/deployment/dockercontroller"
-	. "db/mongo/model/service"
+	"db/mongo/service"
 	"encoding/json"
 	"io/ioutil"
 	"os"
@@ -60,11 +60,11 @@ var Executor depExecutorImpl
 var dockerExecutor dockercontroller.Command
 
 var fileMode = os.FileMode(0755)
-var dbManager DBManager
+var dbManager service.Command
 
 func init() {
 	dockerExecutor = dockercontroller.Executor
-	dbManager = DBManager{}
+	dbManager = service.Executor{}
 }
 
 // Deploy app to target by yaml description.
