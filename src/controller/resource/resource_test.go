@@ -41,7 +41,7 @@ func TestGetResourceInfo_ExpectSuccess(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	shellMockObj := shellmocks.NewMockShellInterface(ctrl)
+	shellMockObj := shellmocks.NewMockCommand(ctrl)
 
 	gomock.InOrder(
 		shellMockObj.EXPECT().ExecuteCommand(BASH, BASH_C_OPTION, GET_PROCESSOR_MODELNAME_CMD).Return(MODEL_NAME, nil),
@@ -55,7 +55,7 @@ func TestGetResourceInfo_ExpectSuccess(t *testing.T) {
 
 	// pass mockObj to a real object.
 	shellExecutor = shellMockObj
-	res, err := Resource.GetResourceInfo()
+	res, err := Executor.GetResourceInfo()
 
 	if err != nil {
 		t.Errorf("Unexpected err: %s", err.Error())
@@ -76,7 +76,7 @@ func TestGetPerformanceInfo_ExpectSuccess(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	shellMockObj := shellmocks.NewMockShellInterface(ctrl)
+	shellMockObj := shellmocks.NewMockCommand(ctrl)
 
 	gomock.InOrder(
 		shellMockObj.EXPECT().ExecuteCommand(BASH, BASH_C_OPTION, GET_CPUUSAGE_CMD).Return(CPU_USAGE, nil),
@@ -88,7 +88,7 @@ func TestGetPerformanceInfo_ExpectSuccess(t *testing.T) {
 
 	// pass mockObj to a real object.
 	shellExecutor = shellMockObj
-	res, err := Resource.GetPerformanceInfo()
+	res, err := Executor.GetPerformanceInfo()
 
 	if err != nil {
 		t.Errorf("Unexpected err: %s", err.Error())
@@ -107,7 +107,7 @@ func TestGetProcessorModel_ExpectSuccess(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	shellMockObj := shellmocks.NewMockShellInterface(ctrl)
+	shellMockObj := shellmocks.NewMockCommand(ctrl)
 
 	gomock.InOrder(
 		shellMockObj.EXPECT().ExecuteCommand(BASH, BASH_C_OPTION, GET_PROCESSOR_MODELNAME_CMD).Return(MODEL_NAME, nil),
@@ -130,7 +130,7 @@ func TestGetProcessorModelWithShellError_ExpectErrorReturn(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	shellMockObj := shellmocks.NewMockShellInterface(ctrl)
+	shellMockObj := shellmocks.NewMockCommand(ctrl)
 
 	gomock.InOrder(
 		shellMockObj.EXPECT().ExecuteCommand(BASH, BASH_C_OPTION, GET_PROCESSOR_MODELNAME_CMD).Return("", errors.NotFound{"/proc/cpuinfo: No such file or directory"}),
@@ -150,7 +150,7 @@ func TestGetProcessorModelWithEmptyModelName_ExpectErrorReturn(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	shellMockObj := shellmocks.NewMockShellInterface(ctrl)
+	shellMockObj := shellmocks.NewMockCommand(ctrl)
 
 	gomock.InOrder(
 		shellMockObj.EXPECT().ExecuteCommand(BASH, BASH_C_OPTION, GET_PROCESSOR_MODELNAME_CMD).Return("", nil),
@@ -170,7 +170,7 @@ func TestGetOS_ExpectSuccess(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	shellMockObj := shellmocks.NewMockShellInterface(ctrl)
+	shellMockObj := shellmocks.NewMockCommand(ctrl)
 
 	gomock.InOrder(
 		shellMockObj.EXPECT().ExecuteCommand(BASH, BASH_C_OPTION, GET_OS_CMD).Return(UNAME, nil),
@@ -193,7 +193,7 @@ func TestGetOSWithShellError_ExpectErrorReturn(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	shellMockObj := shellmocks.NewMockShellInterface(ctrl)
+	shellMockObj := shellmocks.NewMockCommand(ctrl)
 
 	gomock.InOrder(
 		shellMockObj.EXPECT().ExecuteCommand(BASH, BASH_C_OPTION, GET_OS_CMD).Return("", errors.Unknown{}),
@@ -214,7 +214,7 @@ func TestGetCPUUsage_ExpectSuccess(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	shellMockObj := shellmocks.NewMockShellInterface(ctrl)
+	shellMockObj := shellmocks.NewMockCommand(ctrl)
 
 	gomock.InOrder(
 		shellMockObj.EXPECT().ExecuteCommand(BASH, BASH_C_OPTION, GET_CPUUSAGE_CMD).Return(CPU_USAGE, nil),
@@ -237,7 +237,7 @@ func TestGetCPUUsageWithShellError_ExpectErrorReturn(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	shellMockObj := shellmocks.NewMockShellInterface(ctrl)
+	shellMockObj := shellmocks.NewMockCommand(ctrl)
 
 	gomock.InOrder(
 		shellMockObj.EXPECT().ExecuteCommand(BASH, BASH_C_OPTION, GET_CPUUSAGE_CMD).Return("", errors.NotFound{"/proc/cpuinfo: No such file or directory"}),
@@ -258,7 +258,7 @@ func TestGetCPUUsageWithEmptyCPUInfo_ExpectErrorReturn(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	shellMockObj := shellmocks.NewMockShellInterface(ctrl)
+	shellMockObj := shellmocks.NewMockCommand(ctrl)
 
 	gomock.InOrder(
 		shellMockObj.EXPECT().ExecuteCommand(BASH, BASH_C_OPTION, GET_CPUUSAGE_CMD).Return("", nil),
@@ -279,7 +279,7 @@ func TestGetMemUsage_ExpectSuccess(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	shellMockObj := shellmocks.NewMockShellInterface(ctrl)
+	shellMockObj := shellmocks.NewMockCommand(ctrl)
 
 	gomock.InOrder(
 		shellMockObj.EXPECT().ExecuteCommand(BASH, BASH_C_OPTION, GET_MEMTOTAL_CMD).Return(MEM_TOTAL, nil),
@@ -306,7 +306,7 @@ func TestGetMemUsageWithShellError_ExpectErrorReturn(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	shellMockObj := shellmocks.NewMockShellInterface(ctrl)
+	shellMockObj := shellmocks.NewMockCommand(ctrl)
 
 	gomock.InOrder(
 		shellMockObj.EXPECT().ExecuteCommand(BASH, BASH_C_OPTION, GET_MEMTOTAL_CMD).Return("", errors.NotFound{"/proc/meminfo: No such file or directory"}),
@@ -327,7 +327,7 @@ func TestGetMemUsageWithEmptyMemInfo_ExpectErrorReturn(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	shellMockObj := shellmocks.NewMockShellInterface(ctrl)
+	shellMockObj := shellmocks.NewMockCommand(ctrl)
 
 	gomock.InOrder(
 		shellMockObj.EXPECT().ExecuteCommand(BASH, BASH_C_OPTION, GET_MEMTOTAL_CMD).Return("", nil),
@@ -348,7 +348,7 @@ func TestGetDiskUsage_ExpectSuccess(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	shellMockObj := shellmocks.NewMockShellInterface(ctrl)
+	shellMockObj := shellmocks.NewMockCommand(ctrl)
 
 	gomock.InOrder(
 		shellMockObj.EXPECT().ExecuteCommand(BASH, BASH_C_OPTION, GET_DISKTOTAL_CMD).Return(DISK_TOTAL, nil),
@@ -375,7 +375,7 @@ func TestGetDiskUsageWithShellError_ExpectErrorReturn(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	shellMockObj := shellmocks.NewMockShellInterface(ctrl)
+	shellMockObj := shellmocks.NewMockCommand(ctrl)
 
 	gomock.InOrder(
 		shellMockObj.EXPECT().ExecuteCommand(BASH, BASH_C_OPTION, GET_DISKTOTAL_CMD).Return("", errors.NotFound{}),
@@ -396,7 +396,7 @@ func TestGetDiskUsageWithEmptyMemInfo_ExpectErrorReturn(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	shellMockObj := shellmocks.NewMockShellInterface(ctrl)
+	shellMockObj := shellmocks.NewMockCommand(ctrl)
 
 	gomock.InOrder(
 		shellMockObj.EXPECT().ExecuteCommand(BASH, BASH_C_OPTION, GET_DISKTOTAL_CMD).Return("", nil),

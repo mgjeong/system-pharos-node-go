@@ -209,12 +209,12 @@ func getBody() io.Reader {
 }
 
 func setup(t *testing.T, mock mockingci) func(*testing.T) {
-	deploymentCtrl = mock
+	deploymentExecutor = mock
 	return func(*testing.T) {}
 }
 
 func setup2(t *testing.T, mock mockinghci) func(*testing.T) {
-	registerCtrl = mock
+	registerExecutor = mock
 	return func(*testing.T) {}
 }
 

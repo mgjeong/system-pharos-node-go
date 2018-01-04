@@ -93,7 +93,7 @@ func TestCalledDeployApp_ExpectSuccess(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	dockerExecutorMockObj := dockermocks.NewMockDockerExecutorInterface(ctrl)
+	dockerExecutorMockObj := dockermocks.NewMockCommand(ctrl)
 	dbManagerMockObj := dbmocks.MockCommand(ctrl)
 
 	gomock.InOrder(
@@ -104,7 +104,7 @@ func TestCalledDeployApp_ExpectSuccess(t *testing.T) {
 	// pass mockObj to a real object.
 	dockerExecutor = dockerExecutorMockObj
 	
-	res, err := Controller.DeployApp(DESCRIPTION_YAML)
+	res, err := Executor.DeployApp(DESCRIPTION_YAML)
 
 	if err != nil {
 		t.Errorf("Unexpected err: %s", err.Error())
@@ -123,7 +123,7 @@ func TestCalledDeployAppWhenDBNotConnected_ExpectErrorReturn(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	_, err := Controller.DeployApp(DESCRIPTION_YAML)
+	_, err := Executor.DeployApp(DESCRIPTION_YAML)
 
 	if err == nil {
 		t.Errorf("Expected err: %s, actual err: %s", "ConnectionError", "nil")
@@ -136,7 +136,7 @@ func TestCalledDeployAppWhenComposeUpFailed_ExpectErrorReturn(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	dockerExecutorMockObj := dockermocks.NewMockDockerExecutorInterface(ctrl)
+	dockerExecutorMockObj := dockermocks.NewMockCommand(ctrl)
 
 	gomock.InOrder(
 		dockerExecutorMockObj.EXPECT().Up(gomock.Any()).Return(UnknownError),
@@ -146,7 +146,7 @@ func TestCalledDeployAppWhenComposeUpFailed_ExpectErrorReturn(t *testing.T) {
 	// pass mockObj to a real object.
 	dockerExecutor = dockerExecutorMockObj
 
-	_, err := Controller.DeployApp(DESCRIPTION_YAML)
+	_, err := Executor.DeployApp(DESCRIPTION_YAML)
 
 	if err == nil {
 		t.Errorf("Expected err: %s, actual err: %s", "UnknowError", "nil")
@@ -159,7 +159,7 @@ func TestCalledDeployAppWhenYAMLToJSONFailed_ExpectErrorReturn(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	dockerExecutorMockObj := dockermocks.NewMockDockerExecutorInterface(ctrl)
+	dockerExecutorMockObj := dockermocks.NewMockCommand(ctrl)
 	
 	gomock.InOrder(
 		dockerExecutorMockObj.EXPECT().Up(gomock.Any()).Return(nil),
@@ -169,7 +169,7 @@ func TestCalledDeployAppWhenYAMLToJSONFailed_ExpectErrorReturn(t *testing.T) {
 	// pass mockObj to a real object.
 	dockerExecutor = dockerExecutorMockObj
 	
-	_, err := Controller.DeployApp(WRONG_DESCRIPTION_JSON)
+	_, err := Executor.DeployApp(WRONG_DESCRIPTION_JSON)
 
 	if err == nil {
 		t.Errorf("Expected err: %s, actual err: %s", "InvalidYAMLError", "nil")
@@ -182,9 +182,8 @@ func TestCalledDeployAppWhenInsertComposeFileFailed_ExpectErrorReturn(t *testing
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	dockerExecutorMockObj := dockermocks.NewMockDockerExecutorInterface(ctrl)
+	dockerExecutorMockObj := dockermocks.NewMockCommand(ctrl)
 	dbManagerMockObj := dbmocks.MockCommand(ctrl)
-
 
 	gomock.InOrder(
 		dockerExecutorMockObj.EXPECT().Up(gomock.Any()).Return(nil),
@@ -195,7 +194,7 @@ func TestCalledDeployAppWhenInsertComposeFileFailed_ExpectErrorReturn(t *testing
 	// pass mockObj to a real object.
 	dockerExecutor = dockerExecutorMockObj
 	
-	_, err := Controller.DeployApp(DESCRIPTION_YAML)
+	_, err := Executor.DeployApp(DESCRIPTION_YAML)
 
 	if err == nil {
 		t.Errorf("Expected err: %s, actual err: %s", "InsertComposeFileFailed", "nil")
@@ -214,7 +213,7 @@ func TestCalledApps_ExpectSuccess(t *testing.T) {
 		dbManagerMockObj.EXPECT().GetAppList().Return(DB_OBJs, nil),
 	)
 
-	res, err := Controller.Apps()
+	res, err := Executor.Apps()
 
 	if err != nil {
 		t.Errorf("Unexpected err: %s", err.Error())
@@ -245,7 +244,7 @@ func TestCalledAppsWhenGetAppListFailed_ExpectErrorReturn(t *testing.T) {
 		dbManagerMockObj.EXPECT().GetAppList().Return(nil, UnknownError),
 	)
 
-	_, err := Controller.Apps()
+	_, err := Executor.Apps()
 
 	if err == nil {
 		t.Errorf("Expected err: %s, actual err: %s", "UnknownError", "nil")
@@ -256,9 +255,8 @@ func TestCalledApp_ExpectSuccess(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	dockerExecutorMockObj := dockermocks.NewMockDockerExecutorInterface(ctrl)
+	dockerExecutorMockObj := dockermocks.NewMockCommand(ctrl)
 	dbManagerMockObj := dbmocks.MockCommand(ctrl)
-
 
 	gomock.InOrder(
 		dbManagerMockObj.EXPECT().GetApp(APP_ID).Return(DB_GET_OBJ, nil),
@@ -269,7 +267,7 @@ func TestCalledApp_ExpectSuccess(t *testing.T) {
 	// pass mockObj to a real object.
 	dockerExecutor = dockerExecutorMockObj
 
-	res, err := Controller.App(APP_ID)
+	res, err := Executor.App(APP_ID)
 
 	if err != nil {
 		t.Errorf("Unexpected err: %s", err.Error())
@@ -308,7 +306,7 @@ func TestCalledAppWhenGetAppFailed_ExpectErrorReturn(t *testing.T) {
 		dbManagerMockObj.EXPECT().GetApp(APP_ID).Return(nil, UnknownError),
 	)
 
-	_, err := Controller.App(APP_ID)
+	_, err := Executor.App(APP_ID)
 
 	if err == nil {
 		t.Errorf("Expected err: %s, actual err: %s", "UnknownError", "nil")
@@ -325,7 +323,7 @@ func TestCalledAppWhenJSONToYAMLFailed_ExpectErrorReturn(t *testing.T) {
 		dbManagerMockObj.EXPECT().GetApp(APP_ID).Return(WRONG_DB_GET_OBJ, nil),
 	)
 
-	_, err := Controller.App(APP_ID)
+	_, err := Executor.App(APP_ID)
 
 	if err == nil {
 		t.Errorf("Expected err: %s, actual err: %s", "UnknownError", "nil")
@@ -342,7 +340,7 @@ func TestCalledAppWhenNoServiceFiledinYAML_ExpectErrorReturn(t *testing.T) {
 		dbManagerMockObj.EXPECT().GetApp(APP_ID).Return(DB_GET_OBJ_WITHOUT_SERVICE, nil),
 	)
 
-	_, err := Controller.App(APP_ID)
+	_, err := Executor.App(APP_ID)
 
 	if err == nil {
 		t.Errorf("Expected err: %s, actual err: %s", "UnknownError", "nil")
@@ -353,7 +351,7 @@ func TestCalledAppWhenGetServiceStateComposePsFailed_ExpectErrorReturn(t *testin
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	dockerExecutorMockObj := dockermocks.NewMockDockerExecutorInterface(ctrl)
+	dockerExecutorMockObj := dockermocks.NewMockCommand(ctrl)
 	dbManagerMockObj := dbmocks.MockCommand(ctrl)
 
 	gomock.InOrder(
@@ -364,7 +362,7 @@ func TestCalledAppWhenGetServiceStateComposePsFailed_ExpectErrorReturn(t *testin
 	// pass mockObj to a real object.
 	dockerExecutor = dockerExecutorMockObj
 
-	_, err := Controller.App(APP_ID)
+	_, err := Executor.App(APP_ID)
 
 	if err == nil {
 		t.Errorf("Expected err: %s, actual err: %s", "UnknownError", "nil")
@@ -375,9 +373,8 @@ func TestCalledAppWhenGetServiceStateComposeInspectFailed_ExpectErrorReturn(t *t
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	dockerExecutorMockObj := dockermocks.NewMockDockerExecutorInterface(ctrl)
+	dockerExecutorMockObj := dockermocks.NewMockCommand(ctrl)
 	dbManagerMockObj := dbmocks.MockCommand(ctrl)
-
 
 	gomock.InOrder(
 		dbManagerMockObj.EXPECT().GetApp(APP_ID).Return(DB_GET_OBJ, nil),
@@ -388,7 +385,7 @@ func TestCalledAppWhenGetServiceStateComposeInspectFailed_ExpectErrorReturn(t *t
 	// pass mockObj to a real object.
 	dockerExecutor = dockerExecutorMockObj
 
-	_, err := Controller.App(APP_ID)
+	_, err := Executor.App(APP_ID)
 
 	if err == nil {
 		t.Errorf("Expected err: %s, actual err: %s", "UnknownError", "nil")
@@ -399,9 +396,8 @@ func TestCalledAppWhenGetServiceStateUnmarshalFailed_ExpectErrorReturn(t *testin
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	dockerExecutorMockObj := dockermocks.NewMockDockerExecutorInterface(ctrl)
+	dockerExecutorMockObj := dockermocks.NewMockCommand(ctrl)
 	dbManagerMockObj := dbmocks.MockCommand(ctrl)
-
 
 	gomock.InOrder(
 		dbManagerMockObj.EXPECT().GetApp(APP_ID).Return(DB_GET_OBJ, nil),
@@ -412,7 +408,7 @@ func TestCalledAppWhenGetServiceStateUnmarshalFailed_ExpectErrorReturn(t *testin
 	// pass mockObj to a real object.
 	dockerExecutor = dockerExecutorMockObj
 
-	_, err := Controller.App(APP_ID)
+	_, err := Executor.App(APP_ID)
 
 	if err == nil {
 		t.Errorf("Expected err: %s, actual err: %s", "UnknownError", "nil")
@@ -430,7 +426,7 @@ func TestCalledUpdateAppInfo_ExpectSuccess(t *testing.T) {
 		dbManagerMockObj.EXPECT().UpdateAppInfo(APP_ID, DESCRIPTION_JSON).Return(nil),
 	)
 
-	err := Controller.UpdateAppInfo(APP_ID, DESCRIPTION_YAML)
+	err := Executor.UpdateAppInfo(APP_ID, DESCRIPTION_YAML)
 
 	if err != nil {
 		t.Errorf("Unexpected err: %s", err.Error())
@@ -441,7 +437,7 @@ func TestCalledUpdateAppInfoWhenYAMLToJSON_ExpectErrorReturn(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	err := Controller.UpdateAppInfo(APP_ID, WRONG_DESCRIPTION_JSON)
+	err := Executor.UpdateAppInfo(APP_ID, WRONG_DESCRIPTION_JSON)
 
 	if err == nil {
 		t.Errorf("Expected err: %s, actual err: %s", "InvalidYAMLError", "nil")
@@ -458,7 +454,7 @@ func TestCalledUpdateAppInfoWhenUpdateAppInfoFailed_ExpectSuccess(t *testing.T) 
 		dbManagerMockObj.EXPECT().UpdateAppInfo(APP_ID, DESCRIPTION_JSON).Return(InvalidYamlError),
 	)
 
-	err := Controller.UpdateAppInfo(APP_ID, DESCRIPTION_YAML)
+	err := Executor.UpdateAppInfo(APP_ID, DESCRIPTION_YAML)
 
 	if err == nil {
 		t.Errorf("Expected err: %s, actual err: %s", "InvalidYamlError", "nil")
@@ -469,7 +465,7 @@ func TestCalledStartApp_ExpectSuccess(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	dockerExecutorMockObj := dockermocks.NewMockDockerExecutorInterface(ctrl)
+	dockerExecutorMockObj := dockermocks.NewMockCommand(ctrl)
 	dbManagerMockObj := dbmocks.MockCommand(ctrl)
 
 	gomock.InOrder(
@@ -482,7 +478,7 @@ func TestCalledStartApp_ExpectSuccess(t *testing.T) {
 	// pass mockObj to a real object.
 	dockerExecutor = dockerExecutorMockObj
 
-	err := Controller.StartApp(APP_ID)
+	err := Executor.StartApp(APP_ID)
 
 	if err != nil {
 		t.Errorf("Unexpected err: %s", err.Error())
@@ -500,7 +496,7 @@ func TestCalledStartAppWhenSetYAMLFileFailed_ExpectErrorReturn(t *testing.T) {
 		dbManagerMockObj.EXPECT().GetApp(APP_ID).Return(nil, UnknownError),
 	)
 
-	err := Controller.StartApp(APP_ID)
+	err := Executor.StartApp(APP_ID)
 
 	if err == nil {
 		t.Errorf("Expected err: %s, actual err: %s", "UnknownError", "nil")
@@ -511,7 +507,7 @@ func TestCalledStartAppWhenComposeStartFailed_ExpectErrorReturn(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	dockerExecutorMockObj := dockermocks.NewMockDockerExecutorInterface(ctrl)
+	dockerExecutorMockObj := dockermocks.NewMockCommand(ctrl)
 	dbManagerMockObj := dbmocks.MockCommand(ctrl)
 
 	gomock.InOrder(
@@ -523,7 +519,7 @@ func TestCalledStartAppWhenComposeStartFailed_ExpectErrorReturn(t *testing.T) {
 	// pass mockObj to a real object.
 	dockerExecutor = dockerExecutorMockObj
 
-	err := Controller.StartApp(APP_ID)
+	err := Executor.StartApp(APP_ID)
 
 	if err == nil {
 		t.Errorf("Expected err: %s, actual err: %s", "UnknownError", "nil")
@@ -534,7 +530,7 @@ func TestCalledStopApp_ExpectSuccess(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	dockerExecutorMockObj := dockermocks.NewMockDockerExecutorInterface(ctrl)
+	dockerExecutorMockObj := dockermocks.NewMockCommand(ctrl)
 	dbManagerMockObj := dbmocks.MockCommand(ctrl)
 
 	gomock.InOrder(
@@ -547,7 +543,7 @@ func TestCalledStopApp_ExpectSuccess(t *testing.T) {
 	// pass mockObj to a real object.
 	dockerExecutor = dockerExecutorMockObj
 
-	err := Controller.StopApp(APP_ID)
+	err := Executor.StopApp(APP_ID)
 
 	if err != nil {
 		t.Errorf("Unexpected err: %s", err.Error())
@@ -565,7 +561,7 @@ func TestCalledStopAppWhenSetYAMLFileFailed_ExpectErrorReturn(t *testing.T) {
 		dbManagerMockObj.EXPECT().GetApp(APP_ID).Return(nil, UnknownError),
 	)
 
-	err := Controller.StopApp(APP_ID)
+	err := Executor.StopApp(APP_ID)
 
 	if err == nil {
 		t.Errorf("Expected err: %s, actual err: %s", "UnknownError", "nil")
@@ -576,7 +572,7 @@ func TestCalledStopAppWhenComposeStopFailed_ExpectErrorReturn(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	dockerExecutorMockObj := dockermocks.NewMockDockerExecutorInterface(ctrl)
+	dockerExecutorMockObj := dockermocks.NewMockCommand(ctrl)
 	dbManagerMockObj := dbmocks.MockCommand(ctrl)
 	
 	gomock.InOrder(
@@ -588,7 +584,7 @@ func TestCalledStopAppWhenComposeStopFailed_ExpectErrorReturn(t *testing.T) {
 	// pass mockObj to a real object.
 	dockerExecutor = dockerExecutorMockObj
 	
-	err := Controller.StopApp(APP_ID)
+	err := Executor.StopApp(APP_ID)
 
 	if err == nil {
 		t.Errorf("Expected err: %s, actual err: %s", "UnknownError", "nil")
@@ -599,7 +595,7 @@ func TestCalledUpdateApp_ExpectSuccess(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	dockerExecutorMockObj := dockermocks.NewMockDockerExecutorInterface(ctrl)
+	dockerExecutorMockObj := dockermocks.NewMockCommand(ctrl)
 	dbManagerMockObj := dbmocks.MockCommand(ctrl)
 
 	gomock.InOrder(
@@ -612,7 +608,7 @@ func TestCalledUpdateApp_ExpectSuccess(t *testing.T) {
 	// pass mockObj to a real object.
 	dockerExecutor = dockerExecutorMockObj
 	
-	err := Controller.UpdateApp(APP_ID)
+	err := Executor.UpdateApp(APP_ID)
 
 	if err != nil {
 		t.Errorf("Unexpected err: %s", err.Error())
@@ -629,7 +625,7 @@ func TestCalledUpdateAppWhenSetYAMLFileFailed_ExpectErrorReturn(t *testing.T) {
 		dbManagerMockObj.EXPECT().GetApp(APP_ID).Return(nil, UnknownError),
 	)
 
-	err := Controller.UpdateApp(APP_ID)
+	err := Executor.UpdateApp(APP_ID)
 
 	if err == nil {
 		t.Errorf("Expected err: %s, actual err: %s", "UnknownError", "nil")
@@ -640,7 +636,7 @@ func TestCalledUpdateAppWhenComposePullFailed_ExpectErrorReturn(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	dockerExecutorMockObj := dockermocks.NewMockDockerExecutorInterface(ctrl)
+	dockerExecutorMockObj := dockermocks.NewMockCommand(ctrl)
 	dbManagerMockObj := dbmocks.MockCommand(ctrl)
 
 	gomock.InOrder(
@@ -655,7 +651,7 @@ func TestCalledUpdateAppWhenComposePullFailed_ExpectErrorReturn(t *testing.T) {
 	// pass mockObj to a real object.
 	dockerExecutor = dockerExecutorMockObj
 
-	err := Controller.UpdateApp(APP_ID)
+	err := Executor.UpdateApp(APP_ID)
 
 	if err == nil {
 		t.Errorf("Expected err: %s, actual err: %s", "UnknownError", "nil")
@@ -666,7 +662,7 @@ func TestCalledUpdateAppWhenComposeUpFailed_ExpectErrorReturn(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	dockerExecutorMockObj := dockermocks.NewMockDockerExecutorInterface(ctrl)
+	dockerExecutorMockObj := dockermocks.NewMockCommand(ctrl)
 	dbManagerMockObj := dbmocks.MockCommand(ctrl)
 
 	gomock.InOrder(
@@ -682,7 +678,7 @@ func TestCalledUpdateAppWhenComposeUpFailed_ExpectErrorReturn(t *testing.T) {
 	// pass mockObj to a real object.
 	dockerExecutor = dockerExecutorMockObj
 
-	err := Controller.UpdateApp(APP_ID)
+	err := Executor.UpdateApp(APP_ID)
 
 	if err == nil {
 		t.Errorf("Expected err: %s, actual err: %s", "UnknownError", "nil")
@@ -693,7 +689,7 @@ func TestCalledDeleteApp_ExpectSuccess(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	dockerExecutorMockObj := dockermocks.NewMockDockerExecutorInterface(ctrl)
+	dockerExecutorMockObj := dockermocks.NewMockCommand(ctrl)
 	dbManagerMockObj := dbmocks.MockCommand(ctrl)
 
 	gomock.InOrder(
@@ -704,7 +700,7 @@ func TestCalledDeleteApp_ExpectSuccess(t *testing.T) {
 	// pass mockObj to a real object.
 	dockerExecutor = dockerExecutorMockObj
 
-	err := Controller.DeleteApp(APP_ID)
+	err := Executor.DeleteApp(APP_ID)
 
 	if err != nil {
 		t.Errorf("Unexpected err: %s", err.Error())
@@ -721,7 +717,7 @@ func TestCalledDeleteAppWhenSetYAMLFileFailed_ExpectErrorReturn(t *testing.T) {
 		dbManagerMockObj.EXPECT().GetApp(APP_ID).Return(nil, UnknownError),
 	)
 
-	err := Controller.DeleteApp(APP_ID)
+	err := Executor.DeleteApp(APP_ID)
 
 	if err == nil {
 		t.Errorf("Expected err: %s, actual err: %s", "UnknownError", "nil")
@@ -732,7 +728,7 @@ func TestCalledDeleteAppWhenComposeDeleteFailed_ExpectErrorReturn(t *testing.T) 
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	dockerExecutorMockObj := dockermocks.NewMockDockerExecutorInterface(ctrl)
+	dockerExecutorMockObj := dockermocks.NewMockCommand(ctrl)
 	dbManagerMockObj := dbmocks.MockCommand(ctrl)
 
 	gomock.InOrder(
@@ -745,7 +741,7 @@ func TestCalledDeleteAppWhenComposeDeleteFailed_ExpectErrorReturn(t *testing.T) 
 	// pass mockObj to a real object.
 	dockerExecutor = dockerExecutorMockObj
 
-	err := Controller.DeleteApp(APP_ID)
+	err := Executor.DeleteApp(APP_ID)
 
 	if err == nil {
 		t.Errorf("Expected err: %s, actual err: %s", "UnknownError", "nil")
@@ -756,7 +752,7 @@ func TestCalledDeleteAppWhenDBDeleteAppFailed_ExpectErrorReturn(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	dockerExecutorMockObj := dockermocks.NewMockDockerExecutorInterface(ctrl)
+	dockerExecutorMockObj := dockermocks.NewMockCommand(ctrl)
 	dbManagerMockObj := dbmocks.MockCommand(ctrl)
 
 	gomock.InOrder(
@@ -768,7 +764,7 @@ func TestCalledDeleteAppWhenDBDeleteAppFailed_ExpectErrorReturn(t *testing.T) {
 	// pass mockObj to a real object.
 	dockerExecutor = dockerExecutorMockObj
 
-	err := Controller.DeleteApp(APP_ID)
+	err := Executor.DeleteApp(APP_ID)
 
 	if err == nil {
 		t.Errorf("Expected err: %s, actual err: %s", "UnknownError", "nil")
@@ -839,7 +835,7 @@ func TestCalledRestoreRepoDigests_ExpectSuccess(t *testing.T) {
 	defer ctrl.Finish()
 
 	test_state := "UP"
-	dockerExecutorMockObj := dockermocks.NewMockDockerExecutorInterface(ctrl)
+	dockerExecutorMockObj := dockermocks.NewMockCommand(ctrl)
 
 	gomock.InOrder(
 		dockerExecutorMockObj.EXPECT().GetImageDigest(IMAGE_NAME).Return(IMAGE_DIGEST, nil),
@@ -861,7 +857,7 @@ func TestCalledRestoreStateInputSTOP_ExpectSuccess(t *testing.T) {
 	defer ctrl.Finish()
 
 	test_state := "STOP"
-	dockerExecutorMockObj := dockermocks.NewMockDockerExecutorInterface(ctrl)
+	dockerExecutorMockObj := dockermocks.NewMockCommand(ctrl)
 
 	gomock.InOrder(
 		dockerExecutorMockObj.EXPECT().Stop(gomock.Any()).Return(nil),
@@ -881,7 +877,7 @@ func TestCalledRestoreStateInputSTART_ExpectSuccess(t *testing.T) {
 	defer ctrl.Finish()
 
 	test_state := "START"
-	dockerExecutorMockObj := dockermocks.NewMockDockerExecutorInterface(ctrl)
+	dockerExecutorMockObj := dockermocks.NewMockCommand(ctrl)
 
 	gomock.InOrder(
 		dockerExecutorMockObj.EXPECT().Up(gomock.Any()).Return(nil),
@@ -901,7 +897,7 @@ func TestCalledRestoreStateInputUP_ExpectSuccess(t *testing.T) {
 	defer ctrl.Finish()
 
 	test_state := "UP"
-	dockerExecutorMockObj := dockermocks.NewMockDockerExecutorInterface(ctrl)
+	dockerExecutorMockObj := dockermocks.NewMockCommand(ctrl)
 
 	gomock.InOrder(
 		dockerExecutorMockObj.EXPECT().Up(gomock.Any()).Return(nil),
@@ -921,7 +917,7 @@ func TestCalledRestoreStateInputDEPLOY_ExpectSuccess(t *testing.T) {
 	defer ctrl.Finish()
 
 	test_state := "DEPLOY"
-	dockerExecutorMockObj := dockermocks.NewMockDockerExecutorInterface(ctrl)
+	dockerExecutorMockObj := dockermocks.NewMockCommand(ctrl)
 
 	gomock.InOrder(
 		dockerExecutorMockObj.EXPECT().Up(gomock.Any()).Return(nil),

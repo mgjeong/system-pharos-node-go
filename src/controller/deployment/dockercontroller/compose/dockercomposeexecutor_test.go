@@ -29,9 +29,7 @@ func mockExecuteCommand(command string, args ...string) (string, error) {
 	return doSomething(command, args...)
 }
 
-//type shellFunc func(command string, args ...string) (string, error)
-
-var oldShellExecutor shell.ShellInterface
+var oldShellExecutor shell.Command
 
 type tearDown func(t *testing.T)
 

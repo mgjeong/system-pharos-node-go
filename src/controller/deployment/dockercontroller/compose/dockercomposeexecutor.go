@@ -24,7 +24,7 @@ import (
 )
 
 var Executor composeExecutorImpl
-var shellExecutor shell.ShellInterface
+var shellExecutor shell.Command
 
 type composeExecutorImpl struct {
 	composeCommand string
@@ -183,7 +183,7 @@ func (c composeExecutorImpl) executeCommand(args ...string) error {
 	tmpArgs = append(tmpArgs, args...)
 	logger.Logging(logger.DEBUG, tmpArgs...)
 
-	_, err := shell.Executor.ExecuteCommand(c.composeCommand, tmpArgs...)
+	_, err := shellExecutor.ExecuteCommand(c.composeCommand, tmpArgs...)
 
 	return err
 }
@@ -196,7 +196,7 @@ func (c composeExecutorImpl) executeCommandWithMsg(args ...string) (string, erro
 	tmpArgs = append(tmpArgs, args...)
 	logger.Logging(logger.DEBUG, tmpArgs...)
 
-	msg, err := shell.Executor.ExecuteCommand(c.composeCommand, tmpArgs...)
+	msg, err := shellExecutor.ExecuteCommand(c.composeCommand, tmpArgs...)
 
 	return msg, err
 }
