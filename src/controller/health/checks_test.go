@@ -27,13 +27,13 @@ func TestCalledSendPingRequestWhenFailedToSendHttpRequest_ExpectErrorReturn(t *t
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	msgMockObj := msgmocks.NewMockMessengerInterface(ctrl)
+	msgMockObj := msgmocks.NewMockCommand(ctrl)
 
 	gomock.InOrder(
 		msgMockObj.EXPECT().SendHttpRequest("POST", gomock.Any(), gomock.Any()).Return(500, "", errors.New("Error")),
 	)
 
-	httpRequester = msgMockObj
+	httpExecutor = msgMockObj
 
 	interval := "1"
 	_, err := sendPingRequest("id", interval)
@@ -47,12 +47,12 @@ func TestCalledSendPingRequest_ExpectSuccess(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	msgMockObj := msgmocks.NewMockMessengerInterface(ctrl)
+	msgMockObj := msgmocks.NewMockCommand(ctrl)
 
 	gomock.InOrder(
 		msgMockObj.EXPECT().SendHttpRequest("POST", gomock.Any(), gomock.Any()).Return(200, "", nil),
 	)
-	httpRequester = msgMockObj
+	httpExecutor = msgMockObj
 
 	interval := "1"
 	_, err := sendPingRequest("id", interval)
