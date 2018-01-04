@@ -55,13 +55,13 @@ type DeploymentInterface interface {
 }
 
 var fileMode = os.FileMode(0755)
-var dbManager service.Command
+var dbExecutor service.Command
 
 var dockerExecutor dockercontroller.DockerExecutorInterface
 
 func init() {
 	dockerExecutor = dockercontroller.Executor
-	dbManager = service.Executor{}
+	dbExecutor = service.Executor{}
 }
 
 var Controller controller
@@ -105,7 +105,7 @@ func (controller) DeployApp(body string) (map[string]interface{}, error) {
 		return nil, errors.InvalidYaml{"invalid yaml syntax"}
 	}
 
-	data, err := dbManager.InsertComposeFile(string(convertedData))
+	data, err := dbExecutor.InsertComposeFile(string(convertedData))
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
 		e := dockerExecutor.DownWithRemoveImages(COMPOSE_FILE)
@@ -128,7 +128,7 @@ func (controller) Apps() (map[string]interface{}, error) {
 	logger.Logging(logger.DEBUG, "IN")
 	defer logger.Logging(logger.DEBUG, "OUT")
 
-	apps, err := dbManager.GetAppList()
+	apps, err := dbExecutor.GetAppList()
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
 		return nil, errors.Unknown{"db operation fail"}
@@ -155,7 +155,7 @@ func (controller) App(appId string) (map[string]interface{}, error) {
 	logger.Logging(logger.DEBUG, "IN", appId)
 	defer logger.Logging(logger.DEBUG, "OUT")
 
-	app, err := dbManager.GetApp(appId)
+	app, err := dbExecutor.GetApp(appId)
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
 		return nil, convertDBError(err, appId)
@@ -223,7 +223,7 @@ func (controller) UpdateAppInfo(appId string, body string) error {
 		return errors.InvalidYaml{"invalid yaml syntax"}
 	}
 
-	err = dbManager.UpdateAppInfo(appId, string(convertedData))
+	err = dbExecutor.UpdateAppInfo(appId, string(convertedData))
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
 		return convertDBError(err, appId)
@@ -241,7 +241,7 @@ func (controller) StartApp(appId string) error {
 	logger.Logging(logger.DEBUG, "IN", appId)
 	defer logger.Logging(logger.DEBUG, "OUT")
 
-	state, err := dbManager.GetAppState(appId)
+	state, err := dbExecutor.GetAppState(appId)
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
 		return convertDBError(err, appId)
@@ -267,7 +267,7 @@ func (controller) StartApp(appId string) error {
 		return err
 	}
 
-	err = dbManager.UpdateAppState(appId, "START")
+	err = dbExecutor.UpdateAppState(appId, "START")
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
 		return convertDBError(err, appId)
@@ -283,7 +283,7 @@ func (controller) StopApp(appId string) error {
 	logger.Logging(logger.DEBUG, "IN", appId)
 	defer logger.Logging(logger.DEBUG, "OUT")
 
-	state, err := dbManager.GetAppState(appId)
+	state, err := dbExecutor.GetAppState(appId)
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
 		return convertDBError(err, appId)
@@ -309,7 +309,7 @@ func (controller) StopApp(appId string) error {
 		return err
 	}
 
-	err = dbManager.UpdateAppState(appId, "STOP")
+	err = dbExecutor.UpdateAppState(appId, "STOP")
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
 		return convertDBError(err, appId)
@@ -337,7 +337,7 @@ func (controller) UpdateApp(appId string) error {
 		return err
 	}
 
-	app, e := dbManager.GetApp(appId)
+	app, e := dbExecutor.GetApp(appId)
 	if e != nil {
 		logger.Logging(logger.DEBUG, e.Error())
 		return convertDBError(e, appId)
@@ -385,7 +385,7 @@ func (controller) DeleteApp(appId string) error {
 	err = dockerExecutor.DownWithRemoveImages(COMPOSE_FILE)
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
-		state, e := dbManager.GetAppState(appId)
+		state, e := dbExecutor.GetAppState(appId)
 		if e != nil {
 			logger.Logging(logger.ERROR, e.Error())
 			return err
@@ -397,7 +397,7 @@ func (controller) DeleteApp(appId string) error {
 		return err
 	}
 
-	err = dbManager.DeleteApp(appId)
+	err = dbExecutor.DeleteApp(appId)
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
 		return convertDBError(err, appId)
@@ -504,7 +504,7 @@ func restoreState(state string) error {
 // otherwise, return error.
 func setYamlFile(appId string) error {
 
-	app, err := dbManager.GetApp(appId)
+	app, err := dbExecutor.GetApp(appId)
 	if err != nil {
 		return convertDBError(err, appId)
 	}
