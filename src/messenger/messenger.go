@@ -8,7 +8,7 @@ import (
 	"net/http"
 )
 
-type httpInterface interface {
+type httpWrapper interface {
 	DoWrapper(req *http.Request) (*http.Response, error)
 }
 
@@ -19,22 +19,22 @@ func (httpClient) DoWrapper(req *http.Request) (*http.Response, error) {
 	return http.DefaultClient.Do(req)
 }
 
-type MessengerInterface interface {
+type Command interface {
 	SendHttpRequest(method string, url string, dataOptional ...[]byte) (int, string, error)
 }
 
-type HttpRequester struct {
-	client httpInterface
+type Executor struct {
+	client httpWrapper
 }
 
-func NewMessenger() *HttpRequester {
-	return &HttpRequester{
+func NewExecutor() *Executor {
+	return &Executor{
 		client: httpClient{},
 	}
 }
 
 // sendHttpRequest creates a new request and sends it to target device.
-func (requester HttpRequester) SendHttpRequest(method string, url string, dataOptional ...[]byte) (int, string, error) {
+func (executor Executor) SendHttpRequest(method string, url string, dataOptional ...[]byte) (int, string, error) {
 	var err error
 	var req *http.Request
 
@@ -51,7 +51,7 @@ func (requester HttpRequester) SendHttpRequest(method string, url string, dataOp
 		return http.StatusInternalServerError, "", errors.InternalServerError{err.Error()}
 	}
 
-	resp, err := requester.client.DoWrapper(req)
+	resp, err := executor.client.DoWrapper(req)
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
 		return http.StatusInternalServerError, "", errors.InternalServerError{err.Error()}

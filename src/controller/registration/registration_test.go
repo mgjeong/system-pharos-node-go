@@ -70,7 +70,7 @@ func TestCalledRegisterWhenFailedToSetConfiguration_ExpectErrorReturn(t *testing
 	defer ctrl.Finish()
 
 	configMockObj := configmocks.NewMockCommand(ctrl)
-	msgMockObj := msgmocks.NewMockMessengerInterface(ctrl)
+	msgMockObj := msgmocks.NewMockCommand(ctrl)
 
 	url := "http://192.168.0.1:48099/api/v1/agents/register"
 	expectedResp := `{"id":"agentid"}`
@@ -84,7 +84,7 @@ func TestCalledRegisterWhenFailedToSetConfiguration_ExpectErrorReturn(t *testing
 		configMockObj.EXPECT().SetConfiguration(expectedNewConfig).Return(errors.New("Error")),
 	)
 	configurator = configMockObj
-	httpRequester = msgMockObj
+	httpExecutor = msgMockObj
 
 	err := register()
 
@@ -119,7 +119,7 @@ func TestCalledSendPingRequestWhenFailedToSendHttpRequest_ExpectErrorReturn(t *t
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	msgMockObj := msgmocks.NewMockMessengerInterface(ctrl)
+	msgMockObj := msgmocks.NewMockCommand(ctrl)
 
 	interval := "1"
 	url := "http://192.168.0.1:48099/api/v1/agents/id/ping"
@@ -129,7 +129,7 @@ func TestCalledSendPingRequestWhenFailedToSendHttpRequest_ExpectErrorReturn(t *t
 		msgMockObj.EXPECT().SendHttpRequest("POST", url, []byte(expectedBody)).Return(500, "", errors.New("Error")),
 	)
 
-	httpRequester = msgMockObj
+	httpExecutor = msgMockObj
 
 	_, err := sendPingRequest("id", interval)
 
@@ -142,7 +142,7 @@ func TestCalledSendPingRequest_ExpectSuccess(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	msgMockObj := msgmocks.NewMockMessengerInterface(ctrl)
+	msgMockObj := msgmocks.NewMockCommand(ctrl)
 
 	interval := "1"
 	url := "http://192.168.0.1:48099/api/v1/agents/id/ping"
@@ -151,7 +151,7 @@ func TestCalledSendPingRequest_ExpectSuccess(t *testing.T) {
 	gomock.InOrder(
 		msgMockObj.EXPECT().SendHttpRequest("POST", url, []byte(expectedBody)).Return(200, "", nil),
 	)
-	httpRequester = msgMockObj
+	httpExecutor = msgMockObj
 
 	_, err := sendPingRequest("id", interval)
 
@@ -164,14 +164,14 @@ func TestCalledSendRegisterRequestWhenFailedToSendHttpRequest_ExpectErrorReturn(
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	msgMockObj := msgmocks.NewMockMessengerInterface(ctrl)
+	msgMockObj := msgmocks.NewMockCommand(ctrl)
 
 	url := "http://192.168.0.1:48099/api/v1/agents/register"
 
 	gomock.InOrder(
 		msgMockObj.EXPECT().SendHttpRequest("POST", url, gomock.Any()).Return(500, "", errors.New("Error")),
 	)
-	httpRequester = msgMockObj
+	httpExecutor = msgMockObj
 
 	_, _, err := sendRegisterRequest(CONFIGURATION)
 
