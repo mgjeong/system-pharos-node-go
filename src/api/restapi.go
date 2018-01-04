@@ -44,7 +44,7 @@ func RunSDAWebServer(addr string, port int) {
 }
 
 var deploymentExecutor dep.Command
-var registerExecutor reg.Command
+var registrationExecutor reg.Command
 var resourceExecutor res.Command
 
 var _SDAApis _SDAApisHandler
@@ -60,7 +60,7 @@ const (
 
 func init() {
 	deploymentExecutor = dep.Executor
-	registerExecutor = reg.Executor{}
+	registrationExecutor = reg.Executor{}
 	resourceExecutor = res.Executor
 }
 
@@ -102,7 +102,7 @@ func (sda *_SDAApisHandler) handleUnregister(w http.ResponseWriter, req *http.Re
 		return
 	}
 
-	e := registerExecutor.Unregister()
+	e := registrationExecutor.Unregister()
 	if e != nil {
 		makeErrorResponse(w, e)
 		return
