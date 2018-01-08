@@ -23,9 +23,9 @@ import (
 	"commons/errors"
 	"commons/logger"
 	"commons/url"
-	. "controller/deployment"
-	. "controller/registration"
-	. "controller/resource"
+	dep "controller/deployment"
+	reg "controller/registration"
+	res "controller/resource"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -43,9 +43,9 @@ func RunSDAWebServer(addr string, port int) {
 	http.ListenAndServe(addr+":"+strconv.Itoa(port), &_SDAApis)
 }
 
-var deploymentCtrl DeploymentInterface
-var registerCtrl RegistrationInterface
-var resourceCtrl ResourceInterface
+var deploymentExecutor dep.Command
+var registrationExecutor reg.Command
+var resourceExecutor res.Command
 
 var _SDAApis _SDAApisHandler
 
@@ -59,9 +59,9 @@ const (
 )
 
 func init() {
-	deploymentCtrl = Controller
-	registerCtrl = Registration{}
-	resourceCtrl = Resource
+	deploymentExecutor = dep.Executor
+	registrationExecutor = reg.Executor{}
+	resourceExecutor = res.Executor
 }
 
 // Implements of http serve interface.
@@ -102,7 +102,7 @@ func (sda *_SDAApisHandler) handleUnregister(w http.ResponseWriter, req *http.Re
 		return
 	}
 
-	e := registerCtrl.Unregister()
+	e := registrationExecutor.Unregister()
 	if e != nil {
 		makeErrorResponse(w, e)
 		return
@@ -128,7 +128,7 @@ func (sda *_SDAApisHandler) handleDeploy(w http.ResponseWriter, req *http.Reques
 		return
 	}
 
-	response, e := deploymentCtrl.DeployApp(bodyStr)
+	response, e := deploymentExecutor.DeployApp(bodyStr)
 	if e != nil {
 		makeErrorResponse(w, e)
 		return
@@ -204,7 +204,7 @@ func (sda *_SDAApisHandler) app(w http.ResponseWriter, req *http.Request, appId 
 	var e error
 	switch req.Method {
 	case GET:
-		response, e = deploymentCtrl.App(appId)
+		response, e = deploymentExecutor.App(appId)
 	case POST:
 		var bodyStr string
 		bodyStr, e = getBodyFromReq(req)
@@ -212,9 +212,9 @@ func (sda *_SDAApisHandler) app(w http.ResponseWriter, req *http.Request, appId 
 			makeErrorResponse(w, errors.InvalidYaml{"body is empty"})
 			return
 		}
-		e = deploymentCtrl.UpdateAppInfo(appId, bodyStr)
+		e = deploymentExecutor.UpdateAppInfo(appId, bodyStr)
 	case DELETE:
-		e = deploymentCtrl.DeleteApp(appId)
+		e = deploymentExecutor.DeleteApp(appId)
 	}
 	if e != nil {
 		makeErrorResponse(w, e)
@@ -236,7 +236,7 @@ func (sda *_SDAApisHandler) apps(w http.ResponseWriter, req *http.Request) {
 	if !checkSupportedMethod(w, req.Method, GET) {
 		return
 	}
-	response, e := deploymentCtrl.Apps()
+	response, e := deploymentExecutor.Apps()
 	if e != nil {
 		makeErrorResponse(w, e)
 		return
@@ -253,7 +253,7 @@ func (sda *_SDAApisHandler) update(w http.ResponseWriter, req *http.Request, app
 	if !checkSupportedMethod(w, req.Method, POST) {
 		return
 	}
-	e := deploymentCtrl.UpdateApp(appId)
+	e := deploymentExecutor.UpdateApp(appId)
 	if e != nil {
 		makeErrorResponse(w, e)
 		return
@@ -272,7 +272,7 @@ func (sda *_SDAApisHandler) stop(w http.ResponseWriter, req *http.Request, appId
 	if !checkSupportedMethod(w, req.Method, POST) {
 		return
 	}
-	e := deploymentCtrl.StopApp(appId)
+	e := deploymentExecutor.StopApp(appId)
 	if e != nil {
 		makeErrorResponse(w, e)
 		return
@@ -291,7 +291,7 @@ func (sda *_SDAApisHandler) start(w http.ResponseWriter, req *http.Request, appI
 	if !checkSupportedMethod(w, req.Method, POST) {
 		return
 	}
-	e := deploymentCtrl.StartApp(appId)
+	e := deploymentExecutor.StartApp(appId)
 	if e != nil {
 		makeErrorResponse(w, e)
 		return
@@ -311,7 +311,7 @@ func (sda *_SDAApisHandler) resource(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	response, e := resourceCtrl.GetResourceInfo()
+	response, e := resourceExecutor.GetResourceInfo()
 
 	if e != nil {
 		makeErrorResponse(w, e)
@@ -329,7 +329,7 @@ func (sda *_SDAApisHandler) performance(w http.ResponseWriter, req *http.Request
 		return
 	}
 
-	response, e := resourceCtrl.GetPerformanceInfo()
+	response, e := resourceExecutor.GetPerformanceInfo()
 
 	if e != nil {
 		makeErrorResponse(w, e)

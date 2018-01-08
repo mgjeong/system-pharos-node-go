@@ -47,18 +47,18 @@ var (
 	managerAddress string
 )
 
-type RegistrationInterface interface {
+type Command interface {
 	Unregister() error
 }
 
-type Registration struct{}
+type Executor struct{}
 
-var httpRequester messenger.MessengerInterface
+var httpExecutor messenger.Command
 var configurator configuration.Command
 
 func init() {
-	httpRequester = messenger.NewMessenger()
-	configurator = configuration.Configurator{}
+	httpExecutor = messenger.NewExecutor()
+	configurator = configuration.Executor{}
 
 	// Register
 	err := register()
@@ -122,7 +122,7 @@ func register() error {
 // Unregister to system-edge-manager service.
 // if succeed to unregister, return error as nil
 // otherwise, return error.
-func (Registration) Unregister() error {
+func (Executor) Unregister() error {
 	logger.Logging(logger.DEBUG, "IN")
 	defer logger.Logging(logger.DEBUG, "OUT")
 
@@ -192,7 +192,7 @@ func sendPingRequest(agentID string, interval string) (int, error) {
 	logger.Logging(logger.DEBUG, "try to send ping request")
 
 	url := makeRequestUrl(url.Agents(), "/", agentID, url.Ping())
-	code, _, err := httpRequester.SendHttpRequest("POST", url, []byte(jsonData))
+	code, _, err := httpExecutor.SendHttpRequest("POST", url, []byte(jsonData))
 	if err != nil {
 		logger.Logging(logger.ERROR, "failed to send ping request")
 		return code, err
@@ -213,7 +213,7 @@ func sendRegisterRequest(body map[string]interface{}) (int, string, error) {
 		logger.Logging(logger.ERROR, err.Error())
 		return 500, "", err
 	}
-	return httpRequester.SendHttpRequest("POST", url, []byte(jsonData))
+	return httpExecutor.SendHttpRequest("POST", url, []byte(jsonData))
 }
 
 func sendUnregisterRequest(agentID string) (int, string, error) {
@@ -221,7 +221,7 @@ func sendUnregisterRequest(agentID string) (int, string, error) {
 	defer logger.Logging(logger.DEBUG, "OUT")
 
 	url := makeRequestUrl(url.Agents(), "/", agentID, url.Unregister())
-	return httpRequester.SendHttpRequest("POST", url)
+	return httpExecutor.SendHttpRequest("POST", url)
 }
 
 func makeRequestUrl(api_parts ...string) string {

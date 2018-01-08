@@ -23,7 +23,7 @@ import (
 	"commons/errors"
 	"commons/logger"
 	"controller/deployment/dockercontroller"
-	. "db/mongo/model/service"
+	"db/mongo/service"
 	"encoding/json"
 	"io/ioutil"
 	"os"
@@ -43,7 +43,7 @@ const (
 	STATE        = "state"
 )
 
-type DeploymentInterface interface {
+type Command interface {
 	DeployApp(body string) (map[string]interface{}, error)
 	Apps() (map[string]interface{}, error)
 	App(appId string) (map[string]interface{}, error)
@@ -54,19 +54,18 @@ type DeploymentInterface interface {
 	UpdateApp(appId string) error
 }
 
-var fileMode = os.FileMode(0755)
-var dbManager DBManager
+type depExecutorImpl struct{}
 
-var dockerExecutor dockercontroller.DockerExecutorInterface
+var Executor depExecutorImpl
+var dockerExecutor dockercontroller.Command
+
+var fileMode = os.FileMode(0755)
+var dbExecutor service.Command
 
 func init() {
 	dockerExecutor = dockercontroller.Executor
-	dbManager = DBManager{}
+	dbExecutor = service.Executor{}
 }
-
-var Controller controller
-
-type controller struct{}
 
 // Deploy app to target by yaml description.
 // yaml description will be inserted to db server
@@ -74,7 +73,7 @@ type controller struct{}
 // and create, start containers on the target.
 // if succeed to deploy, return app_id
 // otherwise, return error.
-func (controller) DeployApp(body string) (map[string]interface{}, error) {
+func (depExecutorImpl) DeployApp(body string) (map[string]interface{}, error) {
 	logger.Logging(logger.DEBUG, "IN")
 	defer logger.Logging(logger.DEBUG, "OUT")
 
@@ -114,7 +113,7 @@ func (controller) DeployApp(body string) (map[string]interface{}, error) {
 		return nil, errors.InvalidYaml{"invalid yaml syntax"}
 	}
 
-	data, err := dbManager.InsertComposeFile(string(jsonData))
+	data, err := dbExecutor.InsertComposeFile(string(jsonData))
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
 		e := dockerExecutor.DownWithRemoveImages(COMPOSE_FILE)
@@ -133,11 +132,11 @@ func (controller) DeployApp(body string) (map[string]interface{}, error) {
 // Getting all of app informations in the target.
 // if succeed to get, return all of app informations as map
 // otherwise, return error.
-func (controller) Apps() (map[string]interface{}, error) {
+func (depExecutorImpl) Apps() (map[string]interface{}, error) {
 	logger.Logging(logger.DEBUG, "IN")
 	defer logger.Logging(logger.DEBUG, "OUT")
 
-	apps, err := dbManager.GetAppList()
+	apps, err := dbExecutor.GetAppList()
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
 		return nil, errors.Unknown{"db operation fail"}
@@ -160,11 +159,11 @@ func (controller) Apps() (map[string]interface{}, error) {
 // Getting app information in the target by input appId.
 // if succeed to get, return app information
 // otherwise, return error.
-func (controller) App(appId string) (map[string]interface{}, error) {
+func (depExecutorImpl) App(appId string) (map[string]interface{}, error) {
 	logger.Logging(logger.DEBUG, "IN", appId)
 	defer logger.Logging(logger.DEBUG, "OUT")
 
-	app, err := dbManager.GetApp(appId)
+	app, err := dbExecutor.GetApp(appId)
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
 		return nil, convertDBError(err, appId)
@@ -221,7 +220,7 @@ func (controller) App(appId string) (map[string]interface{}, error) {
 // only update yaml description on the db server.
 // if succeed to update, return error as nil
 // otherwise, return error.
-func (controller) UpdateAppInfo(appId string, body string) error {
+func (depExecutorImpl) UpdateAppInfo(appId string, body string) error {
 	logger.Logging(logger.DEBUG, "IN", appId)
 	defer logger.Logging(logger.DEBUG, "OUT")
 
@@ -240,7 +239,7 @@ func (controller) UpdateAppInfo(appId string, body string) error {
 		return errors.InvalidYaml{"invalid yaml syntax"}
 	}
 
-	err = dbManager.UpdateAppInfo(appId, string(jsonData))
+	err = dbExecutor.UpdateAppInfo(appId, string(jsonData))
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
 		return convertDBError(err, appId)
@@ -254,11 +253,11 @@ func (controller) UpdateAppInfo(appId string, body string) error {
 // can not guarantee about valid operation of containers.
 // if succeed to start, return error as nil
 // otherwise, return error.
-func (controller) StartApp(appId string) error {
+func (depExecutorImpl) StartApp(appId string) error {
 	logger.Logging(logger.DEBUG, "IN", appId)
 	defer logger.Logging(logger.DEBUG, "OUT")
 
-	state, err := dbManager.GetAppState(appId)
+	state, err := dbExecutor.GetAppState(appId)
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
 		return convertDBError(err, appId)
@@ -284,7 +283,7 @@ func (controller) StartApp(appId string) error {
 		return err
 	}
 
-	err = dbManager.UpdateAppState(appId, "START")
+	err = dbExecutor.UpdateAppState(appId, "START")
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
 		return convertDBError(err, appId)
@@ -296,11 +295,11 @@ func (controller) StartApp(appId string) error {
 // Stop app in the target by input appId.
 // if succeed to stop, return app information
 // otherwise, return error.
-func (controller) StopApp(appId string) error {
+func (depExecutorImpl) StopApp(appId string) error {
 	logger.Logging(logger.DEBUG, "IN", appId)
 	defer logger.Logging(logger.DEBUG, "OUT")
 
-	state, err := dbManager.GetAppState(appId)
+	state, err := dbExecutor.GetAppState(appId)
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
 		return convertDBError(err, appId)
@@ -326,7 +325,7 @@ func (controller) StopApp(appId string) error {
 		return err
 	}
 
-	err = dbManager.UpdateAppState(appId, "STOP")
+	err = dbExecutor.UpdateAppState(appId, "STOP")
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
 		return convertDBError(err, appId)
@@ -344,7 +343,7 @@ func (controller) StopApp(appId string) error {
 // Agent can make sure that previous imaes by digest.
 // if succeed to update, return error as nil
 // otherwise, return error.
-func (controller) UpdateApp(appId string) error {
+func (depExecutorImpl) UpdateApp(appId string) error {
 	logger.Logging(logger.DEBUG, "IN", appId)
 	defer logger.Logging(logger.DEBUG, "OUT")
 
@@ -354,7 +353,7 @@ func (controller) UpdateApp(appId string) error {
 		return err
 	}
 
-	app, e := dbManager.GetApp(appId)
+	app, e := dbExecutor.GetApp(appId)
 	if e != nil {
 		logger.Logging(logger.DEBUG, e.Error())
 		return convertDBError(e, appId)
@@ -389,7 +388,7 @@ func (controller) UpdateApp(appId string) error {
 // See also controller.StopApp().
 // if succeed to delete, return error as nil
 // otherwise, return error.
-func (controller) DeleteApp(appId string) error {
+func (depExecutorImpl) DeleteApp(appId string) error {
 	logger.Logging(logger.DEBUG, "IN", appId)
 	defer logger.Logging(logger.DEBUG, "OUT")
 
@@ -402,7 +401,7 @@ func (controller) DeleteApp(appId string) error {
 	err = dockerExecutor.DownWithRemoveImages(COMPOSE_FILE)
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
-		state, e := dbManager.GetAppState(appId)
+		state, e := dbExecutor.GetAppState(appId)
 		if e != nil {
 			logger.Logging(logger.ERROR, e.Error())
 			return err
@@ -414,7 +413,7 @@ func (controller) DeleteApp(appId string) error {
 		return err
 	}
 
-	err = dbManager.DeleteApp(appId)
+	err = dbExecutor.DeleteApp(appId)
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
 		return convertDBError(err, appId)
@@ -521,7 +520,7 @@ func restoreState(state string) error {
 // if setting YAML is succeeded, return error as nil
 // otherwise, return error.
 func setYamlFile(appId string) error {
-	app, err := dbManager.GetApp(appId)
+	app, err := dbExecutor.GetApp(appId)
 	if err != nil {
 		return convertDBError(err, appId)
 	}
