@@ -15,7 +15,7 @@
  *
  *******************************************************************************/
 
-// Package registration provides logic of checking health with system-edge-manager service.
+// Package registration provides logic of checking health with Pharos Anchor service.
 package registration
 
 import (
@@ -67,8 +67,8 @@ func init() {
 	}
 }
 
-// register to system-edge-manager service.
-// should know the system-edge-manager address(ip:port)
+// register to pharos-anchor service.
+// should know the pharos-anchor address(ip:port)
 // if succeed to register, return error as nil
 // otherwise, return error.
 func register() error {
@@ -81,7 +81,7 @@ func register() error {
 		return err
 	}
 
-	// Get system-edge-manager address from configuration.
+	// Get pharos-anchor address from configuration.
 	managerAddress = config["serveraddress"].(string)
 
 	// Make a request body for registration.
@@ -119,7 +119,7 @@ func register() error {
 	return nil
 }
 
-// Unregister to system-edge-manager service.
+// Unregister to pharos-anchor service.
 // if succeed to unregister, return error as nil
 // otherwise, return error.
 func (Executor) Unregister() error {
@@ -191,7 +191,7 @@ func sendPingRequest(agentID string, interval string) (int, error) {
 
 	logger.Logging(logger.DEBUG, "try to send ping request")
 
-	url := makeRequestUrl(url.Agents(), "/", agentID, url.Ping())
+	url := makeRequestUrl(url.Nodes(), "/", agentID, url.Ping())
 	code, _, err := httpExecutor.SendHttpRequest("POST", url, []byte(jsonData))
 	if err != nil {
 		logger.Logging(logger.ERROR, "failed to send ping request")
@@ -206,7 +206,7 @@ func sendRegisterRequest(body map[string]interface{}) (int, string, error) {
 	logger.Logging(logger.DEBUG, "IN")
 	defer logger.Logging(logger.DEBUG, "OUT")
 
-	url := makeRequestUrl(url.Agents(), url.Register())
+	url := makeRequestUrl(url.Nodes(), url.Register())
 
 	jsonData, err := convertMapToJson(body)
 	if err != nil {
@@ -220,13 +220,13 @@ func sendUnregisterRequest(agentID string) (int, string, error) {
 	logger.Logging(logger.DEBUG, "IN")
 	defer logger.Logging(logger.DEBUG, "OUT")
 
-	url := makeRequestUrl(url.Agents(), "/", agentID, url.Unregister())
+	url := makeRequestUrl(url.Nodes(), "/", agentID, url.Unregister())
 	return httpExecutor.SendHttpRequest("POST", url)
 }
 
 func makeRequestUrl(api_parts ...string) string {
 	var full_url bytes.Buffer
-	full_url.WriteString(HTTP_TAG + managerAddress + ":" + DEFAULT_SDAM_PORT + url.Base())
+	full_url.WriteString(HTTP_TAG + managerAddress + ":" + DEFAULT_SDAM_PORT + url.Base() + url.Management())
 	for _, api_part := range api_parts {
 		full_url.WriteString(api_part)
 	}

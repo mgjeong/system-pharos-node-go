@@ -67,13 +67,13 @@ func invalidOperation(t *testing.T, method string, url string, code int) {
 
 func getInvalidMethodList() map[string][]string {
 	urlList := make(map[string][]string)
-	urlList["/api/v1/deploy"] = []string{GET, PUT, DELETE}
-	urlList["/api/v1/apps"] = []string{PUT, POST, DELETE}
-	urlList["/api/v1/apps/11"] = []string{PUT}
-	urlList["/api/v1/apps/11/update"] = []string{GET, PUT, DELETE}
-	urlList["/api/v1/apps/11/stop"] = []string{GET, PUT, DELETE}
-	urlList["/api/v1/apps/11/start"] = []string{GET, PUT, DELETE}
-	urlList["/api/v1/unregister"] = []string{GET, PUT, DELETE}
+	urlList["/api/v1/management/deploy"] = []string{GET, PUT, DELETE}
+	urlList["/api/v1/management/apps"] = []string{PUT, POST, DELETE}
+	urlList["/api/v1/management/apps/11"] = []string{PUT}
+	urlList["/api/v1/management/apps/11/update"] = []string{GET, PUT, DELETE}
+	urlList["/api/v1/management/apps/11/stop"] = []string{GET, PUT, DELETE}
+	urlList["/api/v1/management/apps/11/start"] = []string{GET, PUT, DELETE}
+	urlList["/api/v1/management/unregister"] = []string{GET, PUT, DELETE}
 
 	return urlList
 }
@@ -214,7 +214,7 @@ func setup(t *testing.T, mock mockingci) func(*testing.T) {
 }
 
 func setup2(t *testing.T, mock mockinghci) func(*testing.T) {
-	registerExecutor = mock
+	registrationExecutor = mock
 	return func(*testing.T) {}
 }
 
@@ -298,10 +298,9 @@ func TestDeploy(t *testing.T) {
 
 	t.Run("Success", func(t *testing.T) {
 		r := returnValue{id: id, err: nil, path: ""}
-		executeFunc(t, POST, urls.Base()+urls.Deploy(), r, true)
-
+		executeFunc(t, POST, urls.Base()+urls.Management()+urls.Deploy(), r, true)
 		if status != http.StatusOK ||
-			head.Get("Location") != urls.Base()+urls.Apps()+"/"+id {
+			head.Get("Location") != urls.Base()+urls.Management()+urls.Apps()+"/"+id {
 			t.Error()
 		}
 	})
@@ -311,7 +310,7 @@ func TestDeploy(t *testing.T) {
 	for _, test := range testList {
 		t.Run("Error/"+test.name, func(t *testing.T) {
 			r := returnValue{id: id, err: test.err, path: ""}
-			executeFunc(t, POST, urls.Base()+urls.Deploy(), r, true)
+			executeFunc(t, POST, urls.Base()+urls.Management()+urls.Deploy(), r, true)
 
 			if status != test.expectCode {
 				t.Error()
@@ -321,7 +320,7 @@ func TestDeploy(t *testing.T) {
 
 	t.Run("ErrorEmptyBody", func(t *testing.T) {
 		r := returnValue{id: id, err: errors.Unknown{}, path: ""}
-		executeFunc(t, POST, urls.Base()+urls.Deploy(), r, false)
+		executeFunc(t, POST, urls.Base()+urls.Management()+urls.Deploy(), r, false)
 
 		if status == http.StatusOK {
 			t.Error()
@@ -337,7 +336,7 @@ func TestApps(t *testing.T) {
 
 	t.Run("Success", func(t *testing.T) {
 		r := returnValue{id: "", err: nil, path: ""}
-		executeFunc(t, GET, urls.Base()+urls.Apps(), r, false)
+		executeFunc(t, GET, urls.Base()+urls.Management()+urls.Apps(), r, false)
 
 		if status != http.StatusOK {
 			t.Error()
@@ -348,7 +347,7 @@ func TestApps(t *testing.T) {
 	for _, test := range testList {
 		t.Run("Error/"+test.name, func(t *testing.T) {
 			r := returnValue{id: "", err: test.err, path: ""}
-			executeFunc(t, GET, urls.Base()+urls.Apps(), r, false)
+			executeFunc(t, GET, urls.Base()+urls.Management()+urls.Apps(), r, false)
 			if status != test.expectCode {
 				t.Error()
 			}
@@ -363,7 +362,7 @@ func TestUnregister(t *testing.T) {
 
 	t.Run("Success", func(t *testing.T) {
 		r := returnValue{id: "", err: nil, path: ""}
-		executeFunc2(t, POST, urls.Base()+urls.Unregister(), r, true)
+		executeFunc2(t, POST, urls.Base()+urls.Management()+urls.Unregister(), r, true)
 
 		if status != http.StatusOK {
 			t.Error()
@@ -374,7 +373,7 @@ func TestUnregister(t *testing.T) {
 	for _, test := range testList {
 		t.Run("Error/"+test.name, func(t *testing.T) {
 			r := returnValue{id: "", err: test.err, path: ""}
-			executeFunc2(t, POST, urls.Base()+urls.Unregister(), r, true)
+			executeFunc2(t, POST, urls.Base()+urls.Management()+urls.Unregister(), r, true)
 			if status != test.expectCode {
 				t.Error()
 			}
@@ -390,7 +389,7 @@ func TestApp(t *testing.T) {
 	var list []string = []string{GET, POST, DELETE}
 
 	id := "111"
-	url := urls.Base() + urls.Apps() + "/" + id
+	url := urls.Base() + urls.Management() + urls.Apps() + "/" + id
 
 	for _, method := range list {
 		t.Run(method+"/Success", func(t *testing.T) {
@@ -431,7 +430,7 @@ func TestFunc(t *testing.T) {
 	defer tearDown(t)
 
 	id := "111"
-	url := urls.Base() + urls.Apps() + "/" + id
+	url := urls.Base() + urls.Management() + urls.Apps() + "/" + id
 
 	urls := []string{
 		urls.Update(), urls.Start(), urls.Stop(),

@@ -21,6 +21,12 @@ package url
 // Returning base url as string.
 func Base() string { return "/api/v1" }
 
+// Returning management url as string.
+func Management() string { return "/management" }
+
+// Returning monitoring url as string.
+func Monitoring() string { return "/monitoring" }
+
 // Returning deploy url as string.
 func Deploy() string { return "/deploy" }
 
@@ -36,8 +42,8 @@ func Start() string { return "/start" }
 // Returning Stop url as string.
 func Stop() string { return "/stop" }
 
-// Returning Agents url as string.
-func Agents() string { return "/agents" }
+// Returning Nodes url as string.
+func Nodes() string { return "/nodes" }
 
 // Returning Ping url as string.
 func Ping() string { return "/ping" }
