@@ -14,19 +14,11 @@
  * limitations under the License.
  *
  *******************************************************************************/
-package api
+package common
 
 import (
-	"io"
 	"net/http"
 	"testing"
-)
-
-const (
-	GET    string = "GET"
-	PUT    string = "PUT"
-	POST   string = "POST"
-	DELETE string = "DELETE"
 )
 
 // Test
@@ -34,10 +26,6 @@ var status int
 var head http.Header
 
 type testResponseWriter struct {
-}
-
-func init() {
-	NodeApis = Executor{}
 }
 
 func (w testResponseWriter) Header() http.Header {
@@ -53,43 +41,25 @@ func (w testResponseWriter) WriteHeader(code int) {
 	status = code
 }
 
-func newRequest(method string, url string, body io.Reader) *http.Request {
-	status = 0
-	head = make(map[string][]string)
-
-	r, _ := http.NewRequest(method, url, body)
-	r.URL.Path = url
-	return r
-}
-
-func invalidOperation(t *testing.T, method string, url string, code int) {
-	w, req := testResponseWriter{}, newRequest(method, url, nil)
-	NodeApis.ServeHTTP(w, req)
+func testMakeResponse(t *testing.T, w testResponseWriter, data []byte, expect int) {
+	MakeResponse(w, data)
 
 	t.Log(status)
-	if status != code {
+	if status != expect {
 		t.Error()
 	}
 }
 
-func getInvalidUrlList() map[string][]string {
-	urlList := make(map[string][]string)
-	urlList["/test"] = []string{GET, PUT, POST, DELETE}
-	urlList["/api/v1/test"] = []string{GET, PUT, POST, DELETE}
-	urlList["/api/v1/apps/11/test"] = []string{GET, PUT, POST, DELETE}
-	urlList["/api/v1/apps/11/test/"] = []string{GET, PUT, POST, DELETE}
+// This unittest function does not work.
+func TestMakeResponse(t *testing.T) {
+	/*var data []byte
+	w := testResponseWriter{}
+	t.Run("ExpectSuccessWithEmptyData", func(t *testing.T) {
+		testMakeResponse(t, w, data, http.StatusOK)
+	})
 
-	return urlList
-}
-
-func TestInvalidUrl(t *testing.T) {
-	urlList := getInvalidUrlList()
-
-	for key, vals := range urlList {
-		for _, tc := range vals {
-			t.Run(key+"="+tc, func(t *testing.T) {
-				invalidOperation(t, tc, key, http.StatusNotFound)
-			})
-		}
-	}
+	data = []byte{'1', '2', '3'}
+	t.Run("ExpectSuccess", func(t *testing.T) {
+		testMakeResponse(t, w, data, http.StatusOK)
+	})*/
 }
