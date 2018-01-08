@@ -15,18 +15,15 @@
  *
  *******************************************************************************/
 
-// Package registration provides logic of checking health with system-edge-manager service.
-package registration
+// Package health provides logic of checking health with system-edge-manager service.
+package health
 
 import (
-	"bytes"
 	"commons/errors"
 	"commons/logger"
 	"commons/url"
 	"controller/configuration"
-	"encoding/json"
 	"messenger"
-	"strconv"
 	"time"
 )
 
@@ -39,12 +36,6 @@ const (
 	HEALTH_CHECK      = "healthCheck"
 	DEFAULT_SDAM_PORT = "48099"
 	TIME_UNIT         = time.Minute
-)
-
-var (
-	quit           chan bool
-	ticker         *time.Ticker
-	managerAddress string
 )
 
 type Command interface {
@@ -82,7 +73,7 @@ func register() error {
 	}
 
 	// Get system-edge-manager address from configuration.
-	managerAddress = config["serveraddress"].(string)
+	common.managerAddress = config["serveraddress"].(string)
 
 	// Make a request body for registration.
 	body := makeRegistrationBody(config)
@@ -93,7 +84,7 @@ func register() error {
 		return err
 	}
 
-	respMap, err := convertRespToMap(respStr)
+	respMap, err := common.convertRespToMap(respStr)
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
 		return err
@@ -137,78 +128,19 @@ func (Executor) Unregister() error {
 	}
 
 	// Stop a ticker to send ping request.
-	if quit != nil {
-		quit <- true
+	if common.quit != nil {
+		common.quit <- true
 	}
 	return nil
-}
-
-func stopHealthCheck() {
-	close(quit)
-	quit = nil
-}
-
-func startHealthCheck(agentID string) {
-	logger.Logging(logger.DEBUG, "IN")
-	defer logger.Logging(logger.DEBUG, "OUT")
-
-	// Get interval from configuration file.
-	config, err := configurator.GetConfiguration()
-	if err != nil {
-		logger.Logging(logger.ERROR, err.Error())
-	}
-	interval := config["pinginterval"].(string)
-
-	quit = make(chan bool)
-	intervalInt, _ := strconv.Atoi(interval)
-	ticker = time.NewTicker(time.Duration(intervalInt) * TIME_UNIT)
-	go func() {
-		for {
-			select {
-			case <-ticker.C:
-				sendPingRequest(agentID, interval)
-			case <-quit:
-				ticker.Stop()
-				stopHealthCheck()
-				return
-			}
-		}
-	}()
-}
-
-func sendPingRequest(agentID string, interval string) (int, error) {
-	logger.Logging(logger.DEBUG, "IN")
-	defer logger.Logging(logger.DEBUG, "OUT")
-
-	data := make(map[string]interface{})
-	data[INTERVAL] = interval
-
-	jsonData, err := convertMapToJson(data)
-	if err != nil {
-		logger.Logging(logger.ERROR, err.Error())
-		return 500, err
-	}
-
-	logger.Logging(logger.DEBUG, "try to send ping request")
-
-	url := makeRequestUrl(url.Agents(), "/", agentID, url.Ping())
-	code, _, err := httpExecutor.SendHttpRequest("POST", url, []byte(jsonData))
-	if err != nil {
-		logger.Logging(logger.ERROR, "failed to send ping request")
-		return code, err
-	}
-
-	logger.Logging(logger.DEBUG, "receive pong response, code["+strconv.Itoa(code)+"]")
-	return code, nil
 }
 
 func sendRegisterRequest(body map[string]interface{}) (int, string, error) {
 	logger.Logging(logger.DEBUG, "IN")
 	defer logger.Logging(logger.DEBUG, "OUT")
 
-	url := makeRequestUrl(url.Agents(), url.Register())
+	url := common.makeRequestUrl(url.Agents(), url.Register())
 
-	jsonData, err := convertMapToJson(body)
+	jsonData, err := common.convertMapToJson(body)
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
 		return 500, "", err
@@ -220,45 +152,8 @@ func sendUnregisterRequest(agentID string) (int, string, error) {
 	logger.Logging(logger.DEBUG, "IN")
 	defer logger.Logging(logger.DEBUG, "OUT")
 
-	url := makeRequestUrl(url.Agents(), "/", agentID, url.Unregister())
+	url := common.makeRequestUrl(url.Agents(), "/", agentID, url.Unregister())
 	return httpExecutor.SendHttpRequest("POST", url)
-}
-
-func makeRequestUrl(api_parts ...string) string {
-	var full_url bytes.Buffer
-	full_url.WriteString(HTTP_TAG + managerAddress + ":" + DEFAULT_SDAM_PORT + url.Base())
-	for _, api_part := range api_parts {
-		full_url.WriteString(api_part)
-	}
-
-	logger.Logging(logger.DEBUG, full_url.String())
-	return full_url.String()
-}
-
-func convertJsonToMap(jsonStr string) (map[string]interface{}, error) {
-	result := make(map[string]interface{})
-	err := json.Unmarshal([]byte(jsonStr), &result)
-	if err != nil {
-		return nil, errors.InvalidParam{"json unmarshalling failed"}
-	}
-	return result, err
-}
-
-func convertMapToJson(data map[string]interface{}) (string, error) {
-	result, err := json.Marshal(data)
-	if err != nil {
-		return "", errors.Unknown{"json marshalling failed"}
-	}
-	return string(result), nil
-}
-
-func convertRespToMap(respStr string) (map[string]interface{}, error) {
-	resp, err := convertJsonToMap(respStr)
-	if err != nil {
-		logger.Logging(logger.ERROR, "Failed to convert response from string to map")
-		return nil, errors.Unknown{"Json Converting Failed"}
-	}
-	return resp, err
 }
 
 func makeRegistrationBody(config map[string]interface{}) map[string]interface{} {

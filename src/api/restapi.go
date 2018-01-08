@@ -24,7 +24,7 @@ import (
 	"commons/logger"
 	"commons/url"
 	dep "controller/deployment"
-	reg "controller/registration"
+	health "controller/health"
 	res "controller/resource"
 	"encoding/json"
 	"fmt"
@@ -44,9 +44,8 @@ func RunSDAWebServer(addr string, port int) {
 }
 
 var deploymentExecutor dep.Command
-var registrationExecutor reg.Command
+var healthExecutor health.Command
 var resourceExecutor res.Command
-
 var _SDAApis _SDAApisHandler
 
 type _SDAApisHandler struct{}
@@ -60,7 +59,7 @@ const (
 
 func init() {
 	deploymentExecutor = dep.Executor
-	registrationExecutor = reg.Executor{}
+	healthExecutor = health.Executor{}
 	resourceExecutor = res.Executor
 }
 
@@ -102,7 +101,7 @@ func (sda *_SDAApisHandler) handleUnregister(w http.ResponseWriter, req *http.Re
 		return
 	}
 
-	e := registrationExecutor.Unregister()
+	e := healthExecutor.Unregister()
 	if e != nil {
 		makeErrorResponse(w, e)
 		return
