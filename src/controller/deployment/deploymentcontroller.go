@@ -28,7 +28,6 @@ import (
 	"io/ioutil"
 	"os"
 	"reflect"
-	"strings"
 
 	"github.com/ghodss/yaml"
 )
@@ -80,38 +79,31 @@ func (depExecutorImpl) DeployApp(body string) (map[string]interface{}, error) {
 	err := ioutil.WriteFile(COMPOSE_FILE, []byte(body), fileMode)
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
-		return nil, errors.IOError{"file io fail"}
+		return nil, errors.IOError{Msg: "file io fail"}
 	}
 	defer os.RemoveAll(COMPOSE_FILE)
-
-	err = dockerExecutor.Up(COMPOSE_FILE)
-	if err != nil {
-		logger.Logging(logger.ERROR, err.Error())
-		e := dockerExecutor.DownWithRemoveImages(COMPOSE_FILE)
-		if e != nil {
-			logger.Logging(logger.ERROR, e.Error())
-		}
-		return nil, err
-	}
 
 	convertedData, err := yaml.YAMLToJSON([]byte(body))
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
-		e := dockerExecutor.DownWithRemoveImages(COMPOSE_FILE)
-		if e != nil {
-			logger.Logging(logger.ERROR, e.Error())
-		}
-		return nil, errors.InvalidYaml{"invalid yaml syntax"}
+		return nil, errors.InvalidYaml{Msg: "invalid yaml syntax"}
 	}
 
 	data, err := dbExecutor.InsertComposeFile(string(convertedData))
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
-		e := dockerExecutor.DownWithRemoveImages(COMPOSE_FILE)
+		return nil, errors.Unknown{Msg: "db operation fail"}
+	}
+
+	err = dockerExecutor.Up(data[ID].(string), COMPOSE_FILE)
+	if err != nil {
+		logger.Logging(logger.ERROR, err.Error())
+		e := dockerExecutor.DownWithRemoveImages(data[ID].(string), COMPOSE_FILE)
 		if e != nil {
 			logger.Logging(logger.ERROR, e.Error())
 		}
-		return nil, errors.Unknown{"db operation fail"}
+		dbExecutor.DeleteApp(data[ID].(string))
+		return nil, err
 	}
 
 	res := make(map[string]interface{})
@@ -130,7 +122,7 @@ func (depExecutorImpl) Apps() (map[string]interface{}, error) {
 	apps, err := dbExecutor.GetAppList()
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
-		return nil, errors.Unknown{"db operation fail"}
+		return nil, errors.Unknown{Msg: "db operation fail"}
 	}
 
 	yamlList := make([]map[string]interface{}, 0)
@@ -162,13 +154,13 @@ func (depExecutorImpl) App(appId string) (map[string]interface{}, error) {
 
 	yaml, err := yaml.JSONToYAML([]byte(app[DESCRIPTION].(string)))
 	if err != nil {
-		return nil, errors.InvalidYaml{"invalid yaml syntax"}
+		return nil, errors.InvalidYaml{Msg: "invalid yaml syntax"}
 	}
 
 	err = ioutil.WriteFile(COMPOSE_FILE, yaml, fileMode)
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
-		return nil, errors.IOError{"file io fail"}
+		return nil, errors.IOError{Msg: "file io fail"}
 	}
 	defer os.RemoveAll(COMPOSE_FILE)
 
@@ -177,21 +169,21 @@ func (depExecutorImpl) App(appId string) (map[string]interface{}, error) {
 
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
-		return nil, errors.IOError{"json unmarshal fail"}
+		return nil, errors.IOError{Msg: "json unmarshal fail"}
 	}
 
 	if description[SERVICES] == nil || len(description[SERVICES].(map[string]interface{})) == 0 {
-		return nil, errors.Unknown{"can't find application info"}
+		return nil, errors.Unknown{Msg: "can't find application info"}
 	}
 
 	services := make([]map[string]interface{}, 0)
 	for _, serviceName := range reflect.ValueOf(description[SERVICES].(map[string]interface{})).MapKeys() {
 		service := make(map[string]interface{}, 0)
 
-		state, err := getServiceState(serviceName.String())
+		state, err := getServiceState(appId, serviceName.String())
 		if err != nil {
 			logger.Logging(logger.ERROR, err.Error())
-			return nil, errors.Unknown{"get state fail"}
+			return nil, errors.Unknown{Msg: "get state fail"}
 		}
 
 		service[NAME] = serviceName.String()
@@ -219,7 +211,7 @@ func (depExecutorImpl) UpdateAppInfo(appId string, body string) error {
 	convertedData, err := yaml.YAMLToJSON([]byte(body))
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
-		return errors.InvalidYaml{"invalid yaml syntax"}
+		return errors.InvalidYaml{Msg: "invalid yaml syntax"}
 	}
 
 	err = dbExecutor.UpdateAppInfo(appId, string(convertedData))
@@ -247,7 +239,7 @@ func (depExecutorImpl) StartApp(appId string) error {
 	}
 
 	if state == "START" {
-		return errors.AlreadyReported{state}
+		return errors.AlreadyReported{Msg: state}
 	}
 
 	err = setYamlFile(appId)
@@ -256,10 +248,10 @@ func (depExecutorImpl) StartApp(appId string) error {
 		return err
 	}
 
-	err = dockerExecutor.Start(COMPOSE_FILE)
+	err = dockerExecutor.Start(appId, COMPOSE_FILE)
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
-		e := restoreState(state)
+		e := restoreState(appId, state)
 		if e != nil {
 			logger.Logging(logger.ERROR, err.Error())
 		}
@@ -289,7 +281,7 @@ func (depExecutorImpl) StopApp(appId string) error {
 	}
 
 	if state == "STOP" {
-		return errors.AlreadyReported{state}
+		return errors.AlreadyReported{Msg: state}
 	}
 
 	err = setYamlFile(appId)
@@ -298,10 +290,10 @@ func (depExecutorImpl) StopApp(appId string) error {
 		return err
 	}
 
-	err = dockerExecutor.Stop(COMPOSE_FILE)
+	err = dockerExecutor.Stop(appId, COMPOSE_FILE)
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
-		e := restoreState(state)
+		e := restoreState(appId, state)
 		if e != nil {
 			logger.Logging(logger.ERROR, err.Error())
 		}
@@ -342,20 +334,20 @@ func (depExecutorImpl) UpdateApp(appId string) error {
 		return convertDBError(e, appId)
 	}
 
-	err = dockerExecutor.Pull(COMPOSE_FILE)
+	err = dockerExecutor.Pull(appId, COMPOSE_FILE)
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
-		e := restoreRepoDigests(app[DESCRIPTION].(string), app[STATE].(string))
+		e := restoreRepoDigests(appId, app[DESCRIPTION].(string), app[STATE].(string))
 		if e != nil {
 			logger.Logging(logger.ERROR, e.Error())
 		}
 		return err
 	}
 
-	err = dockerExecutor.Up(COMPOSE_FILE)
+	err = dockerExecutor.Up(appId, COMPOSE_FILE)
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
-		e := restoreRepoDigests(app[DESCRIPTION].(string), app[STATE].(string))
+		e := restoreRepoDigests(appId, app[DESCRIPTION].(string), app[STATE].(string))
 		if e != nil {
 			logger.Logging(logger.ERROR, e.Error())
 		}
@@ -381,7 +373,7 @@ func (depExecutorImpl) DeleteApp(appId string) error {
 		return err
 	}
 
-	err = dockerExecutor.DownWithRemoveImages(COMPOSE_FILE)
+	err = dockerExecutor.DownWithRemoveImages(appId, COMPOSE_FILE)
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
 		state, e := dbExecutor.GetAppState(appId)
@@ -389,7 +381,7 @@ func (depExecutorImpl) DeleteApp(appId string) error {
 			logger.Logging(logger.ERROR, e.Error())
 			return err
 		}
-		e = restoreState(state)
+		e = restoreState(appId, state)
 		if e != nil {
 			logger.Logging(logger.ERROR, e.Error())
 		}
@@ -409,7 +401,7 @@ func (depExecutorImpl) DeleteApp(appId string) error {
 // See also controller.UpdateApp()
 // if succeed to restore, return error as nil
 // otherwise, return error.
-func restoreRepoDigests(desc string, state string) error {
+func restoreRepoDigests(appId, desc, state string) error {
 	imageNames, err := getImageNames([]byte(desc))
 	if err != nil {
 		logger.Logging(logger.DEBUG, err.Error())
@@ -418,7 +410,7 @@ func restoreRepoDigests(desc string, state string) error {
 	repoDigests := make([]string, 0)
 
 	for _, imageName := range imageNames {
-		digest, err := dockerExecutor.GetImageDigest(imageName)
+		digest, err := dockerExecutor.GetImageDigestByName(imageName)
 		if err != nil {
 			logger.Logging(logger.ERROR, err.Error())
 			return err
@@ -430,11 +422,11 @@ func restoreRepoDigests(desc string, state string) error {
 
 	err = json.Unmarshal([]byte(desc), &description)
 	if err != nil {
-		return errors.IOError{"json unmarshal fail"}
+		return errors.IOError{Msg: "json unmarshal fail"}
 	}
 
 	if len(description[SERVICES].(map[string]interface{})) == 0 || description[SERVICES] == nil {
-		return errors.Unknown{"can't find application info"}
+		return errors.Unknown{Msg: "can't find application info"}
 	}
 
 	idx := 0
@@ -452,16 +444,16 @@ func restoreRepoDigests(desc string, state string) error {
 
 	err = ioutil.WriteFile(COMPOSE_FILE, yaml, fileMode)
 	if err != nil {
-		return errors.IOError{"file io fail"}
+		return errors.IOError{Msg: "file io fail"}
 	}
 
-	err = dockerExecutor.Up(COMPOSE_FILE)
+	err = dockerExecutor.Up(appId, COMPOSE_FILE)
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
 		return err
 	}
 
-	err = restoreState(state)
+	err = restoreState(appId, state)
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
 		return err
@@ -473,22 +465,22 @@ func restoreRepoDigests(desc string, state string) error {
 // See also controller.StartApp(), controller.StopApp()
 // if succeed to restore, return error as nil
 // otherwise, return error.
-func restoreState(state string) error {
+func restoreState(appId, state string) error {
 	var err error
 
 	if len(state) == 0 {
-		return errors.InvalidParam{"empty state"}
+		return errors.InvalidParam{Msg: "empty state"}
 	}
 
 	switch state {
 	case "STOP":
-		err = dockerExecutor.Stop(COMPOSE_FILE)
+		err = dockerExecutor.Stop(appId, COMPOSE_FILE)
 	case "START":
-		err = dockerExecutor.Up(COMPOSE_FILE)
+		err = dockerExecutor.Up(appId, COMPOSE_FILE)
 	case "UP":
-		err = dockerExecutor.Up(COMPOSE_FILE)
+		err = dockerExecutor.Up(appId, COMPOSE_FILE)
 	case "DEPLOY":
-		err = dockerExecutor.Up(COMPOSE_FILE)
+		err = dockerExecutor.Up(appId, COMPOSE_FILE)
 	}
 
 	if err != nil {
@@ -510,12 +502,12 @@ func setYamlFile(appId string) error {
 
 	yaml, err := yaml.JSONToYAML([]byte(app[DESCRIPTION].(string)))
 	if err != nil {
-		return errors.InvalidYaml{"invalid yaml syntax"}
+		return errors.InvalidYaml{Msg: "invalid yaml syntax"}
 	}
 
 	err = ioutil.WriteFile(COMPOSE_FILE, yaml, fileMode)
 	if err != nil {
-		return errors.IOError{"file io fail"}
+		return errors.IOError{Msg: "file io fail"}
 	}
 
 	return nil
@@ -530,16 +522,16 @@ func getImageNames(source []byte) ([]string, error) {
 
 	err := json.Unmarshal(source, &description)
 	if err != nil {
-		return nil, errors.IOError{"json unmarshal fail"}
+		return nil, errors.IOError{Msg: "json unmarshal fail"}
 	}
 
 	if len(description[SERVICES].(map[string]interface{})) == 0 || description[SERVICES] == nil {
-		return nil, errors.Unknown{"can't find application info"}
+		return nil, errors.Unknown{Msg: "can't find application info"}
 	}
 
 	for _, service_info := range description[SERVICES].(map[string]interface{}) {
 		if service_info.(map[string]interface{})[IMAGE] == nil {
-			return nil, errors.Unknown{"can't find service info"}
+			return nil, errors.Unknown{Msg: "can't find service info"}
 		}
 		imageNames = append(imageNames, service_info.(map[string]interface{})[IMAGE].(string))
 	}
@@ -552,38 +544,27 @@ func getImageNames(source []byte) ([]string, error) {
 // And then, get service state from using docker inspect <container name>
 // if getting service state is succeed, return service state
 // otherwise, return error.
-func getServiceState(serviceName string) (interface{}, error) {
-	msg, err := dockerExecutor.Ps(COMPOSE_FILE, serviceName)
+func getServiceState(appId, serviceName string) (map[string]interface{}, error) {
+	infos, err := dockerExecutor.Ps(appId, COMPOSE_FILE, serviceName)
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
 		return nil, err
 	}
 
-	subLines := strings.Split(msg, "\n")
-	values := strings.Split(subLines[2], " ")
-	containerName := values[0]
+	containerName := infos[0]["Name"]
 
-	inspectInfo := make([]map[string]interface{}, 0)
-	serviceInfo, err := dockerExecutor.Inspect(containerName)
+	serviceInfo, err := dockerExecutor.GetContainerStateByName(containerName)
 	if err != nil {
-		logger.Logging(logger.ERROR, err.Error())
 		return nil, err
 	}
-
-	err = json.Unmarshal([]byte(serviceInfo), &inspectInfo)
-	if err != nil {
-		logger.Logging(logger.ERROR, err.Error())
-		return nil, errors.IOError{"json unmarshal fail"}
-	}
-
-	return inspectInfo[0]["State"], nil
+	return serviceInfo, nil
 }
 
 func convertDBError(err error, appId string) error {
 	switch err.(type) {
 	case errors.NotFound:
-		return errors.InvalidAppId{"failed to find app id : " + appId}
+		return errors.InvalidAppId{Msg: "failed to find app id : " + appId}
 	default:
-		return errors.Unknown{"db operation fail"}
+		return errors.Unknown{Msg: "db operation fail"}
 	}
 }
