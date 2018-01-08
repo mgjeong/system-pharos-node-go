@@ -121,9 +121,9 @@ func TestCalled_getCollection_WithInvalidSession_ExpectErrorReturn(t *testing.T)
 */
 
 func TestCalled_InsertComposeFile_WithEmptyDescription_ExpectErrorReturn(t *testing.T) {
-	dbManager := DBManager{}
+	dbExecutor := Executor{}
 
-	_, err := dbManager.InsertComposeFile(invalidDescription)
+	_, err := dbExecutor.InsertComposeFile(invalidDescription)
 
 	if err == nil {
 		t.Errorf("Expected err: %s, actual err: %s", "InvalidYamlError or UnknownError", "nil")
@@ -138,11 +138,11 @@ func TestCalled_InsertComposeFile_WithEmptyDescription_ExpectErrorReturn(t *test
 }
 
 func TestCalled_InsertComposeFile_WithInvalidDescription_Service_ExpectErrorReturn(t *testing.T) {
-	dbManager := DBManager{}
+	dbExecutor := Executor{}
 
 	invalid_description_without_service := `{"services":}`
 
-	_, err := dbManager.InsertComposeFile(invalid_description_without_service)
+	_, err := dbExecutor.InsertComposeFile(invalid_description_without_service)
 
 	if err == nil {
 		t.Errorf("Expected err: %s, actual err: %s", "InvalidYamlError", "nil")
@@ -156,14 +156,14 @@ func TestCalled_InsertComposeFile_WithInvalidDescription_Service_ExpectErrorRetu
 }
 
 func TestCalled_InsertComposeFile_WithInvalidDescription_Image_ExpectErrorReturn(t *testing.T) {
-	dbManager := DBManager{}
+	dbExecutor := Executor{}
 
 	invalid_description_without_image := `{
   "services": {
     "test_service_name": {}
   }
 }`
-	_, err := dbManager.InsertComposeFile(invalid_description_without_image)
+	_, err := dbExecutor.InsertComposeFile(invalid_description_without_image)
 
 	if err == nil {
 		t.Errorf("Expected err: %s, actual err: %s", "InvalidYamlError", "nil")
@@ -192,7 +192,7 @@ func TestCalled_InsertComposeFile_WithValidDescription_ExpectSuccess(t *testing.
 		sessionMockObj.EXPECT().Close(),
 	)
 	mgoDial = connectionMockObj
-	dbManager := DBManager{}
+	dbExecutor := Executor{}
 	
 	expectedRes := map[string]interface{}{
 		"id":          validID,
@@ -200,7 +200,7 @@ func TestCalled_InsertComposeFile_WithValidDescription_ExpectSuccess(t *testing.
 		"state":       "DEPLOY",
 	}
 
-	res, err := dbManager.InsertComposeFile(valid_description)
+	res, err := dbExecutor.InsertComposeFile(valid_description)
 
 	if err != nil {
 		t.Error()
@@ -234,9 +234,9 @@ func TestCalled_GetAppList_WhenDBHasNotAppsData_ExpectErrorReturn(t *testing.T) 
 		sessionMockObj.EXPECT().Close(),
 	)
 	mgoDial = connectionMockObj
-	dbManager := DBManager{}
+	dbExecutor := Executor{}
 	
-	_, err := dbManager.GetAppList()
+	_, err := dbExecutor.GetAppList()
 
 	if err == nil {
 		t.Errorf("Expected err: %s, actual err: %s", "NotFoundError", "nil")
@@ -277,8 +277,8 @@ func TestCalled_GetAppList_WhenDBHasAppsData_ExpectSuccess(t *testing.T) {
 	)
 	
 	mgoDial = connectionMockObj
-	dbManager := DBManager{}
-	res, err := dbManager.GetAppList()
+	dbExecutor := Executor{}
+	res, err := dbExecutor.GetAppList()
 
 	if err != nil {
 		t.Error()
@@ -315,8 +315,8 @@ func TestCalled_GetApp_WhenDBHasNotMatchedApp_ExpectErrorReturn(t *testing.T) {
 	)
 
 	mgoDial = connectionMockObj
-	dbManager := DBManager{}
-	_, err := dbManager.GetApp(validID)
+	dbExecutor := Executor{}
+	_, err := dbExecutor.GetApp(validID)
 
 	if err == nil {
 		t.Errorf("Expected err: %s, actual err: %s", "NotFoundError", "nil")
@@ -358,8 +358,8 @@ func TestCalled_GetAppList_WhenDBHasMatchedApp_ExpectSuccess(t *testing.T) {
 	)
 
 	mgoDial = connectionMockObj
-	dbManager := DBManager{}
-	res, err := dbManager.GetApp(validID)
+	dbExecutor := Executor{}
+	res, err := dbExecutor.GetApp(validID)
 
 	if err != nil {
 		t.Error()
@@ -375,9 +375,9 @@ func TestCalled_GetAppList_WhenDBHasMatchedApp_ExpectSuccess(t *testing.T) {
 */
 
 func TestCalled_UpdateAppInfo_WithInvlaidAppID_ExpectErrorReturn(t *testing.T) {
-	dbManager := DBManager{}
+	dbExecutor := Executor{}
 
-	err := dbManager.UpdateAppInfo(invalidID, valid_description)
+	err := dbExecutor.UpdateAppInfo(invalidID, valid_description)
 
 	if err == nil {
 		t.Errorf("Expected err: %s, actual err: %s", "InvalidParamError", "nil")
@@ -411,8 +411,8 @@ func TestCalled_UpdateAppInfo_WhenDBHasNotMatchedApp_ExpectErrorReturn(t *testin
 	)
 	
 	mgoDial = connectionMockObj
-	dbManager := DBManager{}
-	err := dbManager.UpdateAppInfo(validID, valid_description)
+	dbExecutor := Executor{}
+	err := dbExecutor.UpdateAppInfo(validID, valid_description)
 
 	if err == nil {
 		t.Errorf("Expected err: %s, actual err: %s", "NotFoundError", "nil")
@@ -447,8 +447,8 @@ func TestCalled_UpdateAppInfo_WhenDBHasMatchedApp_ExpectSuccess(t *testing.T) {
 	)
 
 	mgoDial = connectionMockObj
-	dbManager := DBManager{}
-	err := dbManager.UpdateAppInfo(validID, valid_description)
+	dbExecutor := Executor{}
+	err := dbExecutor.UpdateAppInfo(validID, valid_description)
 
 	if err != nil {
 		t.Error()
@@ -460,8 +460,8 @@ func TestCalled_UpdateAppInfo_WhenDBHasMatchedApp_ExpectSuccess(t *testing.T) {
 */
 
 func TestCalled_DeleteApp_WithInvlaidAppID_ExpectErrorReturn(t *testing.T) {
-	dbManager := DBManager{}
-	err := dbManager.DeleteApp(invalidID)
+	dbExecutor := Executor{}
+	err := dbExecutor.DeleteApp(invalidID)
 
 	if err == nil {
 		t.Errorf("Expected err: %s, actual err: %s", "InvalidParamError", "nil")
@@ -494,8 +494,8 @@ func TestCalled_DeleteApp_WhenDBHasNotMatchedApp_ExpectErrorReturn(t *testing.T)
 	)
 
 	mgoDial = connectionMockObj
-	dbManager := DBManager{}
-	err := dbManager.DeleteApp(validID)
+	dbExecutor := Executor{}
+	err := dbExecutor.DeleteApp(validID)
 
 	if err == nil {
 		t.Errorf("Expected err: %s, actual err: %s", "NotFoundError", "nil")
@@ -529,8 +529,8 @@ func TestCalled_DeleteApp_WhenDBHasMatchedApp_ExpectSuccess(t *testing.T) {
 	)
 
 	mgoDial = connectionMockObj
-	dbManager := DBManager{}
-	err := dbManager.DeleteApp(validID)
+	dbExecutor := Executor{}
+	err := dbExecutor.DeleteApp(validID)
 
 	if err != nil {
 		t.Error()
