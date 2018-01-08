@@ -73,7 +73,7 @@ func sendPingRequest(agentID string, interval string) (int, error) {
 
 	logger.Logging(logger.DEBUG, "try to send ping request")
 
-	url := common.makeRequestUrl(url.Agents(), "/", agentID, url.Ping())
+	url := common.makeRequestUrl(url.Nodes(), "/", agentID, url.Ping())
 	code, _, err := httpExecutor.SendHttpRequest("POST", url, []byte(jsonData))
 	if err != nil {
 		logger.Logging(logger.ERROR, "failed to send ping request")

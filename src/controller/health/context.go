@@ -37,7 +37,7 @@ type context struct {
 
 func (ctx context) makeRequestUrl(api_parts ...string) string {
 	var full_url bytes.Buffer
-	full_url.WriteString(HTTP_TAG + ctx.managerAddress + ":" + DEFAULT_SDAM_PORT + url.Base())
+	full_url.WriteString(HTTP_TAG + ctx.managerAddress + ":" + DEFAULT_SDAM_PORT + url.Base() + url.Management())
 	for _, api_part := range api_parts {
 		full_url.WriteString(api_part)
 	}

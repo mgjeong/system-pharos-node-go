@@ -58,8 +58,8 @@ func init() {
 	}
 }
 
-// register to system-edge-manager service.
-// should know the system-edge-manager address(ip:port)
+// register to pharos-anchor service.
+// should know the pharos-anchor address(ip:port)
 // if succeed to register, return error as nil
 // otherwise, return error.
 func register() error {
@@ -110,7 +110,7 @@ func register() error {
 	return nil
 }
 
-// Unregister to system-edge-manager service.
+// Unregister to pharos-anchor service.
 // if succeed to unregister, return error as nil
 // otherwise, return error.
 func (Executor) Unregister() error {
@@ -138,7 +138,7 @@ func sendRegisterRequest(body map[string]interface{}) (int, string, error) {
 	logger.Logging(logger.DEBUG, "IN")
 	defer logger.Logging(logger.DEBUG, "OUT")
 
-	url := common.makeRequestUrl(url.Agents(), url.Register())
+	url := common.makeRequestUrl(url.Nodes(), url.Register())
 
 	jsonData, err := common.convertMapToJson(body)
 	if err != nil {
@@ -152,7 +152,7 @@ func sendUnregisterRequest(agentID string) (int, string, error) {
 	logger.Logging(logger.DEBUG, "IN")
 	defer logger.Logging(logger.DEBUG, "OUT")
 
-	url := common.makeRequestUrl(url.Agents(), "/", agentID, url.Unregister())
+	url := common.makeRequestUrl(url.Nodes(), "/", agentID, url.Unregister())
 	return httpExecutor.SendHttpRequest("POST", url)
 }
 

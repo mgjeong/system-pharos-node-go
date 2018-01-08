@@ -72,7 +72,7 @@ func TestCalledRegisterWhenFailedToSetConfiguration_ExpectErrorReturn(t *testing
 	configMockObj := configmocks.NewMockCommand(ctrl)
 	msgMockObj := msgmocks.NewMockCommand(ctrl)
 
-	url := "http://192.168.0.1:48099/api/v1/agents/register"
+	url := "http://192.168.0.1:48099/api/v1/management/nodes/register"
 	expectedResp := `{"id":"agentid"}`
 	expectedNewConfig := map[string]interface{}{
 		"agentid": "agentid",
@@ -109,6 +109,7 @@ func TestCalledUnregister_ExpectSuccess(t *testing.T) {
 	configurator = configMockObj
 
 	err := healthExecutor.Unregister()
+
 	if err != nil {
 		t.Errorf("Unexpected err: %s", err.Error())
 	}
@@ -120,7 +121,7 @@ func TestCalledSendRegisterRequestWhenFailedToSendHttpRequest_ExpectErrorReturn(
 
 	msgMockObj := msgmocks.NewMockCommand(ctrl)
 
-	url := "http://192.168.0.1:48099/api/v1/agents/register"
+	url := "http://192.168.0.1:48099/api/v1/management/nodes/register"
 
 	gomock.InOrder(
 		msgMockObj.EXPECT().SendHttpRequest("POST", url, gomock.Any()).Return(500, "", errors.New("Error")),
