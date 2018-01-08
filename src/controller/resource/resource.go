@@ -20,7 +20,6 @@ import (
 	"commons/errors"
 	"commons/logger"
 	shell "controller/shellcommand"
-	"strconv"
 	"strings"
 )
 
@@ -151,93 +150,40 @@ func getCPUUsage() (string, error) {
 		logger.Logging(logger.ERROR, "can't find cpu usage info")
 		return "", errors.Unknown{"can't find cpu usage info"}
 	}
-
-	procStatCPUSlice := strings.Split(procStatCPU, " ")
-	user, _ := strconv.Atoi(procStatCPUSlice[1])
-	nice, _ := strconv.Atoi(procStatCPUSlice[2])
-	system, _ := strconv.Atoi(procStatCPUSlice[3])
-	idle, _ := strconv.Atoi(procStatCPUSlice[4])
-	iowait, _ := strconv.Atoi(procStatCPUSlice[5])
-	irq, _ := strconv.Atoi(procStatCPUSlice[6])
-	softirq, _ := strconv.Atoi(procStatCPUSlice[7])
-	steal, _ := strconv.Atoi(procStatCPUSlice[8])
 	
-	totalTime := user + nice + system + idle + iowait + irq + softirq + steal
-	idleTime := idle + iowait
-	
-	cpuUsagePerc := strconv.FormatFloat(100*float64(totalTime-idleTime)/float64(totalTime), 'f', 2, 64)
-	return cpuUsagePerc + "%%", err
+	return procStatCPU, err
 }
 
 func getMemUsage() (string, error) {
 	logger.Logging(logger.DEBUG, "IN")
 	defer logger.Logging(logger.DEBUG, "OUT")
 
-	total, err := shellExecutor.ExecuteCommand("bash", "-c", "cat /proc/meminfo | grep MemTotal: | awk '{print $2}'")
+	procMeminfo, err := shellExecutor.ExecuteCommand("bash", "-c", "cat /proc/meminfo")
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
 		return "", err
 	}
-	if len(total) == 0 {
+	if len(procMeminfo) == 0 {
 		logger.Logging(logger.ERROR, "can't find total memory info")
 		return "", errors.Unknown{"can't find total memory info"}
 	}
-
-	free, err := shellExecutor.ExecuteCommand("bash", "-c", "cat /proc/meminfo | grep MemFree: | awk '{print $2}'")
-	if err != nil {
-		logger.Logging(logger.ERROR, err.Error())
-		return "", err
-	}
-	if len(free) == 0 {
-		logger.Logging(logger.ERROR, "can't find used memory info")
-		return "", errors.Unknown{"can't find used memory info"}
-	}
-
-	memTotal, _ := strconv.Atoi(strings.TrimSpace(total))
-	memFree, _ := strconv.Atoi(strings.TrimSpace(free))
-
-	memUsagePerc := strconv.FormatFloat(100*float64(memTotal-memFree)/float64(memTotal), 'f', 2, 64)
-	return memUsagePerc + "%%", err
+	
+	return procMeminfo, err
 }
 
 func getDiskUsage() (string, error) {
 	logger.Logging(logger.DEBUG, "IN")
 	defer logger.Logging(logger.DEBUG, "OUT")
 
-	total, err := shellExecutor.ExecuteCommand("bash", "-c", "df -m | awk '{print $2}'")
+	df, err := shellExecutor.ExecuteCommand("bash", "-c", "df -m")
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
 		return "", err
 	}
-	if len(total) == 0 {
+	if len(df) == 0 {
 		logger.Logging(logger.ERROR, "can't find total disk info")
 		return "", errors.Unknown{"can't find total disk info"}
 	}
-
-	available, err := shellExecutor.ExecuteCommand("bash", "-c", "df -m | awk '{print $4}'")
-	if err != nil {
-		return "", err
-	}
-	if len(available) == 0 {
-		logger.Logging(logger.ERROR, "can't find available disk info")
-		return "", errors.Unknown{"can't find availble disk info"}
-	}
-
-	totalSlice := strings.Split(total, "\n")
-	availableSlice := strings.Split(available, "\n")
-
-	diskTotalSum := 0
-	diskAvailableSum := 0
-
-	for idx, value := range totalSlice {
-		if idx != 0 {
-			diskSize, _ := strconv.Atoi(value)
-			diskAvailable, _ := strconv.Atoi(availableSlice[idx])
-			diskTotalSum += diskSize
-			diskAvailableSum += diskAvailable
-		}
-	}
-
-	diskUsagePerc := strconv.FormatFloat(100*float64(diskTotalSum-diskAvailableSum)/float64(diskTotalSum), 'f', 2, 64)
-	return diskUsagePerc + "%%", err
+	
+	return df, err
 }
