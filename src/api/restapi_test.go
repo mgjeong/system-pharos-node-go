@@ -214,7 +214,7 @@ func setup(t *testing.T, mock mockingci) func(*testing.T) {
 }
 
 func setup2(t *testing.T, mock mockinghci) func(*testing.T) {
-	registrationExecutor = mock
+	healthExecutor = mock
 	return func(*testing.T) {}
 }
 
