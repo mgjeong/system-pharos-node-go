@@ -5,153 +5,180 @@ package mock_dockercontroller
 
 import (
 	gomock "github.com/golang/mock/gomock"
+	reflect "reflect"
 )
 
-// Mock of Command interface
+// MockCommand is a mock of Command interface
 type MockCommand struct {
 	ctrl     *gomock.Controller
-	recorder *_MockCommandRecorder
+	recorder *MockCommandMockRecorder
 }
 
-// Recorder for MockCommand (not exported)
-type _MockCommandRecorder struct {
+// MockCommandMockRecorder is the mock recorder for MockCommand
+type MockCommandMockRecorder struct {
 	mock *MockCommand
 }
 
+// NewMockCommand creates a new mock instance
 func NewMockCommand(ctrl *gomock.Controller) *MockCommand {
 	mock := &MockCommand{ctrl: ctrl}
-	mock.recorder = &_MockCommandRecorder{mock}
+	mock.recorder = &MockCommandMockRecorder{mock}
 	return mock
 }
 
-func (_m *MockCommand) EXPECT() *_MockCommandRecorder {
-	return _m.recorder
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockCommand) EXPECT() *MockCommandMockRecorder {
+	return m.recorder
 }
 
-func (_m *MockCommand) Create(path string) error {
-	ret := _m.ctrl.Call(_m, "Create", path)
+// Create mocks base method
+func (m *MockCommand) Create(id, path string) error {
+	ret := m.ctrl.Call(m, "Create", id, path)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-func (_mr *_MockCommandRecorder) Create(arg0 interface{}) *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "Create", arg0)
+// Create indicates an expected call of Create
+func (mr *MockCommandMockRecorder) Create(id, path interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockCommand)(nil).Create), id, path)
 }
 
-func (_m *MockCommand) Up(path string) error {
-	ret := _m.ctrl.Call(_m, "Up", path)
+// Up mocks base method
+func (m *MockCommand) Up(id, path string) error {
+	ret := m.ctrl.Call(m, "Up", id, path)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-func (_mr *_MockCommandRecorder) Up(arg0 interface{}) *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "Up", arg0)
+// Up indicates an expected call of Up
+func (mr *MockCommandMockRecorder) Up(id, path interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Up", reflect.TypeOf((*MockCommand)(nil).Up), id, path)
 }
 
-func (_m *MockCommand) Down(path string) error {
-	ret := _m.ctrl.Call(_m, "Down", path)
+// Down mocks base method
+func (m *MockCommand) Down(id, path string) error {
+	ret := m.ctrl.Call(m, "Down", id, path)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-func (_mr *_MockCommandRecorder) Down(arg0 interface{}) *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "Down", arg0)
+// Down indicates an expected call of Down
+func (mr *MockCommandMockRecorder) Down(id, path interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Down", reflect.TypeOf((*MockCommand)(nil).Down), id, path)
 }
 
-func (_m *MockCommand) DownWithRemoveImages(path string) error {
-	ret := _m.ctrl.Call(_m, "DownWithRemoveImages", path)
+// DownWithRemoveImages mocks base method
+func (m *MockCommand) DownWithRemoveImages(id, path string) error {
+	ret := m.ctrl.Call(m, "DownWithRemoveImages", id, path)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-func (_mr *_MockCommandRecorder) DownWithRemoveImages(arg0 interface{}) *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "DownWithRemoveImages", arg0)
+// DownWithRemoveImages indicates an expected call of DownWithRemoveImages
+func (mr *MockCommandMockRecorder) DownWithRemoveImages(id, path interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DownWithRemoveImages", reflect.TypeOf((*MockCommand)(nil).DownWithRemoveImages), id, path)
 }
 
-func (_m *MockCommand) Start(path string) error {
-	ret := _m.ctrl.Call(_m, "Start", path)
+// Start mocks base method
+func (m *MockCommand) Start(id, path string) error {
+	ret := m.ctrl.Call(m, "Start", id, path)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-func (_mr *_MockCommandRecorder) Start(arg0 interface{}) *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "Start", arg0)
+// Start indicates an expected call of Start
+func (mr *MockCommandMockRecorder) Start(id, path interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Start", reflect.TypeOf((*MockCommand)(nil).Start), id, path)
 }
 
-func (_m *MockCommand) Stop(path string) error {
-	ret := _m.ctrl.Call(_m, "Stop", path)
+// Stop mocks base method
+func (m *MockCommand) Stop(id, path string) error {
+	ret := m.ctrl.Call(m, "Stop", id, path)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-func (_mr *_MockCommandRecorder) Stop(arg0 interface{}) *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "Stop", arg0)
+// Stop indicates an expected call of Stop
+func (mr *MockCommandMockRecorder) Stop(id, path interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Stop", reflect.TypeOf((*MockCommand)(nil).Stop), id, path)
 }
 
-func (_m *MockCommand) Pause(path string) error {
-	ret := _m.ctrl.Call(_m, "Pause", path)
+// Pause mocks base method
+func (m *MockCommand) Pause(id, path string) error {
+	ret := m.ctrl.Call(m, "Pause", id, path)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-func (_mr *_MockCommandRecorder) Pause(arg0 interface{}) *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "Pause", arg0)
+// Pause indicates an expected call of Pause
+func (mr *MockCommandMockRecorder) Pause(id, path interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Pause", reflect.TypeOf((*MockCommand)(nil).Pause), id, path)
 }
 
-func (_m *MockCommand) Unpause(path string) error {
-	ret := _m.ctrl.Call(_m, "Unpause", path)
+// Unpause mocks base method
+func (m *MockCommand) Unpause(id, path string) error {
+	ret := m.ctrl.Call(m, "Unpause", id, path)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-func (_mr *_MockCommandRecorder) Unpause(arg0 interface{}) *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "Unpause", arg0)
+// Unpause indicates an expected call of Unpause
+func (mr *MockCommandMockRecorder) Unpause(id, path interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Unpause", reflect.TypeOf((*MockCommand)(nil).Unpause), id, path)
 }
 
-func (_m *MockCommand) Pull(path string) error {
-	ret := _m.ctrl.Call(_m, "Pull", path)
+// Pull mocks base method
+func (m *MockCommand) Pull(id, path string) error {
+	ret := m.ctrl.Call(m, "Pull", id, path)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-func (_mr *_MockCommandRecorder) Pull(arg0 interface{}) *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "Pull", arg0)
+// Pull indicates an expected call of Pull
+func (mr *MockCommandMockRecorder) Pull(id, path interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Pull", reflect.TypeOf((*MockCommand)(nil).Pull), id, path)
 }
 
-func (_m *MockCommand) Ps(path string, args ...string) (string, error) {
-	_s := []interface{}{path}
-	for _, _x := range args {
-		_s = append(_s, _x)
+// Ps mocks base method
+func (m *MockCommand) Ps(id, path string, args ...string) ([]map[string]string, error) {
+	varargs := []interface{}{id, path}
+	for _, a := range args {
+		varargs = append(varargs, a)
 	}
-	ret := _m.ctrl.Call(_m, "Ps", _s...)
+	ret := m.ctrl.Call(m, "Ps", varargs...)
+	ret0, _ := ret[0].([]map[string]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Ps indicates an expected call of Ps
+func (mr *MockCommandMockRecorder) Ps(id, path interface{}, args ...interface{}) *gomock.Call {
+	varargs := append([]interface{}{id, path}, args...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Ps", reflect.TypeOf((*MockCommand)(nil).Ps), varargs...)
+}
+
+// GetContainerStateByName mocks base method
+func (m *MockCommand) GetContainerStateByName(containerName string) (map[string]interface{}, error) {
+	ret := m.ctrl.Call(m, "GetContainerStateByName", containerName)
+	ret0, _ := ret[0].(map[string]interface{})
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetContainerStateByName indicates an expected call of GetContainerStateByName
+func (mr *MockCommandMockRecorder) GetContainerStateByName(containerName interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetContainerStateByName", reflect.TypeOf((*MockCommand)(nil).GetContainerStateByName), containerName)
+}
+
+// GetImageDigestByName mocks base method
+func (m *MockCommand) GetImageDigestByName(imageName string) (string, error) {
+	ret := m.ctrl.Call(m, "GetImageDigestByName", imageName)
 	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-func (_mr *_MockCommandRecorder) Ps(arg0 interface{}, arg1 ...interface{}) *gomock.Call {
-	_s := append([]interface{}{arg0}, arg1...)
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "Ps", _s...)
-}
-
-func (_m *MockCommand) Inspect(IdOrName string) (string, error) {
-	ret := _m.ctrl.Call(_m, "Inspect", IdOrName)
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-func (_mr *_MockCommandRecorder) Inspect(arg0 interface{}) *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "Inspect", arg0)
-}
-
-func (_m *MockCommand) GetImageDigest(imageName string) (string, error) {
-	ret := _m.ctrl.Call(_m, "GetImageDigest", imageName)
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-func (_mr *_MockCommandRecorder) GetImageDigest(arg0 interface{}) *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "GetImageDigest", arg0)
+// GetImageDigestByName indicates an expected call of GetImageDigestByName
+func (mr *MockCommandMockRecorder) GetImageDigestByName(imageName interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetImageDigestByName", reflect.TypeOf((*MockCommand)(nil).GetImageDigestByName), imageName)
 }
