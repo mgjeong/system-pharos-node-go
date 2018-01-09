@@ -14,7 +14,7 @@
  * limitations under the License.
  *
  *******************************************************************************/
-package registration
+package health
 
 import (
 	configmocks "controller/configuration/mocks"
@@ -41,10 +41,10 @@ var (
 	}
 )
 
-var regObj Command
+var healthExecutor Command
 
 func init() {
-	regObj = Executor{}
+	healthExecutor = Executor{}
 }
 
 func TestCalledRegisterWhenFailedToGetConfiguration_ExpectErrorReturn(t *testing.T) {
@@ -72,7 +72,7 @@ func TestCalledRegisterWhenFailedToSetConfiguration_ExpectErrorReturn(t *testing
 	configMockObj := configmocks.NewMockCommand(ctrl)
 	msgMockObj := msgmocks.NewMockCommand(ctrl)
 
-	url := "http://192.168.0.1:48099/api/v1/agents/register"
+	url := "http://192.168.0.1:48099/api/v1/management/nodes/register"
 	expectedResp := `{"id":"agentid"}`
 	expectedNewConfig := map[string]interface{}{
 		"agentid": "agentid",
@@ -108,52 +108,7 @@ func TestCalledUnregister_ExpectSuccess(t *testing.T) {
 	)
 	configurator = configMockObj
 
-	err := regObj.Unregister()
-
-	if err != nil {
-		t.Errorf("Unexpected err: %s", err.Error())
-	}
-}
-
-func TestCalledSendPingRequestWhenFailedToSendHttpRequest_ExpectErrorReturn(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	msgMockObj := msgmocks.NewMockCommand(ctrl)
-
-	interval := "1"
-	url := "http://192.168.0.1:48099/api/v1/agents/id/ping"
-	expectedBody := `{"interval":"1"}`
-
-	gomock.InOrder(
-		msgMockObj.EXPECT().SendHttpRequest("POST", url, []byte(expectedBody)).Return(500, "", errors.New("Error")),
-	)
-
-	httpExecutor = msgMockObj
-
-	_, err := sendPingRequest("id", interval)
-
-	if err == nil {
-		t.Errorf("Expected err: %s", err.Error())
-	}
-}
-
-func TestCalledSendPingRequest_ExpectSuccess(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	msgMockObj := msgmocks.NewMockCommand(ctrl)
-
-	interval := "1"
-	url := "http://192.168.0.1:48099/api/v1/agents/id/ping"
-	expectedBody := `{"interval":"1"}`
-
-	gomock.InOrder(
-		msgMockObj.EXPECT().SendHttpRequest("POST", url, []byte(expectedBody)).Return(200, "", nil),
-	)
-	httpExecutor = msgMockObj
-
-	_, err := sendPingRequest("id", interval)
+	err := healthExecutor.Unregister()
 
 	if err != nil {
 		t.Errorf("Unexpected err: %s", err.Error())
@@ -166,7 +121,7 @@ func TestCalledSendRegisterRequestWhenFailedToSendHttpRequest_ExpectErrorReturn(
 
 	msgMockObj := msgmocks.NewMockCommand(ctrl)
 
-	url := "http://192.168.0.1:48099/api/v1/agents/register"
+	url := "http://192.168.0.1:48099/api/v1/management/nodes/register"
 
 	gomock.InOrder(
 		msgMockObj.EXPECT().SendHttpRequest("POST", url, gomock.Any()).Return(500, "", errors.New("Error")),

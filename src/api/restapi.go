@@ -15,7 +15,7 @@
  *
  *******************************************************************************/
 
-// Package api provides web server for Service Deployment Agent
+// Package api provides web server for pharos-node
 // and also provides functionality of request processing and response making.
 package api
 
@@ -24,7 +24,7 @@ import (
 	"commons/logger"
 	"commons/url"
 	dep "controller/deployment"
-	reg "controller/registration"
+	health "controller/health"
 	res "controller/resource"
 	"encoding/json"
 	"fmt"
@@ -38,15 +38,14 @@ type ResponseType map[string]interface{}
 
 // Starting Web server service with address and port.
 func RunSDAWebServer(addr string, port int) {
-	logger.Logging(logger.DEBUG, "Start Management Agent Web Server")
+	logger.Logging(logger.DEBUG, "Start Pharos Node Web Server")
 	logger.Logging(logger.DEBUG, "Listening "+addr+":"+strconv.Itoa(port))
 	http.ListenAndServe(addr+":"+strconv.Itoa(port), &_SDAApis)
 }
 
 var deploymentExecutor dep.Command
-var registrationExecutor reg.Command
+var healthExecutor health.Command
 var resourceExecutor res.Command
-
 var _SDAApis _SDAApisHandler
 
 type _SDAApisHandler struct{}
@@ -60,7 +59,7 @@ const (
 
 func init() {
 	deploymentExecutor = dep.Executor
-	registrationExecutor = reg.Executor{}
+	healthExecutor = health.Executor{}
 	resourceExecutor = res.Executor
 }
 
@@ -75,7 +74,8 @@ func (sda *_SDAApisHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) 
 		logger.Logging(logger.DEBUG, "Unknown URL")
 		makeErrorResponse(w, errors.NotFoundURL{reqUrl})
 
-	case !strings.Contains(reqUrl, url.Base()):
+	case !(strings.Contains(reqUrl, (url.Base()+url.Management())) ||
+		strings.Contains(reqUrl, (url.Base()+url.Monitoring()))):
 		logger.Logging(logger.DEBUG, "Unknown URL")
 		makeErrorResponse(w, errors.NotFoundURL{reqUrl})
 
@@ -102,7 +102,7 @@ func (sda *_SDAApisHandler) handleUnregister(w http.ResponseWriter, req *http.Re
 		return
 	}
 
-	e := registrationExecutor.Unregister()
+	e := healthExecutor.Unregister()
 	if e != nil {
 		makeErrorResponse(w, e)
 		return
@@ -135,7 +135,7 @@ func (sda *_SDAApisHandler) handleDeploy(w http.ResponseWriter, req *http.Reques
 	}
 
 	appId := response["id"].(string)
-	w.Header().Set("Location", url.Base()+url.Apps()+"/"+appId)
+	w.Header().Set("Location", url.Base()+url.Management()+url.Apps()+"/"+appId)
 
 	makeResponse(w, changeToJson(response))
 }
@@ -146,7 +146,7 @@ func (sda *_SDAApisHandler) handleApps(w http.ResponseWriter, req *http.Request)
 	defer logger.Logging(logger.DEBUG, "OUT")
 
 	switch reqUrl, split := req.URL.Path, strings.Split(req.URL.Path, "/"); {
-	case len(split) == 6:
+	case len(split) == 7:
 		switch appId := split[len(split)-2]; {
 		case strings.HasSuffix(reqUrl, url.Start()):
 			sda.start(w, req, appId)
@@ -161,10 +161,10 @@ func (sda *_SDAApisHandler) handleApps(w http.ResponseWriter, req *http.Request)
 			logger.Logging(logger.DEBUG, "Unmatched url")
 			makeErrorResponse(w, errors.NotFoundURL{reqUrl})
 		}
-	case len(split) == 5:
+	case len(split) == 6:
 		sda.app(w, req, split[len(split)-1])
 
-	case len(split) == 4:
+	case len(split) == 5:
 		sda.apps(w, req)
 
 	default:
@@ -179,9 +179,9 @@ func (sda *_SDAApisHandler) handleResource(w http.ResponseWriter, req *http.Requ
 	defer logger.Logging(logger.DEBUG, "OUT")
 
 	switch reqUrl, split := req.URL.Path, strings.Split(req.URL.Path, "/"); {
-	case len(split) == 4:
-		sda.resource(w, req)
 	case len(split) == 5:
+		sda.resource(w, req)
+	case len(split) == 6:
 		sda.performance(w, req)
 
 	default:
@@ -346,7 +346,7 @@ func makeErrorResponse(w http.ResponseWriter, err error) {
 
 	case errors.NotFoundURL:
 		code = http.StatusNotFound
-		
+
 	case errors.InvalidMethod:
 		code = http.StatusMethodNotAllowed
 

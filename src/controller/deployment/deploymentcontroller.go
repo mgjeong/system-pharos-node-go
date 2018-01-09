@@ -29,7 +29,7 @@ import (
 	"os"
 	"reflect"
 
-	"github.com/ghodss/yaml"
+	"gopkg.in/yaml.v2"
 )
 
 const (
@@ -83,13 +83,22 @@ func (depExecutorImpl) DeployApp(body string) (map[string]interface{}, error) {
 	}
 	defer os.RemoveAll(COMPOSE_FILE)
 
-	convertedData, err := yaml.YAMLToJSON([]byte(body))
+	var description interface{}
+	err = yaml.Unmarshal([]byte(body), &description)
+	if err != nil {
+		logger.Logging(logger.ERROR, err.Error())
+		return nil, errors.Unknown{Msg: "db operation fail"}
+	}
+
+	description = convert(description)
+
+	jsonData, err := json.Marshal(description)
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
 		return nil, errors.InvalidYaml{Msg: "invalid yaml syntax"}
 	}
 
-	data, err := dbExecutor.InsertComposeFile(string(convertedData))
+	data, err := dbExecutor.InsertComposeFile(string(jsonData))
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
 		return nil, errors.Unknown{Msg: "db operation fail"}
@@ -152,7 +161,14 @@ func (depExecutorImpl) App(appId string) (map[string]interface{}, error) {
 		return nil, convertDBError(err, appId)
 	}
 
-	yaml, err := yaml.JSONToYAML([]byte(app[DESCRIPTION].(string)))
+	description := make(map[string]interface{})
+	err = json.Unmarshal([]byte(app[DESCRIPTION].(string)), &description)
+	if err != nil {
+		logger.Logging(logger.ERROR, err.Error())
+		return nil, errors.IOError{"json unmarshal fail"}
+	}
+
+	yaml, err := yaml.Marshal(description)
 	if err != nil {
 		return nil, errors.InvalidYaml{Msg: "invalid yaml syntax"}
 	}
@@ -163,14 +179,6 @@ func (depExecutorImpl) App(appId string) (map[string]interface{}, error) {
 		return nil, errors.IOError{Msg: "file io fail"}
 	}
 	defer os.RemoveAll(COMPOSE_FILE)
-
-	description := make(map[string]interface{})
-	err = json.Unmarshal([]byte(app[DESCRIPTION].(string)), &description)
-
-	if err != nil {
-		logger.Logging(logger.ERROR, err.Error())
-		return nil, errors.IOError{Msg: "json unmarshal fail"}
-	}
 
 	if description[SERVICES] == nil || len(description[SERVICES].(map[string]interface{})) == 0 {
 		return nil, errors.Unknown{Msg: "can't find application info"}
@@ -208,13 +216,22 @@ func (depExecutorImpl) UpdateAppInfo(appId string, body string) error {
 	logger.Logging(logger.DEBUG, "IN", appId)
 	defer logger.Logging(logger.DEBUG, "OUT")
 
-	convertedData, err := yaml.YAMLToJSON([]byte(body))
+	var description interface{}
+	err := yaml.Unmarshal([]byte(body), &description)
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
 		return errors.InvalidYaml{Msg: "invalid yaml syntax"}
 	}
 
-	err = dbExecutor.UpdateAppInfo(appId, string(convertedData))
+	description = convert(description)
+
+	jsonData, err := json.Marshal(description)
+	if err != nil {
+		logger.Logging(logger.ERROR, err.Error())
+		return errors.InvalidYaml{"invalid yaml syntax"}
+	}
+
+	err = dbExecutor.UpdateAppInfo(appId, string(jsonData))
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
 		return convertDBError(err, appId)
@@ -402,6 +419,9 @@ func (depExecutorImpl) DeleteApp(appId string) error {
 // if succeed to restore, return error as nil
 // otherwise, return error.
 func restoreRepoDigests(appId, desc, state string) error {
+	logger.Logging(logger.DEBUG, "IN")
+	defer logger.Logging(logger.DEBUG, "OUT")
+  
 	imageNames, err := getImageNames([]byte(desc))
 	if err != nil {
 		logger.Logging(logger.DEBUG, err.Error())
@@ -435,12 +455,10 @@ func restoreRepoDigests(appId, desc, state string) error {
 		idx++
 	}
 
-	restoredDesc, err := json.Marshal(description)
+	yaml, err := yaml.Marshal(description)
 	if err != nil {
-		logger.Logging(logger.DEBUG, "json marshal fail")
-		return err
+		return errors.InvalidYaml{"invalid yaml syntax"}
 	}
-	yaml, err := yaml.JSONToYAML(restoredDesc)
 
 	err = ioutil.WriteFile(COMPOSE_FILE, yaml, fileMode)
 	if err != nil {
@@ -494,13 +512,19 @@ func restoreState(appId, state string) error {
 // if setting YAML is succeeded, return error as nil
 // otherwise, return error.
 func setYamlFile(appId string) error {
-
 	app, err := dbExecutor.GetApp(appId)
 	if err != nil {
 		return convertDBError(err, appId)
 	}
 
-	yaml, err := yaml.JSONToYAML([]byte(app[DESCRIPTION].(string)))
+	description := make(map[string]interface{})
+	err = json.Unmarshal([]byte(app[DESCRIPTION].(string)), &description)
+	if err != nil {
+		logger.Logging(logger.ERROR, err.Error())
+		return errors.IOError{"json unmarshal fail"}
+	}
+
+	yaml, err := yaml.Marshal(description)
 	if err != nil {
 		return errors.InvalidYaml{Msg: "invalid yaml syntax"}
 	}
@@ -567,4 +591,24 @@ func convertDBError(err error, appId string) error {
 	default:
 		return errors.Unknown{Msg: "db operation fail"}
 	}
+}
+
+// convert function changes the type of key from interface{} to string.
+// yaml package unmarshal key-value pairs with map[interface{}]interface{}.
+// but map[interface{}]interface{} type is not supported in json package.
+// this function is available to resolve the problem.
+func convert(in interface{}) interface{} {
+	switch x := in.(type) {
+	case map[interface{}]interface{}:
+		out := map[string]interface{}{}
+		for key, value := range x {
+			out[key.(string)] = convert(value)
+		}
+		return out
+	case []interface{}:
+		for key, value := range x {
+			x[key] = convert(value)
+		}
+	}
+	return in
 }
