@@ -22,7 +22,7 @@ import (
 )
 
 func main() {
-	logger.Logging(logger.DEBUG, "Start Management Agent")
-	api.RunSDAWebServer("0.0.0.0", 48098)
-	logger.Logging(logger.DEBUG, "Stop Management Agent")
+	logger.Logging(logger.DEBUG, "Start Pharos Node")
+	api.RunNodeWebServer("0.0.0.0", 48098)
+	logger.Logging(logger.DEBUG, "Stop Pharos Node")
 }

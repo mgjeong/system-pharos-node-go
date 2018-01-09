@@ -17,13 +17,17 @@
 package api
 
 import (
-	"bytes"
-	"commons/errors"
-	urls "commons/url"
 	"io"
 	"net/http"
-	"net/url"
+	"net/http/httptest"
 	"testing"
+)
+
+const (
+	GET    string = "GET"
+	PUT    string = "PUT"
+	POST   string = "POST"
+	DELETE string = "DELETE"
 )
 
 // Test
@@ -33,15 +37,21 @@ var head http.Header
 type testResponseWriter struct {
 }
 
+func init() {
+	NodeApis = Executor{}
+}
+
 func (w testResponseWriter) Header() http.Header {
 	return head
 }
+
 func (w testResponseWriter) Write(b []byte) (int, error) {
 	if string(b) == http.StatusText(http.StatusOK) {
 		w.WriteHeader(http.StatusOK)
 	}
 	return 0, nil
 }
+
 func (w testResponseWriter) WriteHeader(code int) {
 	status = code
 }
@@ -57,36 +67,11 @@ func newRequest(method string, url string, body io.Reader) *http.Request {
 
 func invalidOperation(t *testing.T, method string, url string, code int) {
 	w, req := testResponseWriter{}, newRequest(method, url, nil)
-	_SDAApis.ServeHTTP(w, req)
+	NodeApis.ServeHTTP(w, req)
 
 	t.Log(status)
 	if status != code {
 		t.Error()
-	}
-}
-
-func getInvalidMethodList() map[string][]string {
-	urlList := make(map[string][]string)
-	urlList["/api/v1/management/deploy"] = []string{GET, PUT, DELETE}
-	urlList["/api/v1/management/apps"] = []string{PUT, POST, DELETE}
-	urlList["/api/v1/management/apps/11"] = []string{PUT}
-	urlList["/api/v1/management/apps/11/update"] = []string{GET, PUT, DELETE}
-	urlList["/api/v1/management/apps/11/stop"] = []string{GET, PUT, DELETE}
-	urlList["/api/v1/management/apps/11/start"] = []string{GET, PUT, DELETE}
-	urlList["/api/v1/management/unregister"] = []string{GET, PUT, DELETE}
-
-	return urlList
-}
-
-func TestInvalidMethod(t *testing.T) {
-	urlList := getInvalidMethodList()
-
-	for key, vals := range urlList {
-		for _, tc := range vals {
-			t.Run(key+"="+tc, func(t *testing.T) {
-				invalidOperation(t, tc, key, http.StatusMethodNotAllowed)
-			})
-		}
 	}
 }
 
@@ -112,350 +97,84 @@ func TestInvalidUrl(t *testing.T) {
 	}
 }
 
-func testMakeResponse(t *testing.T, w testResponseWriter, data []byte, expect int) {
-	makeResponse(w, data)
+type deploymentApiExecutorMock struct {
+	handlerCall bool
+}
 
-	t.Log(status)
-	if status != expect {
-		t.Error()
+type healthApiExecutorMock struct {
+	handlerCall bool
+}
+
+type resourceApiExecutorMock struct {
+	handlerCall bool
+}
+
+var dm deploymentApiExecutorMock
+var hm healthApiExecutorMock
+var rm resourceApiExecutorMock
+
+func setUp() func() {
+	dm.handlerCall = false
+	hm.handlerCall = false
+	rm.handlerCall = false
+	defaultDeploymentApiExecutor := deploymentApiExecutor
+	defaultHealthApiExecutor := healthApiExecutor
+	defaultResourceApiExecutor := resourceApiExecutor
+	deploymentApiExecutor = &dm
+	healthApiExecutor = &hm
+	resourceApiExecutor = &rm
+
+	return func() {
+		deploymentApiExecutor = defaultDeploymentApiExecutor
+		healthApiExecutor = defaultHealthApiExecutor
+		resourceApiExecutor = defaultResourceApiExecutor
 	}
 }
 
-func TestMakeResponse(t *testing.T) {
-	var data []byte
-	w := testResponseWriter{}
-	t.Run("ExpectSuccessWithEmptyData", func(t *testing.T) {
-		testMakeResponse(t, w, data, http.StatusOK)
-	})
+func TestServeHTTPsendDeploymentApi(t *testing.T) {
+	tearDown := setUp()
+	defer tearDown()
+	w := httptest.NewRecorder()
+	req := newRequest("POST", "localhost:48098/api/v1/management/apps/deploy", nil)
+	NodeApis.ServeHTTP(w, req)
 
-	data = []byte{'1', '2', '3'}
-	t.Run("ExpectSuccess", func(t *testing.T) {
-		testMakeResponse(t, w, data, http.StatusOK)
-	})
-}
-
-// Test using mocking for controllerinterface
-var doSomethingFunc func(*mockingci)
-var doSomethingFuncWithAppId func(*mockingci, string)
-
-// Test using mocking for healthcheckinterface
-var doSomethingFunc2 func(*mockinghci)
-
-type mockingci struct {
-	data map[string]interface{}
-	path string
-	err  error
-}
-
-func makeMockingCi() mockingci {
-	mock := mockingci{}
-	mock.data = make(map[string]interface{})
-	mock.err = nil
-	return mock
-}
-
-type mockinghci struct {
-	err error
-}
-
-func makeMockingHci() mockinghci {
-	mock := mockinghci{}
-	mock.err = nil
-	return mock
-}
-
-func (m mockinghci) Unregister() error {
-	doSomethingFunc2(&m)
-	return m.err
-}
-
-func (m mockingci) DeployApp(body string) (map[string]interface{}, error) {
-	doSomethingFunc(&m)
-	return m.data, m.err
-}
-func (m mockingci) App(appId string) (map[string]interface{}, error) {
-	doSomethingFuncWithAppId(&m, appId)
-	return m.data, m.err
-}
-func (m mockingci) Apps() (map[string]interface{}, error) {
-	doSomethingFunc(&m)
-	return m.data, m.err
-}
-func (m mockingci) UpdateAppInfo(appId string, body string) error {
-	doSomethingFuncWithAppId(&m, appId)
-	return m.err
-}
-func (m mockingci) DeleteApp(appId string) error {
-	doSomethingFuncWithAppId(&m, appId)
-	return m.err
-}
-func (m mockingci) UpdateApp(appId string) error {
-	doSomethingFuncWithAppId(&m, appId)
-	return m.err
-}
-func (m mockingci) StopApp(appId string) error {
-	doSomethingFuncWithAppId(&m, appId)
-	return m.err
-}
-func (m mockingci) StartApp(appId string) error {
-	doSomethingFuncWithAppId(&m, appId)
-	return m.err
-}
-
-func getBody() io.Reader {
-	data := url.Values{}
-	data.Set("name", "test")
-	return bytes.NewBufferString(data.Encode())
-}
-
-func setup(t *testing.T, mock mockingci) func(*testing.T) {
-	deploymentExecutor = mock
-	return func(*testing.T) {}
-}
-
-func setup2(t *testing.T, mock mockinghci) func(*testing.T) {
-	healthExecutor = mock
-	return func(*testing.T) {}
-}
-
-type returnValue struct {
-	id   string
-	err  error
-	path string
-}
-
-func executeFuncImpl(t *testing.T, method string, url string, isBody bool) {
-	var body io.Reader
-	body = nil
-	if isBody {
-		body = getBody()
-	}
-	w, req := testResponseWriter{}, newRequest(method, url, body)
-	_SDAApis.ServeHTTP(w, req)
-
-	t.Log(status)
-	t.Log(head)
-}
-
-func executeFunc(t *testing.T, method string, url string, r returnValue, isBody bool) {
-	doSomethingFunc = func(m *mockingci) {
-		m.data["id"] = r.id
-		m.err = r.err
-		m.path = r.path
-	}
-	executeFuncImpl(t, method, url, isBody)
-}
-
-func executeFunc2(t *testing.T, method string, url string, r returnValue, isBody bool) {
-	doSomethingFunc2 = func(m *mockinghci) {
-		m.err = r.err
-	}
-	executeFuncImpl(t, method, url, isBody)
-}
-
-func executeFuncWithAppId(t *testing.T, appId string, method string, url string, r returnValue, isBody bool) {
-	doSomethingFuncWithAppId = func(m *mockingci, id string) {
-
-		m.data["id"] = r.id
-		m.err = r.err
-		m.path = r.path
-		if appId != id {
-			t.Error()
-		}
-	}
-	executeFuncImpl(t, method, url, isBody)
-}
-
-type testObj struct {
-	name       string
-	err        error
-	expectCode int
-}
-
-func getErrorTestList() []testObj {
-	testList := []testObj{
-		{"InvalidYamlError", errors.InvalidYaml{}, http.StatusBadRequest},
-		{"InvalidAppId", errors.InvalidAppId{}, http.StatusBadRequest},
-		{"InvalidParamError", errors.InvalidParam{}, http.StatusBadRequest},
-		{"NotFoundImage", errors.NotFoundImage{}, http.StatusBadRequest},
-		{"AlreadyAllocatedPort", errors.AlreadyAllocatedPort{}, http.StatusBadRequest},
-		{"AlreadyUsedName", errors.AlreadyUsedName{}, http.StatusBadRequest},
-		{"InvalidContainerName", errors.InvalidContainerName{}, http.StatusBadRequest},
-		{"IOError", errors.IOError{}, http.StatusInternalServerError},
-		{"UnknownError", errors.Unknown{}, http.StatusInternalServerError},
-		{"NotFoundError", errors.NotFound{}, http.StatusServiceUnavailable},
-		{"AlreadyReported", errors.AlreadyReported{}, http.StatusAlreadyReported},
-	}
-	return testList
-}
-
-func TestDeploy(t *testing.T) {
-	mock := makeMockingCi()
-	tearDown := setup(t, mock)
-	defer tearDown(t)
-
-	id := "12345"
-
-	t.Run("Success", func(t *testing.T) {
-		r := returnValue{id: id, err: nil, path: ""}
-		executeFunc(t, POST, urls.Base()+urls.Management()+urls.Deploy(), r, true)
-		if status != http.StatusOK ||
-			head.Get("Location") != urls.Base()+urls.Management()+urls.Apps()+"/"+id {
-			t.Error()
-		}
-	})
-
-	testList := getErrorTestList()
-
-	for _, test := range testList {
-		t.Run("Error/"+test.name, func(t *testing.T) {
-			r := returnValue{id: id, err: test.err, path: ""}
-			executeFunc(t, POST, urls.Base()+urls.Management()+urls.Deploy(), r, true)
-
-			if status != test.expectCode {
-				t.Error()
-			}
-		})
-	}
-
-	t.Run("ErrorEmptyBody", func(t *testing.T) {
-		r := returnValue{id: id, err: errors.Unknown{}, path: ""}
-		executeFunc(t, POST, urls.Base()+urls.Management()+urls.Deploy(), r, false)
-
-		if status == http.StatusOK {
-			t.Error()
-		}
-	})
-
-}
-
-func TestApps(t *testing.T) {
-	mock := makeMockingCi()
-	tearDown := setup(t, mock)
-	defer tearDown(t)
-
-	t.Run("Success", func(t *testing.T) {
-		r := returnValue{id: "", err: nil, path: ""}
-		executeFunc(t, GET, urls.Base()+urls.Management()+urls.Apps(), r, false)
-
-		if status != http.StatusOK {
-			t.Error()
-		}
-	})
-
-	testList := getErrorTestList()
-	for _, test := range testList {
-		t.Run("Error/"+test.name, func(t *testing.T) {
-			r := returnValue{id: "", err: test.err, path: ""}
-			executeFunc(t, GET, urls.Base()+urls.Management()+urls.Apps(), r, false)
-			if status != test.expectCode {
-				t.Error()
-			}
-		})
+	if rm.handlerCall && hm.handlerCall && !dm.handlerCall {
+		t.Error("TestServeHTTPsendDeploymentApi is invalid")
 	}
 }
 
-func TestUnregister(t *testing.T) {
-	mock := makeMockingHci()
-	tearDown := setup2(t, mock)
-	defer tearDown(t)
+func TestServeHTTPsendUnregisterApi(t *testing.T) {
+	tearDown := setUp()
+	defer tearDown()
+	w := httptest.NewRecorder()
+	req := newRequest("POST", "localhost:48098/api/v1/management/unregister", nil)
+	NodeApis.ServeHTTP(w, req)
 
-	t.Run("Success", func(t *testing.T) {
-		r := returnValue{id: "", err: nil, path: ""}
-		executeFunc2(t, POST, urls.Base()+urls.Management()+urls.Unregister(), r, true)
-
-		if status != http.StatusOK {
-			t.Error()
-		}
-	})
-
-	testList := getErrorTestList()
-	for _, test := range testList {
-		t.Run("Error/"+test.name, func(t *testing.T) {
-			r := returnValue{id: "", err: test.err, path: ""}
-			executeFunc2(t, POST, urls.Base()+urls.Management()+urls.Unregister(), r, true)
-			if status != test.expectCode {
-				t.Error()
-			}
-		})
+	if rm.handlerCall && !hm.handlerCall && dm.handlerCall {
+		t.Error("TestServeHTTPsendUnregisterApi is invalid")
 	}
 }
 
-func TestApp(t *testing.T) {
-	mock := makeMockingCi()
-	tearDown := setup(t, mock)
-	defer tearDown(t)
+func TestServeHTTPsendResourceApi(t *testing.T) {
+	tearDown := setUp()
+	defer tearDown()
+	w := httptest.NewRecorder()
+	req := newRequest("POST", "localhost:48098/api/v1/monitoring/resource", nil)
+	NodeApis.ServeHTTP(w, req)
 
-	var list []string = []string{GET, POST, DELETE}
-
-	id := "111"
-	url := urls.Base() + urls.Management() + urls.Apps() + "/" + id
-
-	for _, method := range list {
-		t.Run(method+"/Success", func(t *testing.T) {
-			r := returnValue{id: id, err: nil, path: ""}
-			executeFuncWithAppId(t, id, method, url, r, true)
-
-			if status != http.StatusOK {
-				t.Error()
-			}
-		})
-
-		testList := getErrorTestList()
-		for _, test := range testList {
-			t.Run(method+"/Error/"+test.name, func(t *testing.T) {
-				r := returnValue{id: id, err: test.err, path: ""}
-				executeFuncWithAppId(t, id, method, url, r, true)
-
-				if status != test.expectCode {
-					t.Error()
-				}
-			})
-		}
+	if !rm.handlerCall && hm.handlerCall && dm.handlerCall {
+		t.Error("TestServeHTTPsendResourceApi is invalid")
 	}
-
-	t.Run(POST+"/ErrorEmptyBody", func(t *testing.T) {
-		r := returnValue{id: id, err: errors.Unknown{}, path: ""}
-		executeFuncWithAppId(t, id, POST, url, r, false)
-
-		if status == http.StatusOK {
-			t.Error()
-		}
-	})
 }
 
-func TestFunc(t *testing.T) {
-	mock := makeMockingCi()
-	tearDown := setup(t, mock)
-	defer tearDown(t)
+func (dm *deploymentApiExecutorMock) Handle(w http.ResponseWriter, req *http.Request) {
+	dm.handlerCall = true
+}
 
-	id := "111"
-	url := urls.Base() + urls.Management() + urls.Apps() + "/" + id
+func (hm *healthApiExecutorMock) Handle(w http.ResponseWriter, req *http.Request) {
+	hm.handlerCall = true
+}
 
-	urls := []string{
-		urls.Update(), urls.Start(), urls.Stop(),
-	}
-
-	for _, u := range urls {
-		t.Run(u+"/Success", func(t *testing.T) {
-			r := returnValue{id: "", err: nil, path: ""}
-			executeFuncWithAppId(t, id, POST, url+u, r, false)
-
-			if status != http.StatusOK {
-				t.Error()
-			}
-		})
-
-		testList := getErrorTestList()
-		for _, test := range testList {
-			t.Run(u+"/Error/"+test.name, func(t *testing.T) {
-				r := returnValue{id: "", err: test.err, path: ""}
-				executeFuncWithAppId(t, id, POST, url+u, r, false)
-
-				if status != test.expectCode {
-					t.Error()
-				}
-			})
-		}
-	}
+func (rm *resourceApiExecutorMock) Handle(w http.ResponseWriter, req *http.Request) {
+	rm.handlerCall = true
 }
