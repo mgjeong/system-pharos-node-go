@@ -63,35 +63,33 @@ func (Executor) Handle(w http.ResponseWriter, req *http.Request) {
 	logger.Logging(logger.DEBUG)
 	defer logger.Logging(logger.DEBUG, "OUT")
 
-	if strings.Contains(req.URL.Path, url.Deploy()) {
-		apiInnerExecutor.deploy(w, req)
-	} else if strings.Contains(req.URL.Path, url.Apps()) {
-		switch reqUrl, split := req.URL.Path, strings.Split(req.URL.Path, "/"); {
-		case len(split) == 7:
-			switch appId := split[len(split)-2]; {
-			case strings.HasSuffix(reqUrl, url.Start()):
-				apiInnerExecutor.start(w, req, appId)
+	switch reqUrl, split := req.URL.Path, strings.Split(req.URL.Path, "/"); {
+	case len(split) == 7:
+		switch appId := split[len(split)-2]; {
+		case strings.HasSuffix(reqUrl, url.Start()):
+			apiInnerExecutor.start(w, req, appId)
 
-			case strings.HasSuffix(reqUrl, url.Stop()):
-				apiInnerExecutor.stop(w, req, appId)
+		case strings.HasSuffix(reqUrl, url.Stop()):
+			apiInnerExecutor.stop(w, req, appId)
 
-			case strings.HasSuffix(reqUrl, url.Update()):
-				apiInnerExecutor.update(w, req, appId)
-
-			default:
-				logger.Logging(logger.DEBUG, "Unmatched url")
-				common.MakeErrorResponse(w, errors.NotFoundURL{reqUrl})
-			}
-		case len(split) == 6:
-			apiInnerExecutor.app(w, req, split[len(split)-1])
-
-		case len(split) == 5:
-			apiInnerExecutor.apps(w, req)
+		case strings.HasSuffix(reqUrl, url.Update()):
+			apiInnerExecutor.update(w, req, appId)
 
 		default:
 			logger.Logging(logger.DEBUG, "Unmatched url")
 			common.MakeErrorResponse(w, errors.NotFoundURL{reqUrl})
 		}
+	case len(split) == 6:
+		if strings.Contains(req.URL.Path, url.Deploy()) {
+			apiInnerExecutor.deploy(w, req)
+		} else {
+			apiInnerExecutor.app(w, req, split[len(split)-1])
+		}
+	case len(split) == 5:
+		apiInnerExecutor.apps(w, req)
+	default:
+		logger.Logging(logger.DEBUG, "Unmatched url")
+		common.MakeErrorResponse(w, errors.NotFoundURL{reqUrl})
 	}
 }
 

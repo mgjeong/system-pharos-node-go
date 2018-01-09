@@ -71,8 +71,7 @@ func (Executor) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	case strings.Contains(reqUrl, url.Unregister()):
 		healthApiExecutor.Handle(w, req)
 
-	case strings.Contains(reqUrl, url.Deploy()) ||
-		strings.Contains(reqUrl, url.Apps()):
+	case strings.Contains(reqUrl, url.Apps()):
 		deploymentApiExecutor.Handle(w, req)
 
 	case strings.Contains(reqUrl, url.Resource()):

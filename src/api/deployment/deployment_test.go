@@ -72,13 +72,12 @@ func invalidOperation(t *testing.T, method string, url string, code int) {
 
 func getInvalidMethodList() map[string][]string {
 	urlList := make(map[string][]string)
-	urlList["/api/v1/management/deploy"] = []string{GET, PUT, DELETE}
 	urlList["/api/v1/management/apps"] = []string{PUT, POST, DELETE}
+	urlList["/api/v1/management/apps/deploy"] = []string{GET, PUT, DELETE}
 	urlList["/api/v1/management/apps/11"] = []string{PUT}
 	urlList["/api/v1/management/apps/11/update"] = []string{GET, PUT, DELETE}
 	urlList["/api/v1/management/apps/11/stop"] = []string{GET, PUT, DELETE}
 	urlList["/api/v1/management/apps/11/start"] = []string{GET, PUT, DELETE}
-	//urlList["/api/v1/management/unregister"] = []string{GET, PUT, DELETE}
 
 	return urlList
 }
