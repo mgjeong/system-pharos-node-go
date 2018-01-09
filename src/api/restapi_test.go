@@ -19,6 +19,7 @@ package api
 import (
 	"io"
 	"net/http"
+	"net/http/httptest"
 	"testing"
 )
 
@@ -43,12 +44,14 @@ func init() {
 func (w testResponseWriter) Header() http.Header {
 	return head
 }
+
 func (w testResponseWriter) Write(b []byte) (int, error) {
 	if string(b) == http.StatusText(http.StatusOK) {
 		w.WriteHeader(http.StatusOK)
 	}
 	return 0, nil
 }
+
 func (w testResponseWriter) WriteHeader(code int) {
 	status = code
 }
@@ -92,4 +95,86 @@ func TestInvalidUrl(t *testing.T) {
 			})
 		}
 	}
+}
+
+type deploymentApiExecutorMock struct {
+	handlerCall bool
+}
+
+type healthApiExecutorMock struct {
+	handlerCall bool
+}
+
+type resourceApiExecutorMock struct {
+	handlerCall bool
+}
+
+var dm deploymentApiExecutorMock
+var hm healthApiExecutorMock
+var rm resourceApiExecutorMock
+
+func setUp() func() {
+	dm.handlerCall = false
+	hm.handlerCall = false
+	rm.handlerCall = false
+	defaultDeploymentApiExecutor := deploymentApiExecutor
+	defaultHealthApiExecutor := healthApiExecutor
+	defaultResourceApiExecutor := resourceApiExecutor
+	deploymentApiExecutor = &dm
+	healthApiExecutor = &hm
+	resourceApiExecutor = &rm
+
+	return func() {
+		deploymentApiExecutor = defaultDeploymentApiExecutor
+		healthApiExecutor = defaultHealthApiExecutor
+		resourceApiExecutor = defaultResourceApiExecutor
+	}
+}
+
+func TestServeHTTPsendDeploymentApi(t *testing.T) {
+	tearDown := setUp()
+	defer tearDown()
+	w := httptest.NewRecorder()
+	req := newRequest("POST", "localhost:48098/api/v1/management/apps/deploy", nil)
+	NodeApis.ServeHTTP(w, req)
+
+	if rm.handlerCall && hm.handlerCall && !dm.handlerCall {
+		t.Error("TestServeHTTPsendDeploymentApi is invalid")
+	}
+}
+
+func TestServeHTTPsendUnregisterApi(t *testing.T) {
+	tearDown := setUp()
+	defer tearDown()
+	w := httptest.NewRecorder()
+	req := newRequest("POST", "localhost:48098/api/v1/management/unregister", nil)
+	NodeApis.ServeHTTP(w, req)
+
+	if rm.handlerCall && !hm.handlerCall && dm.handlerCall {
+		t.Error("TestServeHTTPsendUnregisterApi is invalid")
+	}
+}
+
+func TestServeHTTPsendResourceApi(t *testing.T) {
+	tearDown := setUp()
+	defer tearDown()
+	w := httptest.NewRecorder()
+	req := newRequest("POST", "localhost:48098/api/v1/monitoring/resource", nil)
+	NodeApis.ServeHTTP(w, req)
+
+	if !rm.handlerCall && hm.handlerCall && dm.handlerCall {
+		t.Error("TestServeHTTPsendResourceApi is invalid")
+	}
+}
+
+func (dm *deploymentApiExecutorMock) Handle(w http.ResponseWriter, req *http.Request) {
+	dm.handlerCall = true
+}
+
+func (hm *healthApiExecutorMock) Handle(w http.ResponseWriter, req *http.Request) {
+	hm.handlerCall = true
+}
+
+func (rm *resourceApiExecutorMock) Handle(w http.ResponseWriter, req *http.Request) {
+	rm.handlerCall = true
 }

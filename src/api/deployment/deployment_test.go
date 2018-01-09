@@ -228,7 +228,7 @@ func TestDeploy(t *testing.T) {
 
 	t.Run("Success", func(t *testing.T) {
 		r := returnValue{id: id, err: nil, path: ""}
-		executeFunc(t, POST, urls.Base()+urls.Management()+urls.Deploy(), r, true)
+		executeFunc(t, POST, urls.Base()+urls.Management()+urls.Apps()+urls.Deploy(), r, true)
 		if status != http.StatusOK ||
 			head.Get("Location") != urls.Base()+urls.Management()+urls.Apps()+"/"+id {
 			t.Error()
@@ -240,7 +240,7 @@ func TestDeploy(t *testing.T) {
 	for _, test := range testList {
 		t.Run("Error/"+test.name, func(t *testing.T) {
 			r := returnValue{id: id, err: test.err, path: ""}
-			executeFunc(t, POST, urls.Base()+urls.Management()+urls.Deploy(), r, true)
+			executeFunc(t, POST, urls.Base()+urls.Management()+urls.Apps()+urls.Deploy(), r, true)
 
 			if status != test.expectCode {
 				t.Error()
@@ -250,7 +250,7 @@ func TestDeploy(t *testing.T) {
 
 	t.Run("ErrorEmptyBody", func(t *testing.T) {
 		r := returnValue{id: id, err: errors.Unknown{}, path: ""}
-		executeFunc(t, POST, urls.Base()+urls.Management()+urls.Deploy(), r, false)
+		executeFunc(t, POST, urls.Base()+urls.Management()+urls.Apps()+urls.Deploy(), r, false)
 
 		if status == http.StatusOK {
 			t.Error()
