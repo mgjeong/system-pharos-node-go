@@ -20,7 +20,7 @@ import (
 	"api/common"
 	"commons/errors"
 	"commons/logger"
-	"controller/resource"
+	"controller/monitoring/resource"
 
 	"net/http"
 	"strings"
