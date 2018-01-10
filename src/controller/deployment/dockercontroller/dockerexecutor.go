@@ -21,159 +21,292 @@ package dockercontroller
 import (
 	"commons/errors"
 	"commons/logger"
-	"controller/deployment/dockercontroller/compose"
-	shell "controller/shellcommand"
-	"encoding/json"
-	"reflect"
+	"strconv"
+	"strings"
+
+	"golang.org/x/net/context"
+
+	"docker.io/go-docker"
+	"docker.io/go-docker/api/types"
+
+	dockercompose "github.com/docker/libcompose/docker"
+	"github.com/docker/libcompose/docker/ctx"
+	"github.com/docker/libcompose/project"
+	"github.com/docker/libcompose/project/options"
 )
 
 type Command interface {
-	Create(path string) error
-	Up(path string) error
-	Down(path string) error
-	DownWithRemoveImages(path string) error
-	Start(path string) error
-	Stop(path string) error
-	Pause(path string) error
-	Unpause(path string) error
-	Pull(path string) error
-	Ps(path string, args ...string) (string, error)
-	Inspect(IdOrName string) (string, error)
-	GetImageDigest(imageName string) (string, error)
-}
-
-type dockerExecutorImpl struct {
-	dockerCommand string
+	Create(id, path string) error
+	Up(id, path string) error
+	Down(id, path string) error
+	DownWithRemoveImages(id, path string) error
+	Start(id, path string) error
+	Stop(id, path string) error
+	Pause(id, path string) error
+	Unpause(id, path string) error
+	Pull(id, path string) error
+	Ps(id, path string, args ...string) ([]map[string]string, error)
+	GetContainerStateByName(containerName string) (map[string]interface{}, error)
+	GetImageDigestByName(imageName string) (string, error)
 }
 
 var Executor dockerExecutorImpl
-var shellExecutor shell.Command
+
+type dockerExecutorImpl struct{}
+
+var client *docker.Client
+
+type typeGetImageList func(*docker.Client, context.Context, types.ImageListOptions) ([]types.ImageSummary, error)
+type typeGetContainerList func(*docker.Client, context.Context, types.ContainerListOptions) ([]types.Container, error)
+type typeGetContainerInspect func(*docker.Client, context.Context, string) (types.ContainerJSON, error)
+
+var getImageList typeGetImageList
+var getContainerList typeGetContainerList
+var getContainerInspect typeGetContainerInspect
+
+type createType func(*project.APIProject, context.Context, options.Create, ...string) error
+
+var getComposeInstance func(string, string) (project.APIProject, error)
+var create createType
 
 func init() {
-	shellExecutor = shell.Executor
-	Executor.dockerCommand = "docker"
+	getComposeInstance = getComposeInstanceImpl
+
+	client, _ = docker.NewEnvClient()
+	getImageList = (*docker.Client).ImageList
+	getContainerList = (*docker.Client).ContainerList
+	getContainerInspect = (*docker.Client).ContainerInspect
 }
+
 // Creating containers of service list in the yaml description.
 // if succeed to create, return error as nil
 // otherwise, return error.
-func (dockerExecutorImpl) Create(path string) error {
-	return compose.Executor.Create(path)
+func (dockerExecutorImpl) Create(id, path string) error {
+	logger.Logging(logger.DEBUG)
+	defer logger.Logging(logger.DEBUG, "OUT")
+
+	compose, err := getComposeInstance(id, path)
+	if err != nil {
+		return err
+	}
+
+	return compose.Create(context.Background(), options.Create{ForceRecreate: true})
 }
 
 // Pulling images and creating containers and start containers
 // of service list in the yaml description.
 // if succeed to up, return error as nil
 // otherwise, return error.
-func (dockerExecutorImpl) Up(path string) error {
-	return compose.Executor.Up(path)
+func (dockerExecutorImpl) Up(id, path string) error {
+	logger.Logging(logger.DEBUG)
+	defer logger.Logging(logger.DEBUG, "OUT")
+
+	compose, err := getComposeInstance(id, path)
+	if err != nil {
+		return err
+	}
+	return compose.Up(context.Background(), options.Up{Create: options.Create{ForceRecreate: true}})
 }
 
 // Stop and remove containers of service list in the yaml description.
 // if succeed to down, return error as nil
 // otherwise, return error.
-func (dockerExecutorImpl) Down(path string) error {
-	return compose.Executor.Down(path)
+func (dockerExecutorImpl) Down(id, path string) error {
+	logger.Logging(logger.DEBUG)
+	defer logger.Logging(logger.DEBUG, "OUT")
+
+	compose, err := getComposeInstance(id, path)
+	if err != nil {
+		return err
+	}
+	return compose.Down(context.Background(), options.Down{})
 }
 
 // Stop and remove containers, remove images of service list
 // in the yaml description.
 // if succeed to down with rmi option, return error as nil
 // otherwise, return error.
-func (dockerExecutorImpl) DownWithRemoveImages(path string) error {
-	return compose.Executor.DownWithRemoveImages(path)
+func (dockerExecutorImpl) DownWithRemoveImages(id, path string) error {
+	logger.Logging(logger.DEBUG)
+	defer logger.Logging(logger.DEBUG, "OUT")
+
+	compose, err := getComposeInstance(id, path)
+	if err != nil {
+		return err
+	}
+	return compose.Down(context.Background(), options.Down{RemoveImages: "all"})
 }
 
 // Starting containers of service list in the yaml description.
 // if succeed to start, return error as nil
 // otherwise, return error. (if contianers is not created, return error)
-func (dockerExecutorImpl) Start(path string) error {
-	return compose.Executor.Start(path)
+func (dockerExecutorImpl) Start(id, path string) error {
+	logger.Logging(logger.DEBUG)
+	defer logger.Logging(logger.DEBUG, "OUT")
+
+	compose, err := getComposeInstance(id, path)
+	if err != nil {
+		return err
+	}
+	return compose.Start(context.Background())
 }
 
 // Stopping containers of service list in the yaml description.
 // if succeed to stop, return error as nil
 // otherwise, return error.
-func (dockerExecutorImpl) Stop(path string) error {
-	return compose.Executor.Stop(path)
+func (dockerExecutorImpl) Stop(id, path string) error {
+	logger.Logging(logger.DEBUG)
+	defer logger.Logging(logger.DEBUG, "OUT")
+
+	compose, err := getComposeInstance(id, path)
+	if err != nil {
+		return err
+	}
+	return compose.Stop(context.Background(), 10)
 }
 
 // Pause containers of service list in the yaml description.
 // if succeed to pause, return error as nil
 // otherwise, return error.
-func (dockerExecutorImpl) Pause(path string) error {
-	return compose.Executor.Pause(path)
+func (dockerExecutorImpl) Pause(id, path string) error {
+	logger.Logging(logger.DEBUG)
+	defer logger.Logging(logger.DEBUG, "OUT")
+
+	compose, err := getComposeInstance(id, path)
+	if err != nil {
+		return err
+	}
+	return compose.Pause(context.Background())
 }
 
 // Resume paused containers of service list in the yaml description.
 // if succeed to resume, return error as nil
 // otherwise, return error.
-func (dockerExecutorImpl) Unpause(path string) error {
-	return compose.Executor.Unpause(path)
+func (dockerExecutorImpl) Unpause(id, path string) error {
+	logger.Logging(logger.DEBUG)
+	defer logger.Logging(logger.DEBUG, "OUT")
+
+	compose, err := getComposeInstance(id, path)
+	if err != nil {
+		return err
+	}
+	return compose.Unpause(context.Background())
 }
 
 // Pulling images of service list in the yaml description.
 // if succeed to pull, return error as nil
 // otherwise, return error.
-func (dockerExecutorImpl) Pull(path string) error {
-	return compose.Executor.Pull(path)
+func (dockerExecutorImpl) Pull(id, path string) error {
+	logger.Logging(logger.DEBUG)
+	defer logger.Logging(logger.DEBUG, "OUT")
+
+	compose, err := getComposeInstance(id, path)
+	if err != nil {
+		return err
+	}
+	return compose.Pull(context.Background())
 }
 
 // Getting container informations of service list in the yaml description.
 // (e.g. container name, command, state, port)
 // if succeed to get, return error as nil
 // otherwise, return error.
-func (dockerExecutorImpl) Ps(path string, args ...string) (string, error) {
-	return compose.Executor.Ps(path, args...)
-}
-
-// Getting image information by input image name.
-// if succeed to get, return string of image information
-// otherwise, return error.
-func (d dockerExecutorImpl) Inspect(IdOrName string) (string, error) {
+func (dockerExecutorImpl) Ps(id, path string, args ...string) ([]map[string]string, error) {
 	logger.Logging(logger.DEBUG)
 	defer logger.Logging(logger.DEBUG, "OUT")
 
-	funcName := "inspect"
-
-	args := []string{funcName, IdOrName}
-	return d.executeCommand(args...)
-}
-
-// Getting image digest by input image name.
-// if succeed to get, return string of image digest
-// otherwise, return error.
-func (d dockerExecutorImpl) GetImageDigest(imageName string) (string, error) {
-	logger.Logging(logger.DEBUG)
-	defer logger.Logging(logger.DEBUG, "OUT")
-	var inspectMap []map[string]interface{}
-
-	funcName := "inspect"
-
-	args := []string{funcName, imageName}
-	ret, err := d.executeCommand(args...)
-
+	compose, err := getComposeInstance(id, path)
 	if err != nil {
-		logger.Logging(logger.DEBUG, "executeCommand error")
-		return ret, err
+		return nil, err
 	}
+	infos, retErr := compose.Ps(context.Background(), args...)
+	retMap := make([]map[string]string, len(infos))
 
-	json.Unmarshal([]byte(ret), &inspectMap)
-	digestsList := reflect.ValueOf(inspectMap[0]["RepoDigests"])
-	if digestsList.Len() == 0 {
-		return ret, errors.NotFoundImage{"RepoDigests"}
-	} else {
-		ret = digestsList.Index(0).Interface().(string)
-		return ret, err
+	for idx, info := range infos {
+		retMap[idx] = make(map[string]string)
+		for key, value := range info {
+			retMap[idx][key] = value
+		}
 	}
+	return retMap, retErr
 }
 
-// Executing shell command.
-// if succeed to execute, return output of command
-// otherwise, return error.
-func (d dockerExecutorImpl) executeCommand(args ...string) (string, error) {
-	var tmpArgs []string
-	tmpArgs = append(tmpArgs, args...)
-	logger.Logging(logger.DEBUG, tmpArgs...)
+const (
+	STATUS   string = "Status"
+	EXITCODE string = "ExitCode"
+)
 
-	return shellExecutor.ExecuteCommand(Executor.dockerCommand, tmpArgs...)
+// Getting container state in the docker engine by container name.
+// if succeed to get, return state and exit code of container,
+// othewise, return error.
+func (d dockerExecutorImpl) GetContainerStateByName(containerName string) (map[string]interface{}, error) {
+	logger.Logging(logger.DEBUG)
+	defer logger.Logging(logger.DEBUG, "OUT")
+
+	containers, err := getContainerList(client, context.Background(), types.ContainerListOptions{All: true})
+	if err != nil {
+		logger.Logging(logger.ERROR)
+		return nil, errors.Unknown{Msg: "fail to get the container list from docker engine"}
+	}
+
+	for _, container := range containers {
+		target_str := "/" + containerName
+		if isContainedStringInList(container.Names, target_str) {
+
+			ins, err := getContainerInspect(client, context.Background(), container.ID)
+			if err != nil {
+				logger.Logging(logger.ERROR, err.Error())
+				continue
+			}
+
+			ret := make(map[string]interface{})
+			ret[STATUS] = container.State
+			ret[EXITCODE] = strconv.Itoa(ins.State.ExitCode)
+
+			logger.Logging(logger.DEBUG, "returnning", ret[STATUS].(string), ret[EXITCODE].(string))
+			return ret, nil
+		}
+	}
+	return nil, errors.NotFoundImage{Msg: "can not found container"}
+}
+
+// Getting image digest in the docker engine by image name.
+// if succeed to get, return digest of image,
+// othewise, return error.
+func (d dockerExecutorImpl) GetImageDigestByName(imageName string) (string, error) {
+	logger.Logging(logger.DEBUG)
+	defer logger.Logging(logger.DEBUG, "OUT")
+
+	//	images, err := client.(*docker.Client).ImageList(context.Background(), types.ImageListOptions{})
+	images, err := getImageList(client, context.Background(), types.ImageListOptions{})
+	if err != nil {
+		logger.Logging(logger.ERROR, "fail to get the image list from docker engine")
+		return "", errors.Unknown{Msg: "fail to get the image list from docker engine"}
+	}
+
+	for _, image := range images {
+		if isContainedStringInList(image.RepoTags, imageName) &&
+			image.RepoDigests != nil && len(image.RepoDigests[0]) != 0 {
+			return image.RepoDigests[0], nil
+		}
+	}
+	return "", errors.NotFoundImage{Msg: "can not found image"}
+}
+
+func isContainedStringInList(list []string, name string) bool {
+	for _, str := range list {
+		if strings.Compare(str, name) == 0 {
+			return true
+		}
+	}
+	return false
+}
+
+func getComposeInstanceImpl(id, path string) (project.APIProject, error) {
+	return dockercompose.NewProject(&ctx.Context{
+		Context: project.Context{
+			ComposeFiles: []string{path},
+			ProjectName:  id,
+		},
+	}, nil)
 }

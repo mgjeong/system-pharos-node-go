@@ -50,3 +50,11 @@ func ExampleUnregister() {
 	fmt.Println(Unregister())
 	// Output: /unregister
 }
+func ExampleAgents() {
+	fmt.Println(Agents())
+	// Output: /agents
+}
+func ExamplePing() {
+	fmt.Println(Ping())
+	// Output: /ping
+}
