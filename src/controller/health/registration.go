@@ -31,7 +31,7 @@ const (
 	HTTP_TAG          = "http://"
 	IP                = "ip"
 	MANAGER           = "manager"
-	AGENT             = "agent"
+	NODE              = "node"
 	INTERVAL          = "interval"
 	HEALTH_CHECK      = "healthCheck"
 	DEFAULT_SDAM_PORT = "48099"
@@ -95,9 +95,9 @@ func register() error {
 		return errors.Unknown{"received error message from system-edge-manager" + message}
 	}
 
-	// Insert agent id in configuration file.
+	// Insert node id in configuration file.
 	newConfig := make(map[string]interface{})
-	newConfig["agentid"] = respMap["id"]
+	newConfig["nodeid"] = respMap["id"]
 
 	err = configurator.SetConfiguration(newConfig)
 	if err != nil {
@@ -117,9 +117,9 @@ func (Executor) Unregister() error {
 	logger.Logging(logger.DEBUG, "IN")
 	defer logger.Logging(logger.DEBUG, "OUT")
 
-	// Reset agent id.
+	// Reset node id.
 	newConfig := make(map[string]interface{})
-	newConfig["agentid"] = ""
+	newConfig["nodeid"] = ""
 
 	err := configurator.SetConfiguration(newConfig)
 	if err != nil {
@@ -148,11 +148,11 @@ func sendRegisterRequest(body map[string]interface{}) (int, string, error) {
 	return httpExecutor.SendHttpRequest("POST", url, []byte(jsonData))
 }
 
-func sendUnregisterRequest(agentID string) (int, string, error) {
+func sendUnregisterRequest(nodeID string) (int, string, error) {
 	logger.Logging(logger.DEBUG, "IN")
 	defer logger.Logging(logger.DEBUG, "OUT")
 
-	url := common.makeRequestUrl(url.Nodes(), "/", agentID, url.Unregister())
+	url := common.makeRequestUrl(url.Nodes(), "/", nodeID, url.Unregister())
 	return httpExecutor.SendHttpRequest("POST", url)
 }
 
@@ -165,7 +165,7 @@ func makeRegistrationBody(config map[string]interface{}) map[string]interface{} 
 	// Delete unused field.
 	delete(config, "serveraddress")
 	delete(config, "deviceaddress")
-	delete(config, "agentid")
+	delete(config, "nodeid")
 
 	// Set configuration information in request body.
 	data["config"] = config

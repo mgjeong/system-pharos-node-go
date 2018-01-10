@@ -15,7 +15,7 @@
  *
  *******************************************************************************/
 
-// Package commons/url defines url used by system-management-agent.
+// Package commons/url defines url used by Pharos Node.
 package url
 
 // Returning base url as string.

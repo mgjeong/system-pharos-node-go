@@ -249,7 +249,7 @@ func (depExecutorImpl) UpdateAppInfo(appId string, body string) error {
 }
 
 // Start app in the target by input appId.
-// if starting is failed, Agent will make sure that only previous state.
+// if starting is failed, Pharos Node will make sure that only previous state.
 // can not guarantee about valid operation of containers.
 // if succeed to start, return error as nil
 // otherwise, return error.
@@ -340,7 +340,7 @@ func (depExecutorImpl) StopApp(appId string) error {
 // yaml should be updated as controller.UpdateAppInfo()
 // See also controller.UpdateAppInfo().
 // and if failed to update images,
-// Agent can make sure that previous imaes by digest.
+// Pharos Node can make sure that previous images by digest.
 // if succeed to update, return error as nil
 // otherwise, return error.
 func (depExecutorImpl) UpdateApp(appId string) error {

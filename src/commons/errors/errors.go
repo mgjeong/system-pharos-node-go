@@ -15,7 +15,7 @@
  *
  *******************************************************************************/
 
-// Package commons/errors defines error cases of system-management-agent.
+// Package commons/errors defines error cases of Pharos Node.
 package errors
 
 // Struct InvalidParam will be used for return case of error

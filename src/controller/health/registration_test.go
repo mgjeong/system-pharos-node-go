@@ -37,7 +37,7 @@ var (
 		"location":      "Human readable location",
 		"pinginterval":  "10",
 		"deviceaddress": "192.168.0.1",
-		"agentid":       "Pharos Agent ID",
+		"nodeid":       "Pharos Node ID",
 	}
 )
 
@@ -73,9 +73,9 @@ func TestCalledRegisterWhenFailedToSetConfiguration_ExpectErrorReturn(t *testing
 	msgMockObj := msgmocks.NewMockCommand(ctrl)
 
 	url := "http://192.168.0.1:48099/api/v1/management/nodes/register"
-	expectedResp := `{"id":"agentid"}`
+	expectedResp := `{"id":"nodeid"}`
 	expectedNewConfig := map[string]interface{}{
-		"agentid": "agentid",
+		"nodeid": "nodeid",
 	}
 
 	gomock.InOrder(
@@ -100,7 +100,7 @@ func TestCalledUnregister_ExpectSuccess(t *testing.T) {
 	configMockObj := configmocks.NewMockCommand(ctrl)
 
 	expectedNewConfig := map[string]interface{}{
-		"agentid": "",
+		"nodeid": "",
 	}
 
 	gomock.InOrder(
