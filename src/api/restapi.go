@@ -23,7 +23,7 @@ import (
 	"api/common"
 	deploymentapi "api/deployment"
 	healthapi "api/health"
-	resourceapi "api/resource"
+	resourceapi "api/monitoring/resource"
 	"commons/errors"
 	"commons/logger"
 	"commons/url"
