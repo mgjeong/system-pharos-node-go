@@ -16,7 +16,7 @@
  *******************************************************************************/
 
 // Package commons/logger implements log stream which is used
-// on system-management-agent.
+// on Pharos Node.
 package logger
 
 import (

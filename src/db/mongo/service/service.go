@@ -53,7 +53,7 @@ type Command interface {
 }
 
 const (
-	DB_NAME        = "DeploymentAgentDB"
+	DB_NAME        = "DeploymentNodeDB"
 	APP_COLLECTION = "APP"
 	SERVICES_FIELD = "services"
 	IMAGE_FIELD    = "image"

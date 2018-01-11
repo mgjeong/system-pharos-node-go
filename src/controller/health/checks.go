@@ -25,7 +25,7 @@ import (
 	"time"
 )
 
-func startHealthCheck(agentID string) {
+func startHealthCheck(nodeID string) {
 	logger.Logging(logger.DEBUG, "IN")
 	defer logger.Logging(logger.DEBUG, "OUT")
 
@@ -43,7 +43,7 @@ func startHealthCheck(agentID string) {
 		for {
 			select {
 			case <-common.ticker.C:
-				sendPingRequest(agentID, interval)
+				sendPingRequest(nodeID, interval)
 			case <-common.quit:
 				common.ticker.Stop()
 				stopHealthCheck()
@@ -58,7 +58,7 @@ func stopHealthCheck() {
 	common.quit = nil
 }
 
-func sendPingRequest(agentID string, interval string) (int, error) {
+func sendPingRequest(nodeID string, interval string) (int, error) {
 	logger.Logging(logger.DEBUG, "IN")
 	defer logger.Logging(logger.DEBUG, "OUT")
 
@@ -73,7 +73,7 @@ func sendPingRequest(agentID string, interval string) (int, error) {
 
 	logger.Logging(logger.DEBUG, "try to send ping request")
 
-	url := common.makeRequestUrl(url.Nodes(), "/", agentID, url.Ping())
+	url := common.makeRequestUrl(url.Nodes(), "/", nodeID, url.Ping())
 	code, _, err := httpExecutor.SendHttpRequest("POST", url, []byte(jsonData))
 	if err != nil {
 		logger.Logging(logger.ERROR, "failed to send ping request")
