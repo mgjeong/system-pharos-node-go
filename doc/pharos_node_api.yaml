@@ -7,7 +7,7 @@ info:
     The Pharos Node interacts with the Pharos Anchor and enables the
     distribution and control of microservices on an app-by-app basis.
 
-    In addition, It provies resource information API.
+    In addition, It provides resource information API.
   version: v1-20180110
 schemes:
   - http
