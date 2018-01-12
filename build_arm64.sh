@@ -24,7 +24,7 @@ function func_cleanup(){
 }
 
 function build(){
-    CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -o pharos-anchor -a -ldflags '-extldflags "-static"'  src/main/main.go
+    CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -o pharos-node -a -ldflags '-extldflags "-static"'  src/main/main.go
     if [ $? -ne 0 ]; then
         echo -e "\n\033[31m"build fail"\033[0m"
         func_cleanup
