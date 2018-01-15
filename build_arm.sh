@@ -20,8 +20,12 @@ echo -e "\n\033[33m"Start building of Pharos-Node"\033[0m"
 export GOPATH=$PWD
 
 function func_cleanup(){
-    rm -rf rm -rf $GOPATH/src/golang.org
+    rm -rf $GOPATH/pkg
+    rm -rf $GOPATH/src/docker.io
+    rm -rf $GOPATH/src/golang.org
+    rm -rf $GOPATH/src/github.com
 }
+
 
 function build(){
     CGO_ENABLED=0 GOOS=linux GOARCH=arm go build -o pharos-node -a -ldflags '-extldflags "-static"'  src/main/main.go
@@ -35,7 +39,11 @@ function build(){
 function download_pkgs(){
     pkg_list=(
         "gopkg.in/mgo.v2"
+        "gopkg.in/yaml.v2"
+        "-d docker.io/go-docker"
+        "-d github.com/docker/libcompose"
         )
+
 
     idx=1
     for pkg in "${pkg_list[@]}"; do
@@ -49,6 +57,7 @@ function download_pkgs(){
         echo ": Done"
         idx=$((idx+1))
     done
+    rm -rf $GOPATH/src/github.com/docker/distribution/vendor/github.com/opencontainers
 }
 
 echo -e "\nDownload dependent go-pkgs"

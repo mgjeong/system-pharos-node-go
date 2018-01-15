@@ -20,7 +20,10 @@ echo -e "\n\033[33m"Start building of Pharos-Node"\033[0m"
 export GOPATH=$PWD
 
 function func_cleanup(){
-    rm -rf rm -rf $GOPATH/src/golang.org
+    rm -rf $GOPATH/pkg
+    rm -rf $GOPATH/src/docker.io
+    rm -rf $GOPATH/src/golang.org
+    rm -rf $GOPATH/src/github.com
 }
 
 function build(){
@@ -35,6 +38,9 @@ function build(){
 function download_pkgs(){
     pkg_list=(
         "gopkg.in/mgo.v2"
+        "gopkg.in/yaml.v2"
+        "-d docker.io/go-docker"
+        "-d github.com/docker/libcompose"
         )
 
     idx=1
@@ -49,6 +55,7 @@ function download_pkgs(){
         echo ": Done"
         idx=$((idx+1))
     done
+    rm -rf $GOPATH/src/github.com/docker/distribution/vendor/github.com/opencontainers
 }
 
 echo -e "\nDownload dependent go-pkgs"
