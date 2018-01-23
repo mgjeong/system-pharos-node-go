@@ -40,6 +40,16 @@ const (
 	IMAGE        = "image"
 	NAME         = "name"
 	STATE        = "state"
+	EVENTS       = "events"
+	TARGETINFO   = "target"
+	REQUESTINFO  = "request"
+	HOST         = "host"
+	REPOSITORY   = "repository"
+	TAG          = "tag"
+	ACTION       = "action"
+	PUSH         = "push"
+	UPDATE       = "update"
+	DELETE       = "delete"
 )
 
 type Command interface {
@@ -50,6 +60,7 @@ type Command interface {
 	DeleteApp(appId string) error
 	StartApp(appId string) error
 	StopApp(appId string) error
+	HandleEvents(appId string, body string) error
 	UpdateApp(appId string) error
 }
 
@@ -326,6 +337,49 @@ func (depExecutorImpl) StopApp(appId string) error {
 	return nil
 }
 
+// Handle app's event in the target by input appId.
+// Event information about the service of the app
+// is stored in repository information and tag information.
+// if succeed to update, return error as nil
+// otherwise, return error.
+func (depExecutorImpl) HandleEvents(appId string, body string) error {
+	logger.Logging(logger.DEBUG, "IN", appId)
+	defer logger.Logging(logger.DEBUG, "OUT")
+
+	convertedBody, err := convertJsonToMap(body)
+	if err != nil {
+		logger.Logging(logger.ERROR, err.Error())
+		return err
+	}
+	events := convertedBody[EVENTS]
+
+	for _, eventInfo := range events.([]interface{}) {
+		parsedEvent := make(map[string]interface{})
+		parsedEvent, err = parseEventInfo(eventInfo.(map[string]interface{}))
+		if err != nil {
+			logger.Logging(logger.ERROR, err.Error())
+			return err
+		}
+
+		switch parsedEvent[ACTION] {
+		case PUSH:
+			err := updatedDockerImageFromRegistry(appId, parsedEvent)
+			if err != nil {
+				logger.Logging(logger.ERROR, err.Error())
+				return err
+			}
+		case DELETE:
+			err := deletedDockerImageFromRegistry(appId, parsedEvent)
+			if err != nil {
+				logger.Logging(logger.ERROR, err.Error())
+				return err
+			}
+		}
+	}
+	
+	return err
+}
+
 // Update images and restart containers in the target
 // by input appId and stored yaml in db server.
 // if you want to update images,
@@ -421,7 +475,7 @@ func (depExecutorImpl) DeleteApp(appId string) error {
 func restoreRepoDigests(appId, desc, state string) error {
 	logger.Logging(logger.DEBUG, "IN")
 	defer logger.Logging(logger.DEBUG, "OUT")
-  
+
 	imageNames, err := getImageNames([]byte(desc))
 	if err != nil {
 		logger.Logging(logger.DEBUG, err.Error())
@@ -611,4 +665,71 @@ func convert(in interface{}) interface{} {
 		}
 	}
 	return in
+}
+
+// convertJsonToMap converts JSON data into a map.
+// If successful, this function returns an error as nil.
+// otherwise, an appropriate error will be returned.
+func convertJsonToMap(jsonStr string) (map[string]interface{}, error) {
+	logger.Logging(logger.DEBUG, "IN")
+	defer logger.Logging(logger.DEBUG, "OUT")
+
+	result := make(map[string]interface{})
+	err := json.Unmarshal([]byte(jsonStr), &result)
+	if err != nil {
+		return nil, errors.InvalidJSON{"Unmarshalling Failed"}
+	}
+	return result, err
+}
+
+// Update events received from the registry are reflected in the app collection. 
+func updatedDockerImageFromRegistry(appId string, imageInfo map[string]interface{}) error {
+	logger.Logging(logger.DEBUG, "IN")
+	defer logger.Logging(logger.DEBUG, "OUT")
+
+	repository := imageInfo[HOST].(string) + imageInfo[REPOSITORY].(string)
+	
+	err := dbExecutor.UpdateAppEvent(appId, repository, imageInfo[TAG], UPDATE)
+	if err != nil {
+		logger.Logging(logger.ERROR, err.Error())
+		return convertDBError(err, appId)
+	}
+
+	return nil
+}
+
+// Delete events received from the registry are reflected in the app collection.
+func deletedDockerImageFromRegistry(appId string, imageInfo map[string]interface{}) error {
+	logger.Logging(logger.DEBUG, "IN")
+	defer logger.Logging(logger.DEBUG, "OUT")
+
+	repository := imageInfo[HOST].(string) + imageInfo[REPOSITORY].(string)
+
+	err := dbExecutor.UpdateAppEvent(appId, repository, imageInfo[TAG], DELETE)
+	if err != nil {
+		logger.Logging(logger.ERROR, err.Error())
+		return convertDBError(err, appId)
+	}
+
+	return nil
+}
+
+// parseEventInfo parse data which is matched image-info on DB from event-notification.
+func parseEventInfo(eventInfo map[string]interface{}) (map[string]interface{}, error) {
+	logger.Logging(logger.DEBUG, "IN")
+	defer logger.Logging(logger.DEBUG, "OUT")
+
+	targetInfoEvent := make(map[string]interface{})
+	requestInfoEvent := make(map[string]interface{})
+	parsedEvent := make(map[string]interface{})
+
+	targetInfoEvent = eventInfo[TARGETINFO].(map[string]interface{})
+	requestInfoEvent = eventInfo[REQUESTINFO].(map[string]interface{})
+
+	parsedEvent[ACTION] = eventInfo[ACTION]
+	parsedEvent[REPOSITORY] = targetInfoEvent[REPOSITORY]
+	parsedEvent[TAG] = targetInfoEvent[TAG]
+	parsedEvent[HOST] = requestInfoEvent[HOST]
+
+	return parsedEvent, nil
 }
