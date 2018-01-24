@@ -50,6 +50,9 @@ type Command interface {
 
 	// UpdateAppState updates app's State.
 	UpdateAppState(app_id string, state string) error
+
+	// UpdateAppEvent updates the last received event from docker registry.
+	UpdateAppEvent(app_id string, repo string, tag string, event string) error
 }
 
 const (
@@ -58,12 +61,14 @@ const (
 	SERVICES_FIELD = "services"
 	IMAGE_FIELD    = "image"
 	DB_URL         = "localhost:27017"
+	EVENT_NONE     = "none"
 )
 
 type App struct {
 	ID          string `bson:"_id,omitempty"`
 	Description string
 	State       string
+	Images      []map[string]interface{}
 }
 
 type Executor struct {
@@ -107,6 +112,7 @@ func (app App) convertToMap() map[string]interface{} {
 		"id":          app.ID,
 		"description": app.Description,
 		"state":       app.State,
+		"images":      app.Images,
 	}
 }
 
@@ -125,10 +131,16 @@ func (Executor) InsertComposeFile(description string) (map[string]interface{}, e
 	}
 	defer close(session)
 
+	images, err := getImageNames([]byte(description))
+	if err != nil {
+		return nil, err
+	}
+
 	app := App{
 		ID:          id,
 		Description: description,
 		State:       "DEPLOY",
+		Images:      images,
 	}
 
 	err = getCollection(session, DB_NAME, APP_COLLECTION).Insert(app)
@@ -299,6 +311,53 @@ func (Executor) UpdateAppState(app_id string, state string) error {
 	return err
 }
 
+func (Executor) UpdateAppEvent(app_id string, repo string, tag string, event string) error {
+	if len(app_id) == 0 {
+		err := errors.InvalidParam{"Invalid param error : app_id is empty."}
+		return err
+	}
+
+	session, err := connect(DB_URL)
+	if err != nil {
+		return err
+	}
+	defer close(session)
+
+	app := App{}
+	err = getCollection(session, DB_NAME, APP_COLLECTION).Find(bson.M{"_id": app_id}).One(&app)
+	if err != nil {
+		errMsg := "Failed to get app information by " + app_id
+		err = ConvertMongoError(err, errMsg)
+		return err
+	}
+
+	// Find image specified by repo parameter.
+	for index, image := range app.Images {
+		if image["name"] == repo {
+			// If event type is none, delete 'changes' field.
+			if event == EVENT_NONE {
+				delete(app.Images[index], "changes")
+			} else {
+				newEvent := make(map[string]interface{})
+				newEvent["tag"] = tag
+				newEvent["status"] = event
+				app.Images[index]["changes"] = newEvent
+			}
+		}
+
+		// Save the changes to database.
+		update := bson.M{"$set": bson.M{"images": app.Images}}
+		err = getCollection(session, DB_NAME, APP_COLLECTION).Update(bson.M{"_id": app_id}, update)
+		if err != nil {
+			errMsg := "Failed to update app information" + app_id
+			return ConvertMongoError(err, errMsg)
+		}
+		return nil
+	}
+
+	return errors.NotFound{Msg: "There is no matching image"}
+}
+
 // Generating app_id using hash of description
 // if succeed to generate, return UUID (32bytes).
 // otherwise, return error.
@@ -329,7 +388,6 @@ func extractHashValue(source []byte) (string, error) {
 
 	err := json.Unmarshal(source, &description)
 	if err != nil {
-
 		return "", convertJsonError(err)
 	}
 
@@ -350,6 +408,34 @@ func extractHashValue(source []byte) (string, error) {
 		targetValue += words[0]
 	}
 	return sortString(targetValue), nil
+}
+
+func getImageNames(source []byte) ([]map[string]interface{}, error) {
+	description := make(map[string]interface{})
+
+	err := json.Unmarshal(source, &description)
+	if err != nil {
+		return nil, convertJsonError(err)
+	}
+
+	if len(description[SERVICES_FIELD].(map[string]interface{})) == 0 || description[SERVICES_FIELD] == nil {
+		return nil, errors.InvalidYaml{"Invalid YAML error : description has not service information."}
+	}
+
+	images := make([]map[string]interface{}, 0)
+	for _, service_info := range description[SERVICES_FIELD].(map[string]interface{}) {
+		if service_info.(map[string]interface{})[IMAGE_FIELD] == nil {
+			return nil, errors.InvalidYaml{"Invalid YAML error : description has not image information."}
+		}
+
+		fullImageName := service_info.(map[string]interface{})[IMAGE_FIELD].(string)
+		words := strings.Split(fullImageName, ":")
+
+		image := make(map[string]interface{})
+		image["name"] = words[0]
+		images = append(images, image)
+	}
+	return images, nil
 }
 
 // Making hash code by hash value.
