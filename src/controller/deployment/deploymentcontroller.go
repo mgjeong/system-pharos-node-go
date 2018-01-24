@@ -38,6 +38,7 @@ const (
 	DESCRIPTION  = "description"
 	SERVICES     = "services"
 	IMAGE        = "image"
+	IMAGES       = "images"
 	NAME         = "name"
 	STATE        = "state"
 )
@@ -207,6 +208,7 @@ func (depExecutorImpl) App(appId string) (map[string]interface{}, error) {
 	m[STATE] = app[STATE].(string)
 	m[DESCRIPTION] = string(yaml)
 	m[SERVICES] = services
+	m[IMAGES] = app[IMAGES]
 
 	return m, nil
 }
