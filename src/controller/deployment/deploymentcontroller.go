@@ -72,7 +72,7 @@ func init() {
 // and create, start containers on the target.
 // if succeed to deploy, return app_id
 // otherwise, return error.
-func (depExecutorImpl) DeployApp(body string) (map[string]interface{}, error) {
+func (executor depExecutorImpl) DeployApp(body string) (map[string]interface{}, error) {
 	logger.Logging(logger.DEBUG, "IN")
 	defer logger.Logging(logger.DEBUG, "OUT")
 
@@ -115,10 +115,14 @@ func (depExecutorImpl) DeployApp(body string) (map[string]interface{}, error) {
 		return nil, err
 	}
 
-	res := make(map[string]interface{})
-	res[ID] = data[ID].(string)
+	deployedApp, err := executor.App(data[ID].(string))
+	if err != nil {
+		logger.Logging(logger.ERROR, err.Error())
+		return nil, err
+	}
+	deployedApp[ID] = data[ID].(string)
 
-	return res, nil
+	return deployedApp, nil
 }
 
 // Getting all of app informations in the target.
@@ -421,7 +425,7 @@ func (depExecutorImpl) DeleteApp(appId string) error {
 func restoreRepoDigests(appId, desc, state string) error {
 	logger.Logging(logger.DEBUG, "IN")
 	defer logger.Logging(logger.DEBUG, "OUT")
-  
+
 	imageNames, err := getImageNames([]byte(desc))
 	if err != nil {
 		logger.Logging(logger.DEBUG, err.Error())
