@@ -693,9 +693,9 @@ func updatedDockerImageFromRegistry(appId string, imageInfo map[string]interface
 	logger.Logging(logger.DEBUG, "IN")
 	defer logger.Logging(logger.DEBUG, "OUT")
 
-	repository := imageInfo[HOST].(string) + imageInfo[REPOSITORY].(string)
+	repository := imageInfo[HOST].(string) + "/" + imageInfo[REPOSITORY].(string)
 	
-	err := dbExecutor.UpdateAppEvent(appId, repository, imageInfo[TAG], UPDATE)
+	err := dbExecutor.UpdateAppEvent(appId, repository, imageInfo[TAG].(string), UPDATE)
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
 		return convertDBError(err, appId)
@@ -711,7 +711,7 @@ func deletedDockerImageFromRegistry(appId string, imageInfo map[string]interface
 
 	repository := imageInfo[HOST].(string) + imageInfo[REPOSITORY].(string)
 
-	err := dbExecutor.UpdateAppEvent(appId, repository, imageInfo[TAG], DELETE)
+	err := dbExecutor.UpdateAppEvent(appId, repository, imageInfo[TAG].(string), DELETE)
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
 		return convertDBError(err, appId)
