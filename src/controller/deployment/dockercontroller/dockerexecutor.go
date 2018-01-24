@@ -37,14 +37,14 @@ import (
 
 type Command interface {
 	Create(id, path string) error
-	Up(id, path string) error
+	Up(id, path string, services ...string) error
 	Down(id, path string) error
 	DownWithRemoveImages(id, path string) error
 	Start(id, path string) error
 	Stop(id, path string) error
 	Pause(id, path string) error
 	Unpause(id, path string) error
-	Pull(id, path string) error
+	Pull(id, path string, services ...string) error
 	Ps(id, path string, args ...string) ([]map[string]string, error)
 	GetContainerStateByName(containerName string) (map[string]interface{}, error)
 	GetImageDigestByName(imageName string) (string, error)
@@ -97,7 +97,7 @@ func (dockerExecutorImpl) Create(id, path string) error {
 // of service list in the yaml description.
 // if succeed to up, return error as nil
 // otherwise, return error.
-func (dockerExecutorImpl) Up(id, path string) error {
+func (dockerExecutorImpl) Up(id, path string, services ...string) error {
 	logger.Logging(logger.DEBUG)
 	defer logger.Logging(logger.DEBUG, "OUT")
 
@@ -105,7 +105,8 @@ func (dockerExecutorImpl) Up(id, path string) error {
 	if err != nil {
 		return err
 	}
-	return compose.Up(context.Background(), options.Up{Create: options.Create{ForceRecreate: true}})
+	return compose.Up(context.Background(), options.Up{Create: options.Create{ForceRecreate: false}}, services...)
+	//return compose.Up(context.Background(), options.Up{Create: })
 }
 
 // Stop and remove containers of service list in the yaml description.
@@ -196,7 +197,7 @@ func (dockerExecutorImpl) Unpause(id, path string) error {
 // Pulling images of service list in the yaml description.
 // if succeed to pull, return error as nil
 // otherwise, return error.
-func (dockerExecutorImpl) Pull(id, path string) error {
+func (dockerExecutorImpl) Pull(id, path string, services ...string) error {
 	logger.Logging(logger.DEBUG)
 	defer logger.Logging(logger.DEBUG, "OUT")
 
@@ -204,7 +205,7 @@ func (dockerExecutorImpl) Pull(id, path string) error {
 	if err != nil {
 		return err
 	}
-	return compose.Pull(context.Background())
+	return compose.Pull(context.Background(), services...)
 }
 
 // Getting container informations of service list in the yaml description.
