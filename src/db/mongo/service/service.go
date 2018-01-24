@@ -118,13 +118,13 @@ func (Executor) InsertComposeFile(description string) (map[string]interface{}, e
 	if err != nil {
 		return nil, err
 	}
-	
+
 	session, err := connect(DB_URL)
 	if err != nil {
 		return nil, err
 	}
 	defer close(session)
-	
+
 	app := App{
 		ID:          id,
 		Description: description,
@@ -200,13 +200,12 @@ func (Executor) UpdateAppInfo(app_id string, description string) error {
 		err := errors.InvalidParam{"Invalid param error : app_id is empty."}
 		return err
 	}
-	
+
 	session, err := connect(DB_URL)
 	if err != nil {
 		return err
 	}
 	defer close(session)
-
 
 	update := bson.M{"$set": bson.M{"description": description}}
 	err = getCollection(session, DB_NAME, APP_COLLECTION).Update(bson.M{"_id": app_id}, update)
@@ -227,13 +226,12 @@ func (Executor) DeleteApp(app_id string) error {
 		err := errors.InvalidParam{"Invalid param error : app_id is empty."}
 		return err
 	}
-	
+
 	session, err := connect(DB_URL)
 	if err != nil {
 		return err
 	}
 	defer close(session)
-
 
 	err = getCollection(session, DB_NAME, APP_COLLECTION).Remove(bson.M{"_id": app_id})
 	if err != nil {
@@ -253,13 +251,12 @@ func (Executor) GetAppState(app_id string) (string, error) {
 		err := errors.InvalidParam{"Invalid param error : app_id is empty."}
 		return "", err
 	}
-	
+
 	session, err := connect(DB_URL)
 	if err != nil {
 		return "", err
 	}
 	defer close(session)
-
 
 	app := App{}
 	err = getCollection(session, DB_NAME, APP_COLLECTION).Find(bson.M{"_id": app_id}).One(&app)
@@ -284,13 +281,12 @@ func (Executor) UpdateAppState(app_id string, state string) error {
 		err := errors.InvalidParam{"Invalid param error : app_id is empty."}
 		return err
 	}
-	
+
 	session, err := connect(DB_URL)
 	if err != nil {
 		return err
 	}
 	defer close(session)
-
 
 	update := bson.M{"$set": bson.M{"state": state}}
 	err = getCollection(session, DB_NAME, APP_COLLECTION).Update(bson.M{"_id": app_id}, update)
@@ -348,7 +344,10 @@ func extractHashValue(source []byte) (string, error) {
 			return "", errors.InvalidYaml{"Invalid YAML error : description has not image information."}
 		}
 
-		targetValue += service_info.(map[string]interface{})[IMAGE_FIELD].(string)
+		// Parse full image name to exclude tag when generating application id.
+		fullImageName := service_info.(map[string]interface{})[IMAGE_FIELD].(string)
+		words := strings.Split(fullImageName, ":")
+		targetValue += words[0]
 	}
 	return sortString(targetValue), nil
 }
