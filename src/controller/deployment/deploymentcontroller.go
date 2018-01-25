@@ -395,7 +395,6 @@ func (depExecutorImpl) HandleEvents(appId string, body string) error {
 // Pharos Node can make sure that previous images by digest.
 // if succeed to update, return error as nil
 // otherwise, return error.
-//func (depExecutorImpl) UpdateApp(appId string, queries ...string) error {
 func (depExecutorImpl) UpdateApp(appId string, query map[string]interface{}) error {
 	logger.Logging(logger.DEBUG, "IN", appId)
 	defer logger.Logging(logger.DEBUG, "OUT")
