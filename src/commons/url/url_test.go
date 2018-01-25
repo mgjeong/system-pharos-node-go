@@ -34,6 +34,10 @@ func ExampleUpdate() {
 	fmt.Println(Update())
 	// Output: /update
 }
+func ExampleEvents() {
+	fmt.Println(Events())
+	// Output: /events
+}
 func ExampleStart() {
 	fmt.Println(Start())
 	// Output: /start

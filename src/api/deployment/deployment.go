@@ -22,7 +22,6 @@ import (
 	"commons/logger"
 	"commons/url"
 	"controller/deployment"
-
 	"net/http"
 	"strings"
 )
@@ -45,6 +44,7 @@ type apiInnerCommand interface {
 	update(w http.ResponseWriter, req *http.Request, appId string)
 	stop(w http.ResponseWriter, req *http.Request, appId string)
 	start(w http.ResponseWriter, req *http.Request, appId string)
+	events(w http.ResponseWriter, req *http.Request, appId string)
 }
 
 type Executor struct{}
@@ -74,6 +74,9 @@ func (Executor) Handle(w http.ResponseWriter, req *http.Request) {
 
 		case strings.HasSuffix(reqUrl, url.Update()):
 			apiInnerExecutor.update(w, req, appId)
+
+		case strings.HasSuffix(reqUrl, url.Events()):
+			apiInnerExecutor.events(w, req, appId)
 
 		default:
 			logger.Logging(logger.DEBUG, "Unmatched url")
@@ -222,6 +225,33 @@ func (innerExecutorImpl) start(w http.ResponseWriter, req *http.Request, appId s
 		return
 	}
 	e := deploymentExecutor.StartApp(appId)
+	if e != nil {
+		common.MakeErrorResponse(w, e)
+		return
+	}
+
+	response := make(map[string]interface{})
+	response["result"] = "success"
+	common.MakeResponse(w, common.ChangeToJson(response))
+}
+
+// Handling requests which is event the app.
+func (innerExecutorImpl) events(w http.ResponseWriter, req *http.Request, appId string) {
+	logger.Logging(logger.DEBUG)
+	defer logger.Logging(logger.DEBUG, "OUT")
+
+	if !common.CheckSupportedMethod(w, req.Method, POST) {
+		return
+	}
+
+	var bodyStr string
+	bodyStr, e := common.GetBodyFromReq(req)
+	if e != nil {
+		common.MakeErrorResponse(w, errors.InvalidYaml{"body is empty"})
+		return
+	}
+
+	e = deploymentExecutor.HandleEvents(appId, bodyStr)
 	if e != nil {
 		common.MakeErrorResponse(w, e)
 		return
