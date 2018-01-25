@@ -60,7 +60,7 @@ const (
 	APP_COLLECTION = "APP"
 	SERVICES_FIELD = "services"
 	IMAGE_FIELD    = "image"
-	DB_URL         = "localhost:27017"
+	DB_URL         = "127.0.0.1:27017"
 	EVENT_NONE     = "none"
 )
 
