@@ -75,7 +75,7 @@ func (Executor) Handle(w http.ResponseWriter, req *http.Request) {
 		case strings.HasSuffix(reqUrl, url.Update()):
 			apiInnerExecutor.update(w, req, appId)
 
-		case strings.HasSuffix(reqUrl, url.Evetns()):
+		case strings.HasSuffix(reqUrl, url.Events()):
 			apiInnerExecutor.events(w, req, appId)
 
 		default:
