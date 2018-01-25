@@ -25,7 +25,7 @@ import (
 	"io/ioutil"
 )
 
-const configurationFileName = "./configuration.json"
+const configurationFileName = "/configuration.json"
 
 // Interface of configuration operations.
 type Command interface {
