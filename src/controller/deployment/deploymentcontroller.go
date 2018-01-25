@@ -410,17 +410,17 @@ func (depExecutorImpl) UpdateApp(appId string, query map[string]interface{}) err
 		return convertDBError(err, appId)
 	}
 
-	images := query["images"].([]string)
 	serviceName := ""
-	updatedDescription := make(map[string]interface{})
-
-	if len(images) == 0 {
+	if query == nil {
 		err = updateApp(appId, app, serviceName)
 		if err != nil {
 			logger.Logging(logger.DEBUG, err.Error())
 			return err
 		}
 	} else {
+		images := query["images"].([]string)
+		updatedDescription := make(map[string]interface{})
+
 		for _, imageName := range images {
 			tagExist, repo, tag, err := checkReposiroryContainTag(imageName)
 			if err != nil {
@@ -432,7 +432,7 @@ func (depExecutorImpl) UpdateApp(appId string, query map[string]interface{}) err
 				logger.Logging(logger.DEBUG, err.Error())
 				return err
 			}
-			if (tagExist) {
+			if tagExist {
 				updatedDescription, err = updateYamlFile(appId, app[DESCRIPTION].(string), serviceName, repo+":"+tag)
 				if err != nil {
 					logger.Logging(logger.DEBUG, err.Error())
@@ -444,7 +444,7 @@ func (depExecutorImpl) UpdateApp(appId string, query map[string]interface{}) err
 				logger.Logging(logger.DEBUG, err.Error())
 				return err
 			}
-			if (tagExist) {
+			if tagExist {
 				jsonDescription, err := json.Marshal(convert(updatedDescription))
 				if err != nil {
 					logger.Logging(logger.ERROR, err.Error())
@@ -793,20 +793,19 @@ func parseEventInfo(eventInfo map[string]interface{}) (map[string]interface{}, e
 	return parsedEvent, nil
 }
 
-
 func checkReposiroryContainTag(imageName string) (bool, string, string, error) {
 	imageInfo := strings.Split(imageName, "/")
 
 	if len(imageInfo) == 2 {
 		repoInfo := strings.Split(imageInfo[1], ":")
-		if len(repoInfo) == 2 { 		// ex) docker:5000/test:docker,
+		if len(repoInfo) == 2 { // ex) docker:5000/test:docker,
 			return true, imageInfo[0] + "/" + repoInfo[0], repoInfo[1], nil
-		} else if len(repoInfo) == 1 { 	// ex) docker/test:docker
+		} else if len(repoInfo) == 1 { // ex) docker/test:docker
 			return false, imageInfo[0] + "/" + repoInfo[0], "", nil
 		}
-	} else if len(imageInfo) == 1 { 	// ex) test:docker
+	} else if len(imageInfo) == 1 { // ex) test:docker
 		repoInfo := strings.Split(imageInfo[0], ":")
-		if len(repoInfo) == 2 { 		// ex) test:docker
+		if len(repoInfo) == 2 { // ex) test:docker
 			return true, repoInfo[0], repoInfo[1], nil
 		} else if len(repoInfo) == 1 {
 			return false, repoInfo[0], "", nil
