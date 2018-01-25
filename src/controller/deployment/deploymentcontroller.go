@@ -62,7 +62,7 @@ type Command interface {
 	StartApp(appId string) error
 	StopApp(appId string) error
 	HandleEvents(appId string, body string) error
-	UpdateApp(appId string, queries ...string) error
+	UpdateApp(appId string, query map[string]interface{}) error
 }
 
 type depExecutorImpl struct{}
@@ -382,7 +382,7 @@ func (depExecutorImpl) HandleEvents(appId string, body string) error {
 			}
 		}
 	}
-	
+
 	return err
 }
 
@@ -395,7 +395,8 @@ func (depExecutorImpl) HandleEvents(appId string, body string) error {
 // Pharos Node can make sure that previous images by digest.
 // if succeed to update, return error as nil
 // otherwise, return error.
-func (depExecutorImpl) UpdateApp(appId string, queries ...string) error {
+//func (depExecutorImpl) UpdateApp(appId string, queries ...string) error {
+func (depExecutorImpl) UpdateApp(appId string, query map[string]interface{}) error {
 	logger.Logging(logger.DEBUG, "IN", appId)
 	defer logger.Logging(logger.DEBUG, "OUT")
 	err := setYamlFile(appId)
@@ -409,47 +410,55 @@ func (depExecutorImpl) UpdateApp(appId string, queries ...string) error {
 		return convertDBError(err, appId)
 	}
 
+	images := query["images"].([]string)
 	serviceName := ""
 	updatedDescription := make(map[string]interface{})
 
-	// UpdateApp with imageName or with imageName & Tag
-	if len(queries) == 1 || len(queries) == 2 {
-		serviceName, err = getServiceName(queries[0], []byte(app[DESCRIPTION].(string)))
+	if len(images) == 0 {
+		err = updateApp(appId, app, serviceName)
 		if err != nil {
 			logger.Logging(logger.DEBUG, err.Error())
 			return err
 		}
-	}
+	} else {
+		for _, imageName := range images {
+			tagExist, repo, tag, err := checkReposiroryContainTag(imageName)
+			if err != nil {
+				logger.Logging(logger.DEBUG, err.Error())
+				return err
+			}
+			serviceName, err = getServiceName(repo, []byte(app[DESCRIPTION].(string)))
+			if err != nil {
+				logger.Logging(logger.DEBUG, err.Error())
+				return err
+			}
+			if (tagExist) {
+				updatedDescription, err = updateYamlFile(appId, app[DESCRIPTION].(string), serviceName, repo+":"+tag)
+				if err != nil {
+					logger.Logging(logger.DEBUG, err.Error())
+					return err
+				}
+			}
+			err = updateApp(appId, app, serviceName)
+			if err != nil {
+				logger.Logging(logger.DEBUG, err.Error())
+				return err
+			}
+			if (tagExist) {
+				jsonDescription, err := json.Marshal(convert(updatedDescription))
+				if err != nil {
+					logger.Logging(logger.ERROR, err.Error())
+					return errors.InvalidYaml{Msg: "invalid yaml syntax"}
+				}
 
-	// When tag is changed, yaml file has to be updated.
-	if len(queries) == 2 {
-		updatedDescription, err = updateYamlFile(appId, app[DESCRIPTION].(string), serviceName, queries[0]+":"+queries[1])
-		if err != nil {
-			logger.Logging(logger.DEBUG, err.Error())
-			return err
+				err = dbExecutor.UpdateAppInfo(appId, string(jsonDescription))
+				if err != nil {
+					logger.Logging(logger.ERROR, err.Error())
+					return convertDBError(err, appId)
+				}
+			}
 		}
 	}
-
-	err = updateApp(appId, app, serviceName)
-	if err != nil {
-		logger.Logging(logger.DEBUG, err.Error())
-		return err
-	}
-
-	if len(queries) == 2 {
-		jsonDescription, err := json.Marshal(convert(updatedDescription))
-		if err != nil {
-			logger.Logging(logger.ERROR, err.Error())
-			return errors.InvalidYaml{Msg: "invalid yaml syntax"}
-		}
-
-		err = dbExecutor.UpdateAppInfo(appId, string(jsonDescription))
-		if err != nil {
-			logger.Logging(logger.ERROR, err.Error())
-			return convertDBError(err, appId)
-		}
-	}
-
 	return err
 }
 
@@ -732,13 +741,13 @@ func convertJsonToMap(jsonStr string) (map[string]interface{}, error) {
 	return result, err
 }
 
-// Update events received from the registry are reflected in the app collection. 
+// Update events received from the registry are reflected in the app collection.
 func updatedDockerImageFromRegistry(appId string, imageInfo map[string]interface{}) error {
 	logger.Logging(logger.DEBUG, "IN")
 	defer logger.Logging(logger.DEBUG, "OUT")
 
 	repository := imageInfo[HOST].(string) + "/" + imageInfo[REPOSITORY].(string)
-	
+
 	err := dbExecutor.UpdateAppEvent(appId, repository, imageInfo[TAG].(string), UPDATE)
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
@@ -784,8 +793,30 @@ func parseEventInfo(eventInfo map[string]interface{}) (map[string]interface{}, e
 	return parsedEvent, nil
 }
 
-// Get image names from an JSON file.
-// If getting image names is succeeded, return image names
+
+func checkReposiroryContainTag(imageName string) (bool, string, string, error) {
+	imageInfo := strings.Split(imageName, "/")
+
+	if len(imageInfo) == 2 {
+		repoInfo := strings.Split(imageInfo[1], ":")
+		if len(repoInfo) == 2 { 		// ex) docker:5000/test:docker,
+			return true, imageInfo[0] + "/" + repoInfo[0], repoInfo[1], nil
+		} else if len(repoInfo) == 1 { 	// ex) docker/test:docker
+			return false, imageInfo[0] + "/" + repoInfo[0], "", nil
+		}
+	} else if len(imageInfo) == 1 { 	// ex) test:docker
+		repoInfo := strings.Split(imageInfo[0], ":")
+		if len(repoInfo) == 2 { 		// ex) test:docker
+			return true, repoInfo[0], repoInfo[1], nil
+		} else if len(repoInfo) == 1 {
+			return false, repoInfo[0], "", nil
+		}
+	}
+	return false, "", "", nil
+}
+
+// Get name of service which use given imageName.
+// If getting image names is succeeded, return name of service.
 // otherwise, return error.
 func getServiceName(imageName string, desc []byte) (string, error) {
 	description := make(map[string]interface{})

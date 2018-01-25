@@ -105,7 +105,7 @@ func (dockerExecutorImpl) Up(id, path string, services ...string) error {
 	if err != nil {
 		return err
 	}
-	return compose.Up(context.Background(), options.Up{Create: options.Create{ForceRecreate: false}}, services...)
+	return compose.Up(context.Background(), options.Up{Create: options.Create{ForceRecreate: true}}, services...)
 	//return compose.Up(context.Background(), options.Up{Create: })
 }
 
