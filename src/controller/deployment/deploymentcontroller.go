@@ -409,14 +409,14 @@ func (depExecutorImpl) UpdateApp(appId string, query map[string]interface{}) err
 		return convertDBError(err, appId)
 	}
 
-	serviceName := ""
 	if query == nil {
-		err = updateApp(appId, app, true, serviceName)
+		err = updateApp(appId, app, true)
 		if err != nil {
 			logger.Logging(logger.DEBUG, err.Error())
 			return err
 		}
 	} else {
+		serviceName := ""
 		images := query["images"].([]string)
 		updatedDescription := make(map[string]interface{})
 
@@ -885,7 +885,5 @@ func updateApp(appId string, app map[string]interface{}, entireUpdate bool, serv
 			return err
 		}
 		return err
-
 	}
-	return err
 }
