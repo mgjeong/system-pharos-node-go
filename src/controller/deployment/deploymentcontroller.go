@@ -438,7 +438,7 @@ func (depExecutorImpl) UpdateApp(appId string, query map[string]interface{}) err
 					return err
 				}
 			}
-			
+
 			err = updateApp(appId, app, false, serviceName)
 			if err != nil {
 				logger.Logging(logger.DEBUG, err.Error())
@@ -843,8 +843,7 @@ func getServiceName(imageName string, desc []byte) (string, error) {
 }
 
 func updateApp(appId string, app map[string]interface{}, entireUpdate bool, services ...string) error {
-	
-	if (entireUpdate) {
+	if entireUpdate {
 		err := dockerExecutor.Pull(appId, COMPOSE_FILE)
 		if err != nil {
 			logger.Logging(logger.ERROR, err.Error())
@@ -854,7 +853,7 @@ func updateApp(appId string, app map[string]interface{}, entireUpdate bool, serv
 			}*/
 			return err
 		}
-		
+
 		err = dockerExecutor.Up(appId, COMPOSE_FILE)
 		if err != nil {
 			logger.Logging(logger.ERROR, err.Error())
@@ -875,7 +874,7 @@ func updateApp(appId string, app map[string]interface{}, entireUpdate bool, serv
 			}*/
 			return err
 		}
-		
+
 		err = dockerExecutor.Up(appId, COMPOSE_FILE, services...)
 		if err != nil {
 			logger.Logging(logger.ERROR, err.Error())
@@ -886,7 +885,7 @@ func updateApp(appId string, app map[string]interface{}, entireUpdate bool, serv
 			return err
 		}
 		return err
-		
+
 	}
 	return err
 }
