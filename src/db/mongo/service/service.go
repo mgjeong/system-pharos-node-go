@@ -404,8 +404,18 @@ func extractHashValue(source []byte) (string, error) {
 
 		// Parse full image name to exclude tag when generating application id.
 		fullImageName := service_info.(map[string]interface{})[IMAGE_FIELD].(string)
-		words := strings.Split(fullImageName, ":")
-		targetValue += words[0]
+		var registryUrl, imageName string
+		words := strings.Split(fullImageName, "/")
+		if len(words) == 2 {
+			registryUrl += words[0] + "/"
+			imageName += words[1]
+		} else {
+			imageName += words[0]
+		}
+
+		words = strings.Split(imageName, ":")
+		imageNameWithoutTag := words[0]
+		targetValue += registryUrl + imageNameWithoutTag
 	}
 	return sortString(targetValue), nil
 }
@@ -429,11 +439,20 @@ func getImageNames(source []byte) ([]map[string]interface{}, error) {
 		}
 
 		fullImageName := service_info.(map[string]interface{})[IMAGE_FIELD].(string)
-		words := strings.Split(fullImageName, ":")
-		imageNameWithoutTag := strings.Join(words[:len(words)-1], ":")
+		var registryUrl, imageName string
+		words := strings.Split(fullImageName, "/")
+		if len(words) == 2 {
+			registryUrl += words[0] + "/"
+			imageName += words[1]
+		} else {
+			imageName += words[0]
+		}
+
+		words = strings.Split(imageName, ":")
+		imageNameWithoutTag := words[0]
 
 		image := make(map[string]interface{})
-		image["name"] = imageNameWithoutTag
+		image["name"] = registryUrl + imageNameWithoutTag
 		images = append(images, image)
 	}
 	return images, nil

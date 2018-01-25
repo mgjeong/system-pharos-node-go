@@ -799,10 +799,18 @@ func getServiceName(imageName string, desc []byte) (string, error) {
 	}
 
 	for serviceName, serviceInfo := range description[SERVICES].(map[string]interface{}) {
-		image := serviceInfo.(map[string]interface{})[IMAGE].(string)
-		imageInfo := strings.Split(image, ":")
+		fullImageName := serviceInfo.(map[string]interface{})[IMAGE].(string)
+		var registryUrl, repo string
+		words := strings.Split(fullImageName, "/")
+		if len(words) == 2 {
+			registryUrl += words[0] + "/"
+			repo += words[1]
+		} else {
+			repo += words[0]
+		}
 
-		imageWithoutTag := strings.Join(imageInfo[:len(imageInfo)-1], ":")
+		words = strings.Split(repo, ":")
+		imageWithoutTag := registryUrl + words[0]
 
 		if imageWithoutTag == imageName {
 			return serviceName, nil
