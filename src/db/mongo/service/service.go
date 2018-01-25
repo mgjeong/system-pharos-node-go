@@ -333,7 +333,7 @@ func (Executor) UpdateAppEvent(app_id string, repo string, tag string, event str
 
 	// Find image specified by repo parameter.
 	for index, image := range app.Images {
-		if image["name"] == repo {
+		if strings.Compare(image["name"].(string),repo) == 0 {
 			// If event type is none, delete 'changes' field.
 			if event == EVENT_NONE {
 				delete(app.Images[index], "changes")

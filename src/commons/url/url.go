@@ -36,6 +36,9 @@ func Apps() string { return "/apps" }
 // Returning Update url as string.
 func Update() string { return "/update" }
 
+// Returning Events url as string.
+func Events() string { return "/events" }
+
 // Returning Start url as string.
 func Start() string { return "/start" }
 

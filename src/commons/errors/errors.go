@@ -32,6 +32,28 @@ func (e *InvalidParam) SetMsg(msg string) {
 // Implements of Error functionality of InvalidParam for error interface.
 func (e InvalidParam) Error() string { return "invalid parameter : " + e.Msg }
 
+// Struct InvalidJSON will be used for return case of error
+// which value of malformed json format.
+type InvalidJSON struct {
+	Message string
+}
+
+// Error sets an error message of InvalidJSON.
+func (e InvalidJSON) Error() string {
+	return "invalid json format: " + e.Message
+}
+
+// Struct InvalidJSON will be used for return case of error
+// which value of invalid ObjectId.
+type InvalidObjectId struct {
+	Message string
+}
+
+// Error sets an error message of InvalidObjectId.
+func (e InvalidObjectId) Error() string {
+	return "invalid objectId: " + e.Message
+}
+
 // Struct NotFound will be used for return case of error
 // which object or target can not found.
 type NotFound struct {
