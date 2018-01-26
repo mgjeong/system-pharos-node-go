@@ -422,7 +422,7 @@ func (depExecutorImpl) UpdateApp(appId string, query map[string]interface{}) err
 		updatedDescription := make(map[string]interface{})
 
 		for _, imageName := range images {
-			tagExist, repo, tag, err := checkReposiroryContainTag(imageName)
+			tagExist, repo, tag, err := extractQueryInfo(imageName)
 			if err != nil {
 				logger.Logging(logger.DEBUG, err.Error())
 				return err
@@ -799,7 +799,7 @@ func parseEventInfo(eventInfo map[string]interface{}) (map[string]interface{}, e
 	return parsedEvent, nil
 }
 
-func checkReposiroryContainTag(imageName string) (bool, string, string, error) {
+func extractQueryInfo(imageName string) (bool, string, string, error) {
 	imageInfo := strings.Split(imageName, "/")
 
 	if len(imageInfo) == 2 {
