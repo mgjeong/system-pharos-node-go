@@ -186,7 +186,8 @@ func (innerExecutorImpl) update(w http.ResponseWriter, req *http.Request, appId 
 	if !common.CheckSupportedMethod(w, req.Method, POST) {
 		return
 	}
-	e := deploymentExecutor.UpdateApp(appId)
+
+	e := deploymentExecutor.UpdateApp(appId, parseQuery(req))
 	if e != nil {
 		common.MakeErrorResponse(w, e)
 		return
@@ -260,4 +261,19 @@ func (innerExecutorImpl) events(w http.ResponseWriter, req *http.Request, appId 
 	response := make(map[string]interface{})
 	response["result"] = "success"
 	common.MakeResponse(w, common.ChangeToJson(response))
+}
+
+func parseQuery(req *http.Request) map[string]interface{} {
+	query := make(map[string]interface{})
+
+	keys := req.URL.Query()
+	if len(keys) == 0 {
+		return nil
+	}
+
+	for key, value := range req.URL.Query() {
+		query[key] = value
+	}
+
+	return query
 }
