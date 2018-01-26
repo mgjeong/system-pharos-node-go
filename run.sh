@@ -15,5 +15,5 @@
 #
 ###############################################################################
 #!/bin/bash
-mongod --smallfiles --journal &
+mongod --smallfiles &
 /pharos/pharos-node

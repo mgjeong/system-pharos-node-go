@@ -43,7 +43,7 @@ Required options to run Docker image
 
 You can execute it with a Docker image as follows:
 ```shell
-$ docker run -it -p 48098:48098 -v /data/db:/data/db system-pharos-node-go-ubuntu
+$ docker run -it -p 48098:48098 -v /data/db:/data/db -v /var/run/docker.sock:/var/run/docker.sock system-pharos-node-go-ubuntu
 ```
 If it succeeds, you can see log messages on your screen as follows:
 ```shell
@@ -89,7 +89,6 @@ $ docker run -it -p 48098:48098 -v /data/db:/data/db system-pharos-node-go-ubunt
 2018-01-17T10:20:39.717+0000 I NETWORK  [signalProcessingThread] removing socket file: /tmp/mongodb-27017.sock
 2018-01-17T10:20:39.717+0000 I NETWORK  [signalProcessingThread] shutdown: going to flush diaglog...
 2018-01-17T10:20:39.717+0000 I FTDC     [signalProcessingThread] Shutting down full-time diagnostic data capture
-
 
 ```
 
