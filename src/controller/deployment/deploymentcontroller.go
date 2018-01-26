@@ -415,7 +415,6 @@ func (depExecutorImpl) UpdateApp(appId string, query map[string]interface{}) err
 			logger.Logging(logger.DEBUG, err.Error())
 			return err
 		}
-
 	} else {
 		serviceName := ""
 		images := query["images"].([]string)
@@ -439,7 +438,6 @@ func (depExecutorImpl) UpdateApp(appId string, query map[string]interface{}) err
 					return err
 				}
 			}
-
 			err = updateApp(appId, app, false, serviceName)
 			if err != nil {
 				logger.Logging(logger.DEBUG, err.Error())
@@ -635,7 +633,7 @@ func updateYamlFile(appId string, orginDescription string, service string, newIm
 		return nil, errors.IOError{Msg: "json unmarshal fail"}
 	}
 
-	if len(updatedDescription[SERVICES].(map[string]interface{})) == 0 || updatedDescription[SERVICES] == nil {
+	if  updatedDescription[SERVICES] == nil || len(updatedDescription[SERVICES].(map[string]interface{})) == 0 {
 		return nil, errors.Unknown{Msg: "can't find application info"}
 	}
 
@@ -806,19 +804,20 @@ func extractQueryInfo(imageName string) (bool, string, string, error) {
 		repoInfo := strings.Split(imageInfo[1], ":")
 		if len(repoInfo) == 2 { // ex) docker:5000/test:docker,
 			return true, imageInfo[0] + "/" + repoInfo[0], repoInfo[1], nil
-		} else if len(repoInfo) == 1 { // ex) docker/test:docker
+		} else if len(repoInfo) == 1 { // ex) docker:5000/test
 			return false, imageInfo[0] + "/" + repoInfo[0], "", nil
 		}
-	} else if len(imageInfo) == 1 { // ex) test:docker
+	} else if len(imageInfo) == 1 {
 		repoInfo := strings.Split(imageInfo[0], ":")
 		if len(repoInfo) == 2 { // ex) test:docker
 			return true, repoInfo[0], repoInfo[1], nil
-		} else if len(repoInfo) == 1 {
+		} else if len(repoInfo) == 1 { // ex) test
 			return false, repoInfo[0], "", nil
 		}
 	}
 	return false, "", "", nil
 }
+
 
 // Get name of service which use given imageName.
 // If getting image names is succeeded, return name of service.
@@ -855,6 +854,7 @@ func getServiceName(imageName string, desc []byte) (string, error) {
 
 	return "", errors.Unknown{Msg: "can't find matched service"}
 }
+
 
 func updateApp(appId string, app map[string]interface{}, entireUpdate bool, services ...string) error {
 	if entireUpdate {
@@ -906,17 +906,20 @@ func updateAppEvent(appId string) error {
 		logger.Logging(logger.DEBUG, err.Error())
 		return convertDBError(err, appId)
 	}
+	description := make(map[string]interface{})
+	err = json.Unmarshal([]byte(app[DESCRIPTION].(string)), &description)
+	if err != nil {
+		logger.Logging(logger.DEBUG, err.Error())
+		return errors.IOError{"json unmarshal fail"}
+	}
 	
-	description := app[DESCRIPTION].(map[string]interface{})
 	services := description[SERVICES].(map[string]interface{})
-
 	images := app["images"].([]map[string]interface{})
 	for _, serviceInfo := range services {
 		descImageName := serviceInfo.(map[string]interface{})[IMAGE].(string)
-
 		for _, image := range images {
 			changesTag := image["changes"].(map[string]interface{})["tag"].(string)
-			if (image["name"].(string) + changesTag) == descImageName {
+			if (image["name"].(string) + ":" + changesTag) == descImageName {
 				err =  dbExecutor.UpdateAppEvent(appId, image["name"].(string), changesTag, "none")
 				if err != nil {
 					logger.Logging(logger.DEBUG, err.Error())
