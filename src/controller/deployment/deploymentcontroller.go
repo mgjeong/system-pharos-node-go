@@ -415,13 +415,14 @@ func (depExecutorImpl) UpdateApp(appId string, query map[string]interface{}) err
 			logger.Logging(logger.DEBUG, err.Error())
 			return err
 		}
+
 	} else {
 		serviceName := ""
 		images := query["images"].([]string)
 		updatedDescription := make(map[string]interface{})
 
 		for _, imageName := range images {
-			tagExist, repo, tag, err := checkReposiroryContainTag(imageName)
+			tagExist, repo, tag, err := extractQueryInfo(imageName)
 			if err != nil {
 				logger.Logging(logger.DEBUG, err.Error())
 				return err
@@ -456,8 +457,13 @@ func (depExecutorImpl) UpdateApp(appId string, query map[string]interface{}) err
 					logger.Logging(logger.ERROR, err.Error())
 					return convertDBError(err, appId)
 				}
+
 			}
 		}
+	}
+	err = updateAppEvent(appId)
+	if err != nil {
+		logger.Logging(logger.ERROR, err.Error())
 	}
 	return err
 }
@@ -793,7 +799,7 @@ func parseEventInfo(eventInfo map[string]interface{}) (map[string]interface{}, e
 	return parsedEvent, nil
 }
 
-func checkReposiroryContainTag(imageName string) (bool, string, string, error) {
+func extractQueryInfo(imageName string) (bool, string, string, error) {
 	imageInfo := strings.Split(imageName, "/")
 
 	if len(imageInfo) == 2 {
@@ -861,7 +867,6 @@ func updateApp(appId string, app map[string]interface{}, entireUpdate bool, serv
 			}*/
 			return err
 		}
-
 		err = dockerExecutor.Up(appId, COMPOSE_FILE)
 		if err != nil {
 			logger.Logging(logger.ERROR, err.Error())
@@ -882,7 +887,6 @@ func updateApp(appId string, app map[string]interface{}, entireUpdate bool, serv
 			}*/
 			return err
 		}
-
 		err = dockerExecutor.Up(appId, COMPOSE_FILE, services...)
 		if err != nil {
 			logger.Logging(logger.ERROR, err.Error())
@@ -894,4 +898,32 @@ func updateApp(appId string, app map[string]interface{}, entireUpdate bool, serv
 		}
 		return err
 	}
+}
+
+func updateAppEvent(appId string) error {
+	app, err := dbExecutor.GetApp(appId)
+	if err != nil {
+		logger.Logging(logger.DEBUG, err.Error())
+		return convertDBError(err, appId)
+	}
+	
+	description := app[DESCRIPTION].(map[string]interface{})
+	services := description[SERVICES].(map[string]interface{})
+
+	images := app["images"].([]map[string]interface{})
+	for _, serviceInfo := range services {
+		descImageName := serviceInfo.(map[string]interface{})[IMAGE].(string)
+
+		for _, image := range images {
+			changesTag := image["changes"].(map[string]interface{})["tag"].(string)
+			if (image["name"].(string) + changesTag) == descImageName {
+				err =  dbExecutor.UpdateAppEvent(appId, image["name"].(string), changesTag, "none")
+				if err != nil {
+					logger.Logging(logger.DEBUG, err.Error())
+					return convertDBError(err, appId)
+				}
+			}
+		}
+	}
+	return err
 }
