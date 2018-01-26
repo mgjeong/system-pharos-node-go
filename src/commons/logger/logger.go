@@ -40,9 +40,9 @@ const (
 // Initialize package global value.
 func init() {
 	logFlag = log.Ldate | log.Ltime
-	loggers[INFO] = log.New(os.Stdout, "[INFO][MA]", logFlag)
-	loggers[DEBUG] = log.New(os.Stdout, "[DEBUG][MA]", logFlag)
-	loggers[ERROR] = log.New(os.Stdout, "[ERROR][MA]", logFlag)
+	loggers[INFO] = log.New(os.Stdout, "[INFO][NODE]", logFlag)
+	loggers[DEBUG] = log.New(os.Stdout, "[DEBUG][NODE]", logFlag)
+	loggers[ERROR] = log.New(os.Stdout, "[ERROR][NODE]", logFlag)
 }
 
 // Print log stream oh standard output with file name and function name, line.
