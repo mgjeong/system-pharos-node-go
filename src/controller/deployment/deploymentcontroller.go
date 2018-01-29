@@ -633,7 +633,7 @@ func updateYamlFile(appId string, orginDescription string, service string, newIm
 		return nil, errors.IOError{Msg: "json unmarshal fail"}
 	}
 
-	if  updatedDescription[SERVICES] == nil || len(updatedDescription[SERVICES].(map[string]interface{})) == 0 {
+	if updatedDescription[SERVICES] == nil || len(updatedDescription[SERVICES].(map[string]interface{})) == 0 {
 		return nil, errors.Unknown{Msg: "can't find application info"}
 	}
 
@@ -818,7 +818,6 @@ func extractQueryInfo(imageName string) (bool, string, string, error) {
 	return false, "", "", nil
 }
 
-
 // Get name of service which use given imageName.
 // If getting image names is succeeded, return name of service.
 // otherwise, return error.
@@ -854,7 +853,6 @@ func getServiceName(imageName string, desc []byte) (string, error) {
 
 	return "", errors.Unknown{Msg: "can't find matched service"}
 }
-
 
 func updateApp(appId string, app map[string]interface{}, entireUpdate bool, services ...string) error {
 	if entireUpdate {
@@ -912,18 +910,20 @@ func updateAppEvent(appId string) error {
 		logger.Logging(logger.DEBUG, err.Error())
 		return errors.IOError{"json unmarshal fail"}
 	}
-	
+
 	services := description[SERVICES].(map[string]interface{})
 	images := app["images"].([]map[string]interface{})
 	for _, serviceInfo := range services {
 		descImageName := serviceInfo.(map[string]interface{})[IMAGE].(string)
 		for _, image := range images {
-			changesTag := image["changes"].(map[string]interface{})["tag"].(string)
-			if (image["name"].(string) + ":" + changesTag) == descImageName {
-				err =  dbExecutor.UpdateAppEvent(appId, image["name"].(string), changesTag, "none")
-				if err != nil {
-					logger.Logging(logger.DEBUG, err.Error())
-					return convertDBError(err, appId)
+			if changes, ok := image["changes"]; ok {
+				changesTag := changes.(map[string]interface{})["tag"].(string)
+				if (image["name"].(string) + ":" + changesTag) == descImageName {
+					err = dbExecutor.UpdateAppEvent(appId, image["name"].(string), changesTag, "none")
+					if err != nil {
+						logger.Logging(logger.DEBUG, err.Error())
+						return convertDBError(err, appId)
+					}
 				}
 			}
 		}
