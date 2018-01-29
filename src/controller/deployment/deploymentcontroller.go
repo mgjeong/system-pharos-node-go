@@ -836,19 +836,17 @@ func getServiceName(imageName string, desc []byte) (string, error) {
 
 	for serviceName, serviceInfo := range description[SERVICES].(map[string]interface{}) {
 		fullImageName := serviceInfo.(map[string]interface{})[IMAGE].(string)
-		var registryUrl, repo string
 		words := strings.Split(fullImageName, "/")
-		if len(words) == 2 {
-			registryUrl += words[0] + "/"
-			repo += words[1]
-		} else {
-			repo += words[0]
+		imageNameWithoutRepo := strings.Join(words[:len(words)-1], "/")
+		repo := strings.Split(words[len(words)-1], ":")
+
+		imageNameWithoutTag := imageNameWithoutRepo
+		if len(words) > 1 {
+			imageNameWithoutTag += "/"
 		}
+		imageNameWithoutTag += repo[0]
 
-		words = strings.Split(repo, ":")
-		imageWithoutTag := registryUrl + words[0]
-
-		if imageWithoutTag == imageName {
+		if imageNameWithoutTag == imageName {
 			return serviceName, nil
 		}
 	}
@@ -906,7 +904,7 @@ func updateAppEvent(appId string) error {
 		logger.Logging(logger.DEBUG, err.Error())
 		return convertDBError(err, appId)
 	}
-	
+
 	description := app[DESCRIPTION].(map[string]interface{})
 	services := description[SERVICES].(map[string]interface{})
 
@@ -917,7 +915,7 @@ func updateAppEvent(appId string) error {
 		for _, image := range images {
 			changesTag := image["changes"].(map[string]interface{})["tag"].(string)
 			if (image["name"].(string) + changesTag) == descImageName {
-				err =  dbExecutor.UpdateAppEvent(appId, image["name"].(string), changesTag, "none")
+				err = dbExecutor.UpdateAppEvent(appId, image["name"].(string), changesTag, "none")
 				if err != nil {
 					logger.Logging(logger.DEBUG, err.Error())
 					return convertDBError(err, appId)
