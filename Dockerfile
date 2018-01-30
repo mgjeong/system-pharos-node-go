@@ -23,11 +23,12 @@ ENV APP_PORT=48098
 ENV APP=pharos-node
 
 # install MongoDB
-RUN apk add --no-cache mongodb && \
+RUN apk add --no-cache mongodb bash && \
     rm -rf /var/cache/apk/*
 
 # copy files
 COPY $APP run.sh $APP_DIR/
+COPY src/controller/configuration/configuration.json /configuration.json
 
 # expose notifications port
 EXPOSE $APP_PORT
