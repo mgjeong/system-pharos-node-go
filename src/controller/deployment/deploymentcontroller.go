@@ -836,11 +836,13 @@ func getServiceName(repository string, desc []byte) (string, error) {
 		words := strings.Split(fullImageName, "/")
 		imageNameWithoutRepo := strings.Join(words[:len(words)-1], "/")
 		repo := strings.Split(words[len(words)-1], ":")
+
 		imageNameWithoutTag := imageNameWithoutRepo
 		if len(words) > 1 {
 			imageNameWithoutTag += "/"
 		}
 		imageNameWithoutTag += repo[0]
+
 		if imageNameWithoutTag == repository {
 			return serviceName, nil
 		}
@@ -899,6 +901,7 @@ func updateAppEvent(appId string) error {
 		logger.Logging(logger.DEBUG, err.Error())
 		return convertDBError(err, appId)
 	}
+
 	description := make(map[string]interface{})
 	err = json.Unmarshal([]byte(app[DESCRIPTION].(string)), &description)
 	if err != nil {
