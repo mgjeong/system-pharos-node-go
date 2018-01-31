@@ -137,3 +137,14 @@ func (mr *MockCommandMockRecorder) UpdateAppState(app_id, state interface{}) *go
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateAppState", reflect.TypeOf((*MockCommand)(nil).UpdateAppState), app_id, state)
 }
 
+// UpdateAppEvent mocks base method
+func (m *MockCommand) UpdateAppEvent(app_id, repo, tag, event string) error {
+	ret := m.ctrl.Call(m, "UpdateAppEvent", app_id, repo, tag, event)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateAppEvent indicates an expected call of UpdateAppEvent
+func (mr *MockCommandMockRecorder) UpdateAppEvent(app_id, repo, tag, event interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateAppEvent", reflect.TypeOf((*MockCommand)(nil).UpdateAppEvent), app_id, repo, tag, event)
+}

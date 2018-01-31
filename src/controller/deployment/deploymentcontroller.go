@@ -834,19 +834,17 @@ func getServiceName(imageName string, desc []byte) (string, error) {
 
 	for serviceName, serviceInfo := range description[SERVICES].(map[string]interface{}) {
 		fullImageName := serviceInfo.(map[string]interface{})[IMAGE].(string)
-		var registryUrl, repo string
 		words := strings.Split(fullImageName, "/")
-		if len(words) == 2 {
-			registryUrl += words[0] + "/"
-			repo += words[1]
-		} else {
-			repo += words[0]
+		imageNameWithoutRepo := strings.Join(words[:len(words)-1], "/")
+		repo := strings.Split(words[len(words)-1], ":")
+
+		imageNameWithoutTag := imageNameWithoutRepo
+		if len(words) > 1 {
+			imageNameWithoutTag += "/"
 		}
+		imageNameWithoutTag += repo[0]
 
-		words = strings.Split(repo, ":")
-		imageWithoutTag := registryUrl + words[0]
-
-		if imageWithoutTag == imageName {
+		if imageNameWithoutTag == imageName {
 			return serviceName, nil
 		}
 	}
@@ -904,6 +902,7 @@ func updateAppEvent(appId string) error {
 		logger.Logging(logger.DEBUG, err.Error())
 		return convertDBError(err, appId)
 	}
+
 	description := make(map[string]interface{})
 	err = json.Unmarshal([]byte(app[DESCRIPTION].(string)), &description)
 	if err != nil {
