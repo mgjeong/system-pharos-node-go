@@ -815,15 +815,14 @@ func extractQueryInfo(imageName string) (bool, string, string, error) {
 			return false, repoInfo[0], "", nil
 		}
 	}
-	return false, "", "", nil
+	return false, "", "", errors.Unknown{Msg: "invalid repogitory"}
 }
 
 // Get name of service which use given imageName.
 // If getting image names is succeeded, return name of service.
 // otherwise, return error.
-func getServiceName(imageName string, desc []byte) (string, error) {
+func getServiceName(repository string, desc []byte) (string, error) {
 	description := make(map[string]interface{})
-
 	err := json.Unmarshal(desc, &description)
 	if err != nil {
 		return "", errors.IOError{Msg: "json unmarshal fail"}
@@ -834,19 +833,15 @@ func getServiceName(imageName string, desc []byte) (string, error) {
 
 	for serviceName, serviceInfo := range description[SERVICES].(map[string]interface{}) {
 		fullImageName := serviceInfo.(map[string]interface{})[IMAGE].(string)
-		var registryUrl, repo string
 		words := strings.Split(fullImageName, "/")
-		if len(words) == 2 {
-			registryUrl += words[0] + "/"
-			repo += words[1]
-		} else {
-			repo += words[0]
+		imageNameWithoutRepo := strings.Join(words[:len(words)-1], "/")
+		repo := strings.Split(words[len(words)-1], ":")
+		imageNameWithoutTag := imageNameWithoutRepo
+		if len(words) > 1 {
+			imageNameWithoutTag += "/"
 		}
-
-		words = strings.Split(repo, ":")
-		imageWithoutTag := registryUrl + words[0]
-
-		if imageWithoutTag == imageName {
+		imageNameWithoutTag += repo[0]
+		if imageNameWithoutTag == repository {
 			return serviceName, nil
 		}
 	}
