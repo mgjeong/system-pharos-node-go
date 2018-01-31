@@ -131,7 +131,11 @@ func (m mockingci) DeleteApp(appId string) error {
 	doSomethingFuncWithAppId(&m, appId)
 	return m.err
 }
-func (m mockingci) UpdateApp(appId string) error {
+func (m mockingci) HandleEvents(appId string, body string) error {
+	doSomethingFuncWithAppId(&m, appId)
+	return m.err
+}
+func (m mockingci) UpdateApp(appId string, query map[string]interface{}) error {
 	doSomethingFuncWithAppId(&m, appId)
 	return m.err
 }
@@ -362,4 +366,44 @@ func TestFunc(t *testing.T) {
 			})
 		}
 	}
+}
+
+func TestEvents(t *testing.T) {
+	mock := makeMockingCi()
+	tearDown := setup(t, mock)
+	defer tearDown(t)
+
+	id := "12345"
+	url := urls.Base() + urls.Management() + urls.Apps() + "/" + id
+
+	t.Run("Success", func(t *testing.T) {
+		r := returnValue{id: id, err: nil, path: ""}
+		executeFuncWithAppId(t, id, POST, url+urls.Events(), r, true)
+		if status != http.StatusOK {
+			t.Error()
+		}
+	})
+
+	testList := getErrorTestList()
+
+	for _, test := range testList {
+		t.Run("Error/"+test.name, func(t *testing.T) {
+			r := returnValue{id: id, err: test.err, path: ""}
+			executeFuncWithAppId(t, id, POST, url+urls.Events(), r, true)
+
+			if status != test.expectCode {
+				t.Error()
+			}
+		})
+	}
+
+	t.Run("ErrorEmptyBody", func(t *testing.T) {
+		r := returnValue{id: id, err: errors.Unknown{}, path: ""}
+		executeFuncWithAppId(t, id, POST, url+urls.Events(), r, false)
+
+		if status == http.StatusOK {
+			t.Error()
+		}
+	})
+
 }
