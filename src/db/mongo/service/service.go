@@ -333,7 +333,7 @@ func (Executor) UpdateAppEvent(app_id string, repo string, tag string, event str
 
 	// Find image specified by repo parameter.
 	for index, image := range app.Images {
-		if strings.Compare(image["name"].(string),repo) == 0 {
+		if strings.Compare(image["name"].(string), repo) == 0 {
 			// If event type is none, delete 'changes' field.
 			if event == EVENT_NONE {
 				delete(app.Images[index], "changes")
@@ -404,18 +404,16 @@ func extractHashValue(source []byte) (string, error) {
 
 		// Parse full image name to exclude tag when generating application id.
 		fullImageName := service_info.(map[string]interface{})[IMAGE_FIELD].(string)
-		var registryUrl, imageName string
 		words := strings.Split(fullImageName, "/")
-		if len(words) == 2 {
-			registryUrl += words[0] + "/"
-			imageName += words[1]
-		} else {
-			imageName += words[0]
-		}
+		imageNameWithoutRepo := strings.Join(words[:len(words)-1], "/")
+		repo := strings.Split(words[len(words)-1], ":")
 
-		words = strings.Split(imageName, ":")
-		imageNameWithoutTag := words[0]
-		targetValue += registryUrl + imageNameWithoutTag
+		imageNameWithoutTag := imageNameWithoutRepo
+		if len(words) > 1 {
+			imageNameWithoutTag += "/"
+		}
+		imageNameWithoutTag += repo[0]
+		targetValue += imageNameWithoutTag
 	}
 	return sortString(targetValue), nil
 }
@@ -439,20 +437,18 @@ func getImageNames(source []byte) ([]map[string]interface{}, error) {
 		}
 
 		fullImageName := service_info.(map[string]interface{})[IMAGE_FIELD].(string)
-		var registryUrl, imageName string
 		words := strings.Split(fullImageName, "/")
-		if len(words) == 2 {
-			registryUrl += words[0] + "/"
-			imageName += words[1]
-		} else {
-			imageName += words[0]
-		}
+		imageNameWithoutRepo := strings.Join(words[:len(words)-1], "/")
+		repo := strings.Split(words[len(words)-1], ":")
 
-		words = strings.Split(imageName, ":")
-		imageNameWithoutTag := words[0]
+		imageNameWithoutTag := imageNameWithoutRepo
+		if len(words) > 1 {
+			imageNameWithoutTag += "/"
+		}
+		imageNameWithoutTag += repo[0]
 
 		image := make(map[string]interface{})
-		image["name"] = registryUrl + imageNameWithoutTag
+		image["name"] = imageNameWithoutTag
 		images = append(images, image)
 	}
 	return images, nil
