@@ -21,7 +21,6 @@ import (
 	"commons/errors"
 	"commons/logger"
 	"controller/monitoring/resource"
-
 	"net/http"
 	"strings"
 )
@@ -39,7 +38,6 @@ type Command interface {
 
 type apiInnerCommand interface {
 	resource(w http.ResponseWriter, req *http.Request)
-	performance(w http.ResponseWriter, req *http.Request)
 }
 
 type Executor struct{}
@@ -61,9 +59,6 @@ func (Executor) Handle(w http.ResponseWriter, req *http.Request) {
 	switch reqUrl, split := req.URL.Path, strings.Split(req.URL.Path, "/"); {
 	case len(split) == 5:
 		apiInnerExecutor.resource(w, req)
-	case len(split) == 6:
-		apiInnerExecutor.performance(w, req)
-
 	default:
 		logger.Logging(logger.DEBUG, "Unmatched url")
 		common.MakeErrorResponse(w, errors.NotFoundURL{reqUrl})
@@ -80,24 +75,6 @@ func (innerExecutorImpl) resource(w http.ResponseWriter, req *http.Request) {
 	}
 
 	response, e := resourceExecutor.GetResourceInfo()
-
-	if e != nil {
-		common.MakeErrorResponse(w, e)
-		return
-	}
-	common.MakeResponse(w, common.ChangeToJson(response))
-}
-
-// Handling requests which is getting performance information
-func (innerExecutorImpl) performance(w http.ResponseWriter, req *http.Request) {
-	logger.Logging(logger.DEBUG)
-	defer logger.Logging(logger.DEBUG, "OUT")
-
-	if !common.CheckSupportedMethod(w, req.Method, GET) {
-		return
-	}
-
-	response, e := resourceExecutor.GetPerformanceInfo()
 
 	if e != nil {
 		common.MakeErrorResponse(w, e)
