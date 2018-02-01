@@ -43,7 +43,7 @@ const (
 
 	OLD_TAG                  = "1.0"
 	NEW_TAG                  = "2.0"
-	REPOSITORY_WITH_PORT     = "docker.sec.samsung.net:5000/test"
+	REPOSITORY_WITH_PORT     = "docker:5000/test"
 	SERVICE                  = "mongo"
 	ORIGIN_DESCRIPTION_JSON  = "{\"services\":{\"" + SERVICE + "\":{\"image\":\"" + REPOSITORY_WITH_PORT + ":" + OLD_TAG + "\"}},\"version\":\"2\"}"
 	UPDATED_DESCRIPTION_JSON = "{\"services\":{\"" + SERVICE + "\":{\"image\":\"" + REPOSITORY_WITH_PORT + ":" + NEW_TAG + "\"}},\"version\":\"2\"}"
