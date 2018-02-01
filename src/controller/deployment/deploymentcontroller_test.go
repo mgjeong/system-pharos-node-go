@@ -43,8 +43,8 @@ const (
 
 	OLD_TAG                  = "1.0"
 	NEW_TAG                  = "2.0"
-	REPOSITORY_WITH_PORT     = "docker:5000/test"
-	SERVICE                  = "testservice"
+	REPOSITORY_WITH_PORT     = "test_url:5000/test"
+	SERVICE                  = "test_service"
 	ORIGIN_DESCRIPTION_JSON  = "{\"services\":{\"" + SERVICE + "\":{\"image\":\"" + REPOSITORY_WITH_PORT + ":" + OLD_TAG + "\"}},\"version\":\"2\"}"
 	UPDATED_DESCRIPTION_JSON = "{\"services\":{\"" + SERVICE + "\":{\"image\":\"" + REPOSITORY_WITH_PORT + ":" + NEW_TAG + "\"}},\"version\":\"2\"}"
 	FULL_IMAGE_NAME          = REPOSITORY_WITH_PORT + ":" + NEW_TAG
