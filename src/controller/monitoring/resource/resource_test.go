@@ -54,8 +54,8 @@ func TestGetCPUUsage_ExpectSuccess(t *testing.T) {
 		t.Errorf("Unexpected err: %s", err.Error())
 	}
 
-	if result == "" {
-		t.Errorf("Unexpected err: %s", err.Error())
+	if result == nil || len(result) == 0 {
+		t.Errorf("Unexpected err : CPU usage array is empty")
 
 	}
 }

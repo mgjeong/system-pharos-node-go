@@ -95,7 +95,6 @@ func setup(t *testing.T, mock mockingci) func(*testing.T) {
 }
 
 var getResourceInfoCalled bool
-var getPerformanceInfoCalled bool
 
 // Test using mocking for resourceinterface
 var doSomethingFunc func(*mockingci)
@@ -168,7 +167,6 @@ func TestResource(t *testing.T) {
 
 	t.Run("Success", func(t *testing.T) {
 		getResourceInfoCalled = false
-		getPerformanceInfoCalled = false
 
 		r := returnValue{err: nil}
 		executeFunc(t, GET, urls.Base()+urls.Monitoring()+urls.Resource(), r, true)
@@ -176,7 +174,7 @@ func TestResource(t *testing.T) {
 		if status != http.StatusOK {
 			t.Error()
 		}
-		if getResourceInfoCalled == false || getPerformanceInfoCalled == true {
+		if getResourceInfoCalled == false {
 			t.Error()
 		}
 	})
@@ -185,7 +183,6 @@ func TestResource(t *testing.T) {
 	for _, test := range testList {
 		t.Run("Error/"+test.name, func(t *testing.T) {
 			getResourceInfoCalled = false
-			getPerformanceInfoCalled = false
 
 			r := returnValue{err: test.err}
 			executeFunc(t, GET, urls.Base()+urls.Monitoring()+urls.Resource(), r, true)
@@ -193,7 +190,7 @@ func TestResource(t *testing.T) {
 			if status != test.expectCode {
 				t.Error()
 			}
-			if getResourceInfoCalled == false || getPerformanceInfoCalled == true {
+			if getResourceInfoCalled == false {
 				t.Error()
 			}
 		})

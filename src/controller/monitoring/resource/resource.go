@@ -77,26 +77,21 @@ func (resExecutorImpl) GetResourceInfo() (map[string]interface{}, error) {
 	return resources, err
 }
 
-func getCPUUsage() (string, error) {
+func getCPUUsage() ([]string, error) {
 	logger.Logging(logger.DEBUG, "IN")
 	defer logger.Logging(logger.DEBUG, "OUT")
 
 	percent, err := cpu.Percent(time.Second, true)
-	percent_str := ""
-
 	if err != nil {
 		logger.Logging(logger.DEBUG, "gopsutil cpu.Percent() error")
-		return "", errors.Unknown{"gopsutil cpu.Percent() error"}
+		return nil, errors.Unknown{"gopsutil cpu.Percent() error"}
 	}
 
-	for idx, float := range percent {
-		if idx == len(percent)-1 {
-			percent_str += strconv.FormatFloat(float, 'f', 2, 64) + "%"
-		} else {
-			percent_str += strconv.FormatFloat(float, 'f', 2, 64) + "% "
-		}
+	result := make([]string, 0)
+	for _, float := range percent {
+		result = append(result, strconv.FormatFloat(float, 'f', 2, 64)+"%%")
 	}
-	return percent_str, nil
+	return result, nil
 }
 
 func getMemUsage() (map[string]interface{}, error) {
