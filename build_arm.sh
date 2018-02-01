@@ -68,7 +68,6 @@ build
 echo ": Done"
 
 echo -ne "\nPost processing"
-cp /usr/bin/qemu-arm-static .
 func_cleanup
 echo ": Done"
 
