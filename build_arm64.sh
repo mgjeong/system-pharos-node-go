@@ -66,7 +66,6 @@ build
 echo ": Done"
 
 echo -ne "\nPost processing"
-cp /usr/bin/qemu-aarch64-static .
 func_cleanup
 echo ": Done"
 
