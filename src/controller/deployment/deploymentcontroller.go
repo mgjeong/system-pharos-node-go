@@ -815,15 +815,14 @@ func extractQueryInfo(imageName string) (bool, string, string, error) {
 			return false, repoInfo[0], "", nil
 		}
 	}
-	return false, "", "", nil
+	return false, "", "", errors.Unknown{Msg: "invalid repogitory"}
 }
 
 // Get name of service which use given imageName.
 // If getting image names is succeeded, return name of service.
 // otherwise, return error.
-func getServiceName(imageName string, desc []byte) (string, error) {
+func getServiceName(repository string, desc []byte) (string, error) {
 	description := make(map[string]interface{})
-
 	err := json.Unmarshal(desc, &description)
 	if err != nil {
 		return "", errors.IOError{Msg: "json unmarshal fail"}
@@ -844,7 +843,7 @@ func getServiceName(imageName string, desc []byte) (string, error) {
 		}
 		imageNameWithoutTag += repo[0]
 
-		if imageNameWithoutTag == imageName {
+		if imageNameWithoutTag == repository {
 			return serviceName, nil
 		}
 	}
