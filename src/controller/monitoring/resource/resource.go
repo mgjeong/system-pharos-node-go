@@ -19,38 +19,40 @@ package resource
 import (
 	"commons/errors"
 	"commons/logger"
-	shell "controller/shellcommand"
-	"strings"
+	"github.com/shirou/gopsutil/cpu"
+	"github.com/shirou/gopsutil/disk"
+	"github.com/shirou/gopsutil/mem"
+	"strconv"
+	"time"
 )
 
 type Command interface {
 	GetResourceInfo() (map[string]interface{}, error)
-	GetPerformanceInfo() (map[string]interface{}, error)
+}
+
+type memoryUsage struct {
+	Total       string
+	Free        string
+	Used        string
+	UsedPercent string
+}
+
+type diskUsage struct {
+	Path        string
+	Total       string
+	Free        string
+	Used        string
+	UsedPercent string
 }
 
 type resExecutorImpl struct{}
 
 var Executor resExecutorImpl
-var shellExecutor shell.Command
-
-func init() {
-	shellExecutor = shell.Executor
-}
 
 func (resExecutorImpl) GetResourceInfo() (map[string]interface{}, error) {
 	logger.Logging(logger.DEBUG, "IN")
 	defer logger.Logging(logger.DEBUG, "OUT")
 
-	processor, err := getProcessorModel()
-	if err != nil {
-		logger.Logging(logger.ERROR, err.Error())
-		return nil, err
-	}
-	os, err := getOS()
-	if err != nil {
-		logger.Logging(logger.ERROR, err.Error())
-		return nil, err
-	}
 	cpu, err := getCPUUsage()
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
@@ -68,8 +70,6 @@ func (resExecutorImpl) GetResourceInfo() (map[string]interface{}, error) {
 	}
 
 	resources := make(map[string]interface{})
-	resources["processor"] = processor
-	resources["os"] = os
 	resources["cpu"] = cpu
 	resources["disk"] = disk
 	resources["mem"] = mem
@@ -77,113 +77,84 @@ func (resExecutorImpl) GetResourceInfo() (map[string]interface{}, error) {
 	return resources, err
 }
 
-func (resExecutorImpl) GetPerformanceInfo() (map[string]interface{}, error) {
+func getCPUUsage() ([]string, error) {
 	logger.Logging(logger.DEBUG, "IN")
 	defer logger.Logging(logger.DEBUG, "OUT")
 
-	cpu, err := getCPUUsage()
+	percent, err := cpu.Percent(time.Second, true)
 	if err != nil {
-		logger.Logging(logger.ERROR, err.Error())
-		return nil, err
-	}
-	mem, err := getMemUsage()
-	if err != nil {
-		logger.Logging(logger.ERROR, err.Error())
-		return nil, err
-	}
-	disk, err := getDiskUsage()
-	if err != nil {
-		logger.Logging(logger.ERROR, err.Error())
-		return nil, err
+		logger.Logging(logger.DEBUG, "gopsutil cpu.Percent() error")
+		return nil, errors.Unknown{"gopsutil cpu.Percent() error"}
 	}
 
-	usage := make(map[string]interface{})
-	usage["cpu"] = cpu
-	usage["disk"] = disk
-	usage["mem"] = mem
-
-	return usage, err
+	result := make([]string, 0)
+	for _, float := range percent {
+		result = append(result, strconv.FormatFloat(float, 'f', 2, 64)+"%%")
+	}
+	return result, nil
 }
 
-func getProcessorModel() (string, error) {
+func getMemUsage() (map[string]interface{}, error) {
 	logger.Logging(logger.DEBUG, "IN")
 	defer logger.Logging(logger.DEBUG, "OUT")
 
-	modelName, err := shellExecutor.ExecuteCommand("bash", "-c", "grep -m1 ^'model name' /proc/cpuinfo")
+	mem_v, err := mem.VirtualMemory()
 	if err != nil {
-		logger.Logging(logger.ERROR, err.Error())
-		return "", err
+		logger.Logging(logger.DEBUG, "gopsutil mem.VirtualMemory() error")
+		return nil, errors.Unknown{"gopsutil mem.VirtualMemory() error"}
 	}
-	if len(modelName) == 0 {
-		logger.Logging(logger.ERROR, "can't find cpu model name info")
-		return "", errors.Unknown{"can't find cpu model name info"}
-	}
-	modelInfo := strings.Split(modelName, ":")
-	_, model := modelInfo[0], modelInfo[1]
+	mem := memoryUsage{}
+	mem.Total = strconv.FormatUint(mem_v.Total/1024, 10) + "KB"
+	mem.Free = strconv.FormatUint(mem_v.Free/1024, 10) + "KB"
+	mem.Used = strconv.FormatUint(mem_v.Used/1024, 10) + "KB"
+	mem.UsedPercent = strconv.FormatFloat(mem_v.UsedPercent, 'f', 2, 64) + "%%"
 
-	return strings.TrimSpace(model), err
+	return convertToMemUsageMap(mem), err
 }
 
-func getOS() (string, error) {
+func getDiskUsage() ([]map[string]interface{}, error) {
 	logger.Logging(logger.DEBUG, "IN")
 	defer logger.Logging(logger.DEBUG, "OUT")
 
-	os, err := shellExecutor.ExecuteCommand("bash", "-c", "uname -mrs")
+	parts, err := disk.Partitions(false)
 	if err != nil {
-		logger.Logging(logger.ERROR, err.Error())
-		return "", err
+		logger.Logging(logger.DEBUG, "gopsutil disk.Partitions() error")
+		return nil, errors.Unknown{"gopsutil  disk.Partitions() error"}
 	}
 
-	return strings.TrimSpace(os), err
+	result := make([]map[string]interface{}, 0)
+	for _, part := range parts {
+		du, err := disk.Usage(part.Mountpoint)
+		if err != nil {
+			logger.Logging(logger.DEBUG, "gopsutil disk.Usage() error")
+			return nil, errors.Unknown{"gopsutil  disk.Usage() error"}
+		}
+		disk := diskUsage{}
+		disk.Path = du.Path
+		disk.Free = strconv.FormatUint(du.Free/1024/1024/1024, 10) + "G"
+		disk.Total = strconv.FormatUint(du.Total/1024/1024/1024, 10) + "G"
+		disk.Used = strconv.FormatUint(du.Used/1024/1024/1024, 10) + "G"
+		disk.UsedPercent = strconv.FormatFloat(du.UsedPercent, 'f', 2, 64) + "%%"
+		result = append(result, convertToDiskUsageMap(disk))
+	}
+	return result, err
 }
 
-func getCPUUsage() (string, error) {
-	logger.Logging(logger.DEBUG, "IN")
-	defer logger.Logging(logger.DEBUG, "OUT")
-
-	procStatCPU, err := shellExecutor.ExecuteCommand("bash", "-c", "cat /proc/stat | grep cpu")
-	if err != nil {
-		logger.Logging(logger.ERROR, err.Error())
-		return "", err
+func convertToMemUsageMap(mem memoryUsage) map[string]interface{} {
+	return map[string]interface{}{
+		"total":       mem.Total,
+		"free":        mem.Free,
+		"used":        mem.Used,
+		"usedpercent": mem.UsedPercent,
 	}
-	if len(procStatCPU) == 0 {
-		logger.Logging(logger.ERROR, "can't find cpu usage info")
-		return "", errors.Unknown{"can't find cpu usage info"}
-	}
-	
-	return procStatCPU, err
 }
 
-func getMemUsage() (string, error) {
-	logger.Logging(logger.DEBUG, "IN")
-	defer logger.Logging(logger.DEBUG, "OUT")
-
-	procMeminfo, err := shellExecutor.ExecuteCommand("bash", "-c", "cat /proc/meminfo")
-	if err != nil {
-		logger.Logging(logger.ERROR, err.Error())
-		return "", err
+func convertToDiskUsageMap(disk diskUsage) map[string]interface{} {
+	return map[string]interface{}{
+		"path":        disk.Path,
+		"total":       disk.Total,
+		"free":        disk.Free,
+		"used":        disk.Used,
+		"usedpercent": disk.UsedPercent,
 	}
-	if len(procMeminfo) == 0 {
-		logger.Logging(logger.ERROR, "can't find total memory info")
-		return "", errors.Unknown{"can't find total memory info"}
-	}
-	
-	return procMeminfo, err
-}
-
-func getDiskUsage() (string, error) {
-	logger.Logging(logger.DEBUG, "IN")
-	defer logger.Logging(logger.DEBUG, "OUT")
-
-	df, err := shellExecutor.ExecuteCommand("bash", "-c", "df -m")
-	if err != nil {
-		logger.Logging(logger.ERROR, err.Error())
-		return "", err
-	}
-	if len(df) == 0 {
-		logger.Logging(logger.ERROR, "can't find total disk info")
-		return "", errors.Unknown{"can't find total disk info"}
-	}
-	
-	return df, err
 }
