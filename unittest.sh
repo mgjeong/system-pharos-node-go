@@ -6,6 +6,8 @@ go get github.com/golang/mock/gomock
 go get github.com/ghodss/yaml
 go get -d docker.io/go-docker
 go get -d github.com/docker/libcompose
+go get golang.org/x/sys/unix
+go get github.com/shirou/gopsutil
 
 rm -rf $GOPATH/src/github.com/docker/distribution/vendor/github.com/opencontainers
 

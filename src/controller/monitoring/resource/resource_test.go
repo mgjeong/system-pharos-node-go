@@ -31,16 +31,16 @@ func TestGetResrouceInfo_ExpectSuccess(t *testing.T) {
 		t.Errorf("Unexpected err: %s", err.Error())
 	}
 
-	if _, ok := result["CPU"]; !ok {
-		t.Errorf("Unexpected err: CPU key does not exist")
+	if _, ok := result["cpu"]; !ok {
+		t.Errorf("Unexpected err: cpu key does not exist")
 	}
 
-	if _, ok := result["DISK"]; !ok {
-		t.Errorf("Unexpected err: DISK key does not exist")
+	if _, ok := result["disk"]; !ok {
+		t.Errorf("Unexpected err: disk key does not exist")
 	}
 
-	if _, ok := result["MEM"]; !ok {
-		t.Errorf("Unexpected err: MEM key does not exist")
+	if _, ok := result["mem"]; !ok {
+		t.Errorf("Unexpected err: mem key does not exist")
 	}
 }
 
@@ -55,7 +55,7 @@ func TestGetCPUUsage_ExpectSuccess(t *testing.T) {
 	}
 
 	if result == nil || len(result) == 0 {
-		t.Errorf("Unexpected err : CPU usage array is empty")
+		t.Errorf("Unexpected err : cpu usage array is empty")
 
 	}
 }
@@ -70,20 +70,20 @@ func TestGetMemUsage_ExpectSuccess(t *testing.T) {
 		t.Errorf("Unexpected err: %s", err.Error())
 	}
 
-	if _, ok := result["Total"]; !ok {
-		t.Errorf("Unexpected err: Total key does not exist")
+	if _, ok := result["total"]; !ok {
+		t.Errorf("Unexpected err: total key does not exist")
 	}
 
-	if _, ok := result["Free"]; !ok {
-		t.Errorf("Unexpected err: Free key does not exist")
+	if _, ok := result["free"]; !ok {
+		t.Errorf("Unexpected err: free key does not exist")
 	}
 
-	if _, ok := result["Used"]; !ok {
-		t.Errorf("Unexpected err: Used key does not exist")
+	if _, ok := result["used"]; !ok {
+		t.Errorf("Unexpected err: used key does not exist")
 	}
 
-	if _, ok := result["UsedPercent"]; !ok {
-		t.Errorf("Unexpected err: UsedPercent key does not exist")
+	if _, ok := result["usedpercent"]; !ok {
+		t.Errorf("Unexpected err: usedpercent key does not exist")
 	}
 }
 
@@ -98,25 +98,24 @@ func TestGetDiskUsage_ExpectSuccess(t *testing.T) {
 	}
 
 	for _, value := range result {
-		if _, ok := value["Path"]; !ok {
-			t.Errorf("Unexpected err: Path key does not exist")
+		if _, ok := value["path"]; !ok {
+			t.Errorf("Unexpected err: path key does not exist")
 		}
 
-		if _, ok := value["Total"]; !ok {
-			t.Errorf("Unexpected err: Total key does not exist")
+		if _, ok := value["total"]; !ok {
+			t.Errorf("Unexpected err: total key does not exist")
 		}
 
-		if _, ok := value["Free"]; !ok {
-			t.Errorf("Unexpected err: Free key does not exist")
+		if _, ok := value["free"]; !ok {
+			t.Errorf("Unexpected err: free key does not exist")
 		}
 
-		if _, ok := value["Used"]; !ok {
-			t.Errorf("Unexpected err: Used key does not exist")
+		if _, ok := value["used"]; !ok {
+			t.Errorf("Unexpected err: used key does not exist")
 		}
 
-		if _, ok := value["UsedPercent"]; !ok {
-			t.Errorf("Unexpected err: UsedPercent key does not exist")
+		if _, ok := value["usedpercent"]; !ok {
+			t.Errorf("Unexpected err: usedpercent key does not exist")
 		}
 	}
-
 }
