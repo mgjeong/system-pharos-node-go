@@ -20,45 +20,55 @@ import (
 	"commons/errors"
 	dockermocks "controller/deployment/dockercontroller/mocks"
 	dbmocks "db/mongo/service/mocks"
+	"github.com/golang/mock/gomock"
 	"os"
 	"reflect"
 	"testing"
-
-	"github.com/golang/mock/gomock"
 )
 
 const (
-	COMPOSE_FILE_PATH                = "docker-compose.yaml"
-	APP_ID                           = "000000000000000000000000"
-	DESCRIPTION_JSON                 = "{\"services\":{\"test_service\":{\"image\":\"test_image:0.2\"}},\"version\":\"2\"}"
-	DESCRIPTION_JSON_WITHOUT_SERVICE = "{\"no_services\":{\"test_service\":{\"image\":\"test_image\"}},\"version\":\"2\"}"
-	WRONG_DESCRIPTION_JSON           = "{{{{services:\n  test_service:\n    image: test_image\nversion: \"2\""
-	DESCRIPTION_YAML                 = "services:\n  test_service:\n    image: test_image\nversion: \"2\"\n"
-	IMAGE_NAME                       = "test_image"
-	IMAGE_DIGEST                     = "test_image@sha256:1234567890"
-	APP_STATE                        = "STATE"
-	SERVICE_NAME                     = "test_service"
-	CONTAINER_NAME                   = "test_container"
-	WRONG_INSPECT_RETURN_MSG         = "error_[{\"State\": {\"Status\": \"running\", \"ExitCode\": \"0\"}}]"
-
-	OLD_TAG                  = "1.0"
-	NEW_TAG                  = "2.0"
-	REPOSITORY_WITH_PORT     = "test_url:5000/test"
-	SERVICE                  = "test_service"
-	ORIGIN_DESCRIPTION_JSON  = "{\"services\":{\"" + SERVICE + "\":{\"image\":\"" + REPOSITORY_WITH_PORT + ":" + OLD_TAG + "\"}},\"version\":\"2\"}"
-	UPDATED_DESCRIPTION_JSON = "{\"services\":{\"" + SERVICE + "\":{\"image\":\"" + REPOSITORY_WITH_PORT + ":" + NEW_TAG + "\"}},\"version\":\"2\"}"
-	FULL_IMAGE_NAME          = REPOSITORY_WITH_PORT + ":" + NEW_TAG
-	NONE_EVENT               = "none"
+	COMPOSE_FILE_PATH                 = "docker-compose.yaml"
+	APP_ID                            = "000000000000000000000000"
+	DESCRIPTION_JSON_WITHOUT_SERVICE  = "{\"no_services\":{\"test_service\":{\"image\":\"test_image:0.2\"}},\"version\":\"2\"}"
+	WRONG_DESCRIPTION_JSON            = "{{{{services:\n  test_service:\n    image: test_image:0.2\nversion: \"2\""
+	WRONG_INSPECT_RETURN_MSG          = "error_[{\"State\": {\"Status\": \"running\", \"ExitCode\": \"0\"}}]"
+	OLD_TAG                           = "1.0"
+	NEW_TAG                           = "2.0"
+	REPOSITORY_WITH_PORT_IMAGE        = "test_url:5000/test"
+	APP_STATE                         = "STATE"
+	SERVICE_NAME                      = "test_service"
+	CONTAINER_NAME                    = "test_container"
+	DESCRIPTION_JSON                  = "{\"services\":{\"" + SERVICE + "\":{\"image\":\"" + REPOSITORY_WITH_PORT_IMAGE + ":" + OLD_TAG + "\"}},\"version\":\"2\"}"
+	DESCRIPTION_YAML                  = "services:\n  " + SERVICE + ":\n    image: " + REPOSITORY_WITH_PORT_IMAGE + ":" + OLD_TAG + "\nversion: \"2\"\n"
+	REPOSITORY_WITH_PORT_IMAGE_DIGEST = REPOSITORY_WITH_PORT_IMAGE + "@" + "sha256:1234567890"
+	SERVICE                           = "test_service"
+	CONTAINER                         = "test_container"
+	ORIGIN_DESCRIPTION_JSON           = "{\"services\":{\"" + SERVICE + "\":{\"image\":\"" + REPOSITORY_WITH_PORT_IMAGE + ":" + OLD_TAG + "\"}},\"version\":\"2\"}"
+	UPDATED_DESCRIPTION_JSON          = "{\"services\":{\"" + SERVICE + "\":{\"image\":\"" + REPOSITORY_WITH_PORT_IMAGE + ":" + NEW_TAG + "\"}},\"version\":\"2\"}"
+	FULL_IMAGE_NAME                   = REPOSITORY_WITH_PORT_IMAGE + ":" + NEW_TAG
+	NONE_EVENT                        = "none"
+	SERVICE_STATUS                    = "running"
+	EXIT_CODE                         = "0"
 )
 
 var (
+	INSPECT_RETURN_MSG = map[string]interface{}{
+		"Status":   SERVICE_STATUS,
+		"ExitCode": EXIT_CODE,
+	}
+	PS_EXPECT_RETURN = []map[string]string{
+		{
+			"Name": CONTAINER,
+		},
+	}
+
 	DB_GET_APP_OBJ = map[string]interface{}{
 		"id":          APP_ID,
 		"state":       "UP",
 		"description": ORIGIN_DESCRIPTION_JSON,
 		"images": []map[string]interface{}{
 			{
-				"name": REPOSITORY_WITH_PORT,
+				"name": REPOSITORY_WITH_PORT_IMAGE,
 				"changes": map[string]interface{}{
 					"tag":   NEW_TAG,
 					"state": "update",
@@ -73,10 +83,33 @@ var (
 		"description": UPDATED_DESCRIPTION_JSON,
 		"images": []map[string]interface{}{
 			{
-				"name": REPOSITORY_WITH_PORT,
+				"name": REPOSITORY_WITH_PORT_IMAGE,
 				"changes": map[string]interface{}{
 					"tag":   NEW_TAG,
 					"state": "update",
+				},
+			},
+		},
+	}
+
+	APP_OBJ = map[string]interface{}{
+		"state":       "UP",
+		"description": DESCRIPTION_YAML,
+		"images": []map[string]interface{}{
+			{
+				"name": REPOSITORY_WITH_PORT_IMAGE,
+				"changes": map[string]interface{}{
+					"tag":   NEW_TAG,
+					"state": "update",
+				},
+			},
+		},
+		"services": []map[string]interface{}{
+			{
+				"name": SERVICE,
+				"state": map[string]interface{}{
+					"Status":   SERVICE_STATUS,
+					"ExitCode": EXIT_CODE,
 				},
 			},
 		},
@@ -131,16 +164,19 @@ func TestCalledDeployApp_ExpectSuccess(t *testing.T) {
 	defer ctrl.Finish()
 
 	dockerExecutorMockObj := dockermocks.NewMockCommand(ctrl)
-	dbManagerMockObj := dbmocks.NewMockCommand(ctrl)
+	dbExecutorMockObj := dbmocks.NewMockCommand(ctrl)
 
 	gomock.InOrder(
-		dbManagerMockObj.EXPECT().InsertComposeFile(DESCRIPTION_JSON).Return(DB_OBJ, nil),
+		dbExecutorMockObj.EXPECT().InsertComposeFile(DESCRIPTION_JSON).Return(DB_GET_APP_OBJ, nil),
 		dockerExecutorMockObj.EXPECT().Up(gomock.Any(), gomock.Any()).Return(nil),
+		dbExecutorMockObj.EXPECT().GetApp(APP_ID).Return(DB_GET_APP_OBJ, nil),
+		dockerExecutorMockObj.EXPECT().Ps(gomock.Any(), COMPOSE_FILE_PATH, SERVICE_NAME).Return(PS_EXPECT_RETURN, nil),
+		dockerExecutorMockObj.EXPECT().GetContainerStateByName(gomock.Any()).Return(INSPECT_RETURN_MSG, nil),
 	)
 
 	// pass mockObj to a real object.
 	dockerExecutor = dockerExecutorMockObj
-	dbExecutor = dbManagerMockObj
+	dbExecutor = dbExecutorMockObj
 
 	res, err := Executor.DeployApp(DESCRIPTION_YAML)
 
@@ -148,7 +184,29 @@ func TestCalledDeployApp_ExpectSuccess(t *testing.T) {
 		t.Errorf("Unexpected err: %s", err.Error())
 	}
 
-	compareReturnVal := DB_OBJ
+	compareReturnVal := map[string]interface{}{
+		"id":          APP_ID,
+		"state":       "UP",
+		"description": DESCRIPTION_YAML,
+		"images": []map[string]interface{}{
+			{
+				"name": REPOSITORY_WITH_PORT_IMAGE,
+				"changes": map[string]interface{}{
+					"tag":   NEW_TAG,
+					"state": "update",
+				},
+			},
+		},
+		"services": []map[string]interface{}{
+			{
+				"name": SERVICE,
+				"state": map[string]interface{}{
+					"Status":   SERVICE_STATUS,
+					"ExitCode": EXIT_CODE,
+				},
+			},
+		},
+	}
 
 	if !reflect.DeepEqual(res, compareReturnVal) {
 		t.Error()
@@ -162,18 +220,18 @@ func TestCalledDeployAppWhenComposeUpFailed_ExpectErrorReturn(t *testing.T) {
 	defer ctrl.Finish()
 
 	dockerExecutorMockObj := dockermocks.NewMockCommand(ctrl)
-	dbManagerMockObj := dbmocks.NewMockCommand(ctrl)
+	dbExecutorMockObj := dbmocks.NewMockCommand(ctrl)
 
 	gomock.InOrder(
-		dbManagerMockObj.EXPECT().InsertComposeFile(DESCRIPTION_JSON).Return(DB_OBJ, nil),
+		dbExecutorMockObj.EXPECT().InsertComposeFile(DESCRIPTION_JSON).Return(DB_OBJ, nil),
 		dockerExecutorMockObj.EXPECT().Up(gomock.Any(), gomock.Any()).Return(UnknownError),
 		dockerExecutorMockObj.EXPECT().DownWithRemoveImages(gomock.Any(), gomock.Any()).Return(nil),
-		dbManagerMockObj.EXPECT().DeleteApp(gomock.Any()).Return(nil),
+		dbExecutorMockObj.EXPECT().DeleteApp(gomock.Any()).Return(nil),
 	)
 
 	// pass mockObj to a real object.
 	dockerExecutor = dockerExecutorMockObj
-	dbExecutor = dbManagerMockObj
+	dbExecutor = dbExecutorMockObj
 
 	_, err := Executor.DeployApp(DESCRIPTION_YAML)
 
@@ -198,14 +256,14 @@ func TestCalledDeployAppWhenInsertComposeFileFailed_ExpectErrorReturn(t *testing
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	dbManagerMockObj := dbmocks.NewMockCommand(ctrl)
+	dbExecutorMockObj := dbmocks.NewMockCommand(ctrl)
 
 	gomock.InOrder(
-		dbManagerMockObj.EXPECT().InsertComposeFile(DESCRIPTION_JSON).Return(nil, UnknownError),
+		dbExecutorMockObj.EXPECT().InsertComposeFile(DESCRIPTION_JSON).Return(nil, UnknownError),
 	)
 
 	// pass mockObj to a real object.
-	dbExecutor = dbManagerMockObj
+	dbExecutor = dbExecutorMockObj
 
 	_, err := Executor.DeployApp(DESCRIPTION_YAML)
 
@@ -220,13 +278,13 @@ func TestCalledApps_ExpectSuccess(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	dbManagerMockObj := dbmocks.NewMockCommand(ctrl)
+	dbExecutorMockObj := dbmocks.NewMockCommand(ctrl)
 
 	gomock.InOrder(
-		dbManagerMockObj.EXPECT().GetAppList().Return(DB_OBJs, nil),
+		dbExecutorMockObj.EXPECT().GetAppList().Return(DB_OBJs, nil),
 	)
 
-	dbExecutor = dbManagerMockObj
+	dbExecutor = dbExecutorMockObj
 
 	res, err := Executor.Apps()
 
@@ -253,13 +311,13 @@ func TestCalledAppsWhenGetAppListFailed_ExpectErrorReturn(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	dbManagerMockObj := dbmocks.NewMockCommand(ctrl)
+	dbExecutorMockObj := dbmocks.NewMockCommand(ctrl)
 
 	gomock.InOrder(
-		dbManagerMockObj.EXPECT().GetAppList().Return(nil, UnknownError),
+		dbExecutorMockObj.EXPECT().GetAppList().Return(nil, UnknownError),
 	)
 
-	dbExecutor = dbManagerMockObj
+	dbExecutor = dbExecutorMockObj
 
 	_, err := Executor.Apps()
 
@@ -273,25 +331,17 @@ func TestCalledApp_ExpectSuccess(t *testing.T) {
 	defer ctrl.Finish()
 
 	dockerExecutorMockObj := dockermocks.NewMockCommand(ctrl)
-	dbManagerMockObj := dbmocks.NewMockCommand(ctrl)
-
-	INSPECT_RETURN_MSG := make(map[string]interface{})
-	INSPECT_RETURN_MSG["Status"] = "running"
-	INSPECT_RETURN_MSG["ExitCode"] = "0"
-
-	PS_EXPECT_RETURN := make([]map[string]string, 1)
-	PS_EXPECT_RETURN[0] = make(map[string]string)
-	PS_EXPECT_RETURN[0]["Name"] = "mongo_container"
+	dbExecutorMockObj := dbmocks.NewMockCommand(ctrl)
 
 	gomock.InOrder(
-		dbManagerMockObj.EXPECT().GetApp(APP_ID).Return(DB_GET_OBJ, nil),
-		dockerExecutorMockObj.EXPECT().Ps(gomock.Any(), COMPOSE_FILE_PATH, SERVICE_NAME).Return(PS_EXPECT_RETURN, nil),
-		dockerExecutorMockObj.EXPECT().GetContainerStateByName(CONTAINER_NAME).Return(INSPECT_RETURN_MSG, nil),
+		dbExecutorMockObj.EXPECT().GetApp(APP_ID).Return(DB_GET_APP_OBJ, nil),
+		dockerExecutorMockObj.EXPECT().Ps(gomock.Any(), COMPOSE_FILE_PATH, SERVICE).Return(PS_EXPECT_RETURN, nil),
+		dockerExecutorMockObj.EXPECT().GetContainerStateByName(CONTAINER).Return(INSPECT_RETURN_MSG, nil),
 	)
 
 	// pass mockObj to a real object.
 	dockerExecutor = dockerExecutorMockObj
-	dbExecutor = dbManagerMockObj
+	dbExecutor = dbExecutorMockObj
 
 	res, err := Executor.App(APP_ID)
 
@@ -299,24 +349,7 @@ func TestCalledApp_ExpectSuccess(t *testing.T) {
 		t.Errorf("Unexpected err: %s", err.Error())
 	}
 
-	// Make Compare Value
-	services := make([]map[string]interface{}, 0)
-	service := make(map[string]interface{}, 0)
-	state := make(map[string]interface{}, 0)
-
-	state["Status"] = "running"
-	state["ExitCode"] = "0"
-	service["state"] = state
-	service["name"] = SERVICE_NAME
-	services = append(services, service)
-
-	compareReturnVal := map[string]interface{}{
-		"state":       "UP",
-		"description": DESCRIPTION_YAML,
-		"services":    services,
-	}
-
-	if !reflect.DeepEqual(res, compareReturnVal) {
+	if !reflect.DeepEqual(res, APP_OBJ) {
 		t.Error()
 	}
 }
@@ -325,13 +358,13 @@ func TestCalledAppWhenGetAppFailed_ExpectErrorReturn(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	dbManagerMockObj := dbmocks.NewMockCommand(ctrl)
+	dbExecutorMockObj := dbmocks.NewMockCommand(ctrl)
 
 	gomock.InOrder(
-		dbManagerMockObj.EXPECT().GetApp(APP_ID).Return(nil, UnknownError),
+		dbExecutorMockObj.EXPECT().GetApp(APP_ID).Return(nil, UnknownError),
 	)
 
-	dbExecutor = dbManagerMockObj
+	dbExecutor = dbExecutorMockObj
 
 	_, err := Executor.App(APP_ID)
 
@@ -344,13 +377,13 @@ func TestCalledAppWhenJSONToYAMLFailed_ExpectErrorReturn(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	dbManagerMockObj := dbmocks.NewMockCommand(ctrl)
+	dbExecutorMockObj := dbmocks.NewMockCommand(ctrl)
 
 	gomock.InOrder(
-		dbManagerMockObj.EXPECT().GetApp(APP_ID).Return(WRONG_DB_GET_OBJ, nil),
+		dbExecutorMockObj.EXPECT().GetApp(APP_ID).Return(WRONG_DB_GET_OBJ, nil),
 	)
 
-	dbExecutor = dbManagerMockObj
+	dbExecutor = dbExecutorMockObj
 
 	_, err := Executor.App(APP_ID)
 
@@ -363,13 +396,13 @@ func TestCalledAppWhenNoServiceFiledinYAML_ExpectErrorReturn(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	dbManagerMockObj := dbmocks.NewMockCommand(ctrl)
+	dbExecutorMockObj := dbmocks.NewMockCommand(ctrl)
 
 	gomock.InOrder(
-		dbManagerMockObj.EXPECT().GetApp(APP_ID).Return(DB_GET_OBJ_WITHOUT_SERVICE, nil),
+		dbExecutorMockObj.EXPECT().GetApp(APP_ID).Return(DB_GET_OBJ_WITHOUT_SERVICE, nil),
 	)
 
-	dbExecutor = dbManagerMockObj
+	dbExecutor = dbExecutorMockObj
 
 	_, err := Executor.App(APP_ID)
 
@@ -383,16 +416,16 @@ func TestCalledAppWhenGetServiceStateComposePsFailed_ExpectErrorReturn(t *testin
 	defer ctrl.Finish()
 
 	dockerExecutorMockObj := dockermocks.NewMockCommand(ctrl)
-	dbManagerMockObj := dbmocks.NewMockCommand(ctrl)
+	dbExecutorMockObj := dbmocks.NewMockCommand(ctrl)
 
 	gomock.InOrder(
-		dbManagerMockObj.EXPECT().GetApp(APP_ID).Return(DB_GET_OBJ, nil),
+		dbExecutorMockObj.EXPECT().GetApp(APP_ID).Return(DB_GET_OBJ, nil),
 		dockerExecutorMockObj.EXPECT().Ps(gomock.Any(), COMPOSE_FILE_PATH, SERVICE_NAME).Return(nil, UnknownError),
 	)
 
 	// pass mockObj to a real object.
 	dockerExecutor = dockerExecutorMockObj
-	dbExecutor = dbManagerMockObj
+	dbExecutor = dbExecutorMockObj
 
 	_, err := Executor.App(APP_ID)
 
@@ -406,21 +439,17 @@ func TestCalledAppWhenGetServiceStateComposeInspectFailed_ExpectErrorReturn(t *t
 	defer ctrl.Finish()
 
 	dockerExecutorMockObj := dockermocks.NewMockCommand(ctrl)
-	dbManagerMockObj := dbmocks.NewMockCommand(ctrl)
-
-	PS_EXPECT_RETURN := make([]map[string]string, 1)
-	PS_EXPECT_RETURN[0] = make(map[string]string)
-	PS_EXPECT_RETURN[0]["Name"] = "mongo_container"
+	dbExecutorMockObj := dbmocks.NewMockCommand(ctrl)
 
 	gomock.InOrder(
-		dbManagerMockObj.EXPECT().GetApp(APP_ID).Return(DB_GET_OBJ, nil),
+		dbExecutorMockObj.EXPECT().GetApp(APP_ID).Return(DB_GET_OBJ, nil),
 		dockerExecutorMockObj.EXPECT().Ps(gomock.Any(), COMPOSE_FILE_PATH, SERVICE_NAME).Return(PS_EXPECT_RETURN, nil),
 		dockerExecutorMockObj.EXPECT().GetContainerStateByName(CONTAINER_NAME).Return(nil, UnknownError),
 	)
 
 	// pass mockObj to a real object.
 	dockerExecutor = dockerExecutorMockObj
-	dbExecutor = dbManagerMockObj
+	dbExecutor = dbExecutorMockObj
 
 	_, err := Executor.App(APP_ID)
 
@@ -433,13 +462,13 @@ func TestCalledUpdateAppInfo_ExpectSuccess(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	dbManagerMockObj := dbmocks.NewMockCommand(ctrl)
+	dbExecutorMockObj := dbmocks.NewMockCommand(ctrl)
 
 	gomock.InOrder(
-		dbManagerMockObj.EXPECT().UpdateAppInfo(APP_ID, DESCRIPTION_JSON).Return(nil),
+		dbExecutorMockObj.EXPECT().UpdateAppInfo(APP_ID, DESCRIPTION_JSON).Return(nil),
 	)
 
-	dbExecutor = dbManagerMockObj
+	dbExecutor = dbExecutorMockObj
 
 	err := Executor.UpdateAppInfo(APP_ID, DESCRIPTION_YAML)
 
@@ -463,13 +492,13 @@ func TestCalledUpdateAppInfoWhenUpdateAppInfoFailed_ExpectSuccess(t *testing.T) 
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	dbManagerMockObj := dbmocks.NewMockCommand(ctrl)
+	dbExecutorMockObj := dbmocks.NewMockCommand(ctrl)
 
 	gomock.InOrder(
-		dbManagerMockObj.EXPECT().UpdateAppInfo(APP_ID, DESCRIPTION_JSON).Return(InvalidYamlError),
+		dbExecutorMockObj.EXPECT().UpdateAppInfo(APP_ID, DESCRIPTION_JSON).Return(InvalidYamlError),
 	)
 
-	dbExecutor = dbManagerMockObj
+	dbExecutor = dbExecutorMockObj
 
 	err := Executor.UpdateAppInfo(APP_ID, DESCRIPTION_YAML)
 
@@ -483,18 +512,18 @@ func TestCalledStartApp_ExpectSuccess(t *testing.T) {
 	defer ctrl.Finish()
 
 	dockerExecutorMockObj := dockermocks.NewMockCommand(ctrl)
-	dbManagerMockObj := dbmocks.NewMockCommand(ctrl)
+	dbExecutorMockObj := dbmocks.NewMockCommand(ctrl)
 
 	gomock.InOrder(
-		dbManagerMockObj.EXPECT().GetAppState(APP_ID).Return(APP_STATE, nil),
-		dbManagerMockObj.EXPECT().GetApp(APP_ID).Return(DB_GET_OBJ, nil),
+		dbExecutorMockObj.EXPECT().GetAppState(APP_ID).Return(APP_STATE, nil),
+		dbExecutorMockObj.EXPECT().GetApp(APP_ID).Return(DB_GET_OBJ, nil),
 		dockerExecutorMockObj.EXPECT().Start(gomock.Any(), gomock.Any()).Return(nil),
-		dbManagerMockObj.EXPECT().UpdateAppState(APP_ID, gomock.Any()).Return(nil),
+		dbExecutorMockObj.EXPECT().UpdateAppState(APP_ID, gomock.Any()).Return(nil),
 	)
 
 	// pass mockObj to a real object.
 	dockerExecutor = dockerExecutorMockObj
-	dbExecutor = dbManagerMockObj
+	dbExecutor = dbExecutorMockObj
 
 	err := Executor.StartApp(APP_ID)
 
@@ -507,14 +536,14 @@ func TestCalledStartAppWhenSetYAMLFileFailed_ExpectErrorReturn(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	dbManagerMockObj := dbmocks.NewMockCommand(ctrl)
+	dbExecutorMockObj := dbmocks.NewMockCommand(ctrl)
 
 	gomock.InOrder(
-		dbManagerMockObj.EXPECT().GetAppState(APP_ID).Return(APP_STATE, nil),
-		dbManagerMockObj.EXPECT().GetApp(APP_ID).Return(nil, UnknownError),
+		dbExecutorMockObj.EXPECT().GetAppState(APP_ID).Return(APP_STATE, nil),
+		dbExecutorMockObj.EXPECT().GetApp(APP_ID).Return(nil, UnknownError),
 	)
 
-	dbExecutor = dbManagerMockObj
+	dbExecutor = dbExecutorMockObj
 
 	err := Executor.StartApp(APP_ID)
 
@@ -528,17 +557,17 @@ func TestCalledStartAppWhenComposeStartFailed_ExpectErrorReturn(t *testing.T) {
 	defer ctrl.Finish()
 
 	dockerExecutorMockObj := dockermocks.NewMockCommand(ctrl)
-	dbManagerMockObj := dbmocks.NewMockCommand(ctrl)
+	dbExecutorMockObj := dbmocks.NewMockCommand(ctrl)
 
 	gomock.InOrder(
-		dbManagerMockObj.EXPECT().GetAppState(APP_ID).Return(APP_STATE, nil),
-		dbManagerMockObj.EXPECT().GetApp(APP_ID).Return(DB_GET_OBJ, nil),
+		dbExecutorMockObj.EXPECT().GetAppState(APP_ID).Return(APP_STATE, nil),
+		dbExecutorMockObj.EXPECT().GetApp(APP_ID).Return(DB_GET_OBJ, nil),
 		dockerExecutorMockObj.EXPECT().Start(gomock.Any(), gomock.Any()).Return(UnknownError),
 	)
 
 	// pass mockObj to a real object.
 	dockerExecutor = dockerExecutorMockObj
-	dbExecutor = dbManagerMockObj
+	dbExecutor = dbExecutorMockObj
 
 	err := Executor.StartApp(APP_ID)
 
@@ -552,18 +581,18 @@ func TestCalledStopApp_ExpectSuccess(t *testing.T) {
 	defer ctrl.Finish()
 
 	dockerExecutorMockObj := dockermocks.NewMockCommand(ctrl)
-	dbManagerMockObj := dbmocks.NewMockCommand(ctrl)
+	dbExecutorMockObj := dbmocks.NewMockCommand(ctrl)
 
 	gomock.InOrder(
-		dbManagerMockObj.EXPECT().GetAppState(APP_ID).Return(APP_STATE, nil),
-		dbManagerMockObj.EXPECT().GetApp(APP_ID).Return(DB_GET_OBJ, nil),
+		dbExecutorMockObj.EXPECT().GetAppState(APP_ID).Return(APP_STATE, nil),
+		dbExecutorMockObj.EXPECT().GetApp(APP_ID).Return(DB_GET_OBJ, nil),
 		dockerExecutorMockObj.EXPECT().Stop(gomock.Any(), gomock.Any()).Return(nil),
-		dbManagerMockObj.EXPECT().UpdateAppState(APP_ID, gomock.Any()).Return(nil),
+		dbExecutorMockObj.EXPECT().UpdateAppState(APP_ID, gomock.Any()).Return(nil),
 	)
 
 	// pass mockObj to a real object.
 	dockerExecutor = dockerExecutorMockObj
-	dbExecutor = dbManagerMockObj
+	dbExecutor = dbExecutorMockObj
 
 	err := Executor.StopApp(APP_ID)
 
@@ -576,14 +605,14 @@ func TestCalledStopAppWhenSetYAMLFileFailed_ExpectErrorReturn(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	dbManagerMockObj := dbmocks.NewMockCommand(ctrl)
+	dbExecutorMockObj := dbmocks.NewMockCommand(ctrl)
 
 	gomock.InOrder(
-		dbManagerMockObj.EXPECT().GetAppState(APP_ID).Return(APP_STATE, nil),
-		dbManagerMockObj.EXPECT().GetApp(APP_ID).Return(nil, UnknownError),
+		dbExecutorMockObj.EXPECT().GetAppState(APP_ID).Return(APP_STATE, nil),
+		dbExecutorMockObj.EXPECT().GetApp(APP_ID).Return(nil, UnknownError),
 	)
 
-	dbExecutor = dbManagerMockObj
+	dbExecutor = dbExecutorMockObj
 
 	err := Executor.StopApp(APP_ID)
 
@@ -597,17 +626,17 @@ func TestCalledStopAppWhenComposeStopFailed_ExpectErrorReturn(t *testing.T) {
 	defer ctrl.Finish()
 
 	dockerExecutorMockObj := dockermocks.NewMockCommand(ctrl)
-	dbManagerMockObj := dbmocks.NewMockCommand(ctrl)
+	dbExecutorMockObj := dbmocks.NewMockCommand(ctrl)
 
 	gomock.InOrder(
-		dbManagerMockObj.EXPECT().GetAppState(APP_ID).Return(APP_STATE, nil),
-		dbManagerMockObj.EXPECT().GetApp(APP_ID).Return(DB_GET_OBJ, nil),
+		dbExecutorMockObj.EXPECT().GetAppState(APP_ID).Return(APP_STATE, nil),
+		dbExecutorMockObj.EXPECT().GetApp(APP_ID).Return(DB_GET_OBJ, nil),
 		dockerExecutorMockObj.EXPECT().Stop(gomock.Any(), gomock.Any()).Return(UnknownError),
 	)
 
 	// pass mockObj to a real object.
 	dockerExecutor = dockerExecutorMockObj
-	dbExecutor = dbManagerMockObj
+	dbExecutor = dbExecutorMockObj
 
 	err := Executor.StopApp(APP_ID)
 
@@ -621,17 +650,17 @@ func TestCalledDeleteApp_ExpectSuccess(t *testing.T) {
 	defer ctrl.Finish()
 
 	dockerExecutorMockObj := dockermocks.NewMockCommand(ctrl)
-	dbManagerMockObj := dbmocks.NewMockCommand(ctrl)
+	dbExecutorMockObj := dbmocks.NewMockCommand(ctrl)
 
 	gomock.InOrder(
-		dbManagerMockObj.EXPECT().GetApp(APP_ID).Return(DB_GET_OBJ, nil),
+		dbExecutorMockObj.EXPECT().GetApp(APP_ID).Return(DB_GET_OBJ, nil),
 		dockerExecutorMockObj.EXPECT().DownWithRemoveImages(gomock.Any(), gomock.Any()).Return(nil),
-		dbManagerMockObj.EXPECT().DeleteApp(gomock.Any()).Return(nil),
+		dbExecutorMockObj.EXPECT().DeleteApp(gomock.Any()).Return(nil),
 	)
 
 	// pass mockObj to a real object.
 	dockerExecutor = dockerExecutorMockObj
-	dbExecutor = dbManagerMockObj
+	dbExecutor = dbExecutorMockObj
 
 	err := Executor.DeleteApp(APP_ID)
 
@@ -644,13 +673,13 @@ func TestCalledDeleteAppWhenSetYAMLFileFailed_ExpectErrorReturn(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	dbManagerMockObj := dbmocks.NewMockCommand(ctrl)
+	dbExecutorMockObj := dbmocks.NewMockCommand(ctrl)
 
 	gomock.InOrder(
-		dbManagerMockObj.EXPECT().GetApp(APP_ID).Return(nil, UnknownError),
+		dbExecutorMockObj.EXPECT().GetApp(APP_ID).Return(nil, UnknownError),
 	)
 
-	dbExecutor = dbManagerMockObj
+	dbExecutor = dbExecutorMockObj
 
 	err := Executor.DeleteApp(APP_ID)
 
@@ -664,18 +693,18 @@ func TestCalledDeleteAppWhenComposeDeleteFailed_ExpectErrorReturn(t *testing.T) 
 	defer ctrl.Finish()
 
 	dockerExecutorMockObj := dockermocks.NewMockCommand(ctrl)
-	dbManagerMockObj := dbmocks.NewMockCommand(ctrl)
+	dbExecutorMockObj := dbmocks.NewMockCommand(ctrl)
 
 	gomock.InOrder(
-		dbManagerMockObj.EXPECT().GetApp(APP_ID).Return(DB_GET_OBJ, nil),
+		dbExecutorMockObj.EXPECT().GetApp(APP_ID).Return(DB_GET_OBJ, nil),
 		dockerExecutorMockObj.EXPECT().DownWithRemoveImages(gomock.Any(), gomock.Any()).Return(UnknownError),
-		dbManagerMockObj.EXPECT().GetAppState(APP_ID).Return("START", nil),
+		dbExecutorMockObj.EXPECT().GetAppState(APP_ID).Return("START", nil),
 		dockerExecutorMockObj.EXPECT().Up(gomock.Any(), gomock.Any()).Return(nil),
 	)
 
 	// pass mockObj to a real object.
 	dockerExecutor = dockerExecutorMockObj
-	dbExecutor = dbManagerMockObj
+	dbExecutor = dbExecutorMockObj
 
 	err := Executor.DeleteApp(APP_ID)
 
@@ -689,189 +718,22 @@ func TestCalledDeleteAppWhenDBDeleteAppFailed_ExpectErrorReturn(t *testing.T) {
 	defer ctrl.Finish()
 
 	dockerExecutorMockObj := dockermocks.NewMockCommand(ctrl)
-	dbManagerMockObj := dbmocks.NewMockCommand(ctrl)
+	dbExecutorMockObj := dbmocks.NewMockCommand(ctrl)
 
 	gomock.InOrder(
-		dbManagerMockObj.EXPECT().GetApp(APP_ID).Return(DB_GET_OBJ, nil),
+		dbExecutorMockObj.EXPECT().GetApp(APP_ID).Return(DB_GET_OBJ, nil),
 		dockerExecutorMockObj.EXPECT().DownWithRemoveImages(gomock.Any(), gomock.Any()).Return(nil),
-		dbManagerMockObj.EXPECT().DeleteApp(gomock.Any()).Return(UnknownError),
+		dbExecutorMockObj.EXPECT().DeleteApp(gomock.Any()).Return(UnknownError),
 	)
 
 	// pass mockObj to a real object.
 	dockerExecutor = dockerExecutorMockObj
-	dbExecutor = dbManagerMockObj
+	dbExecutor = dbExecutorMockObj
 
 	err := Executor.DeleteApp(APP_ID)
 
 	if err == nil {
 		t.Errorf("Expected err: %s, actual err: %s", "UnknownError", "nil")
-	}
-}
-
-/* Inner Funtion TEST */
-
-func TestCalledSetYamlFile_ExpectSuccess(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	dbManagerMockObj := dbmocks.NewMockCommand(ctrl)
-
-	gomock.InOrder(
-		dbManagerMockObj.EXPECT().GetApp(APP_ID).Return(DB_GET_OBJ, nil),
-	)
-
-	dbExecutor = dbManagerMockObj
-
-	err := setYamlFile(APP_ID)
-
-	if err != nil {
-		t.Errorf("Unexpected err: %s", err.Error())
-	}
-
-	os.RemoveAll(COMPOSE_FILE_PATH)
-}
-
-func TestCalledSetYamlFileWhenGetAppFailed_ExpectErrorReturn(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	dbManagerMockObj := dbmocks.NewMockCommand(ctrl)
-
-	gomock.InOrder(
-		dbManagerMockObj.EXPECT().GetApp(APP_ID).Return(nil, UnknownError),
-	)
-
-	dbExecutor = dbManagerMockObj
-
-	err := setYamlFile(APP_ID)
-
-	if err == nil {
-		t.Errorf("Expected err: %s, actual err: %s", "UnknownError", "nil")
-	}
-
-	os.RemoveAll(COMPOSE_FILE_PATH)
-}
-
-func TestCalledSetYamlFileWhenJSONToYAMLFailed_ExpectErrorReturn(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	dbManagerMockObj := dbmocks.NewMockCommand(ctrl)
-
-	gomock.InOrder(
-		dbManagerMockObj.EXPECT().GetApp(APP_ID).Return(WRONG_DB_GET_OBJ, nil),
-	)
-
-	dbExecutor = dbManagerMockObj
-
-	err := setYamlFile(APP_ID)
-
-	if err == nil {
-		t.Errorf("Expected err: %s, actual err: %s", "UnknownError", "nil")
-	}
-
-	os.RemoveAll(COMPOSE_FILE_PATH)
-}
-
-func TestCalledRestoreRepoDigests_ExpectSuccess(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	test_state := "UP"
-	dockerExecutorMockObj := dockermocks.NewMockCommand(ctrl)
-
-	gomock.InOrder(
-		dockerExecutorMockObj.EXPECT().GetImageDigestByName(IMAGE_NAME).Return(IMAGE_DIGEST, nil),
-		dockerExecutorMockObj.EXPECT().Up(gomock.Any(), gomock.Any()).Return(nil),
-		dockerExecutorMockObj.EXPECT().Up(gomock.Any(), gomock.Any()).Return(nil),
-	)
-
-	dockerExecutor = dockerExecutorMockObj
-
-	err := restoreRepoDigests("", DESCRIPTION_JSON, test_state)
-
-	if err != nil {
-		t.Errorf("Unexpected err: %s", err.Error())
-	}
-}
-
-func TestCalledRestoreStateInputSTOP_ExpectSuccess(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	test_state := "STOP"
-	dockerExecutorMockObj := dockermocks.NewMockCommand(ctrl)
-
-	gomock.InOrder(
-		dockerExecutorMockObj.EXPECT().Stop(gomock.Any(), gomock.Any()).Return(nil),
-	)
-
-	dockerExecutor = dockerExecutorMockObj
-
-	err := restoreState("", test_state)
-
-	if err != nil {
-		t.Errorf("Unexpected err: %s", err.Error())
-	}
-}
-
-func TestCalledRestoreStateInputSTART_ExpectSuccess(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	test_state := "START"
-	dockerExecutorMockObj := dockermocks.NewMockCommand(ctrl)
-
-	gomock.InOrder(
-		dockerExecutorMockObj.EXPECT().Up(gomock.Any(), gomock.Any()).Return(nil),
-	)
-
-	dockerExecutor = dockerExecutorMockObj
-
-	err := restoreState("", test_state)
-
-	if err != nil {
-		t.Errorf("Unexpected err: %s", err.Error())
-	}
-}
-
-func TestCalledRestoreStateInputUP_ExpectSuccess(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	test_state := "UP"
-	dockerExecutorMockObj := dockermocks.NewMockCommand(ctrl)
-
-	gomock.InOrder(
-		dockerExecutorMockObj.EXPECT().Up(gomock.Any(), gomock.Any()).Return(nil),
-	)
-
-	dockerExecutor = dockerExecutorMockObj
-
-	err := restoreState("", test_state)
-
-	if err != nil {
-		t.Errorf("Unexpected err: %s", err.Error())
-	}
-}
-
-func TestCalledRestoreStateInputDEPLOY_ExpectSuccess(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	test_state := "DEPLOY"
-	dockerExecutorMockObj := dockermocks.NewMockCommand(ctrl)
-
-	gomock.InOrder(
-		dockerExecutorMockObj.EXPECT().Up(gomock.Any(), gomock.Any()).Return(nil),
-	)
-
-	dockerExecutor = dockerExecutorMockObj
-
-	err := restoreState("", test_state)
-
-	if err != nil {
-		t.Errorf("Unexpected err: %s", err.Error())
 	}
 }
 
@@ -986,7 +848,7 @@ func TestUpdateAppWithQueryWithTag_ExpectSuccess(t *testing.T) {
 		dockerExecutorMockObj.EXPECT().Up(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil),
 		dbExecutorMockObj.EXPECT().UpdateAppInfo(APP_ID, UPDATED_DESCRIPTION_JSON).Return(nil),
 		dbExecutorMockObj.EXPECT().GetApp(APP_ID).Return(DB_GET_APP_UPDATED_OBJ, nil),
-		dbExecutorMockObj.EXPECT().UpdateAppEvent(APP_ID, REPOSITORY_WITH_PORT, NEW_TAG, NONE_EVENT).Return(nil),
+		dbExecutorMockObj.EXPECT().UpdateAppEvent(APP_ID, REPOSITORY_WITH_PORT_IMAGE, NEW_TAG, NONE_EVENT).Return(nil),
 	)
 
 	dockerExecutor = dockerExecutorMockObj
@@ -1029,11 +891,178 @@ func TestUpdateAppWithQueryWithTagWhenUpdateAppInfoFailed_ExpectReturnError(t *t
 	}
 }
 
+/* Inner Funtion TEST */
+
+func TestCalledSetYamlFile_ExpectSuccess(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	dbExecutorMockObj := dbmocks.NewMockCommand(ctrl)
+
+	gomock.InOrder(
+		dbExecutorMockObj.EXPECT().GetApp(APP_ID).Return(DB_GET_OBJ, nil),
+	)
+
+	dbExecutor = dbExecutorMockObj
+
+	err := setYamlFile(APP_ID)
+
+	if err != nil {
+		t.Errorf("Unexpected err: %s", err.Error())
+	}
+
+	os.RemoveAll(COMPOSE_FILE_PATH)
+}
+
+func TestCalledSetYamlFileWhenGetAppFailed_ExpectErrorReturn(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	dbExecutorMockObj := dbmocks.NewMockCommand(ctrl)
+
+	gomock.InOrder(
+		dbExecutorMockObj.EXPECT().GetApp(APP_ID).Return(nil, UnknownError),
+	)
+
+	dbExecutor = dbExecutorMockObj
+
+	err := setYamlFile(APP_ID)
+
+	if err == nil {
+		t.Errorf("Expected err: %s, actual err: %s", "UnknownError", "nil")
+	}
+
+	os.RemoveAll(COMPOSE_FILE_PATH)
+}
+
+func TestCalledSetYamlFileWhenJSONToYAMLFailed_ExpectErrorReturn(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	dbExecutorMockObj := dbmocks.NewMockCommand(ctrl)
+
+	gomock.InOrder(
+		dbExecutorMockObj.EXPECT().GetApp(APP_ID).Return(WRONG_DB_GET_OBJ, nil),
+	)
+
+	dbExecutor = dbExecutorMockObj
+
+	err := setYamlFile(APP_ID)
+
+	if err == nil {
+		t.Errorf("Expected err: %s, actual err: %s", "UnknownError", "nil")
+	}
+
+	os.RemoveAll(COMPOSE_FILE_PATH)
+}
+
+func TestCalledRestoreRepoDigests_ExpectSuccess(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	test_state := "UP"
+	dockerExecutorMockObj := dockermocks.NewMockCommand(ctrl)
+
+	gomock.InOrder(
+		dockerExecutorMockObj.EXPECT().GetImageDigestByName(REPOSITORY_WITH_PORT_IMAGE+":"+OLD_TAG).Return(REPOSITORY_WITH_PORT_IMAGE_DIGEST, nil),
+		dockerExecutorMockObj.EXPECT().Up(gomock.Any(), gomock.Any()).Return(nil),
+		dockerExecutorMockObj.EXPECT().Up(gomock.Any(), gomock.Any()).Return(nil),
+	)
+
+	dockerExecutor = dockerExecutorMockObj
+
+	err := restoreRepoDigests("", DESCRIPTION_JSON, test_state)
+
+	if err != nil {
+		t.Errorf("Unexpected err: %s", err.Error())
+	}
+}
+
+func TestCalledRestoreStateInputSTOP_ExpectSuccess(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	test_state := "STOP"
+	dockerExecutorMockObj := dockermocks.NewMockCommand(ctrl)
+
+	gomock.InOrder(
+		dockerExecutorMockObj.EXPECT().Stop(gomock.Any(), gomock.Any()).Return(nil),
+	)
+
+	dockerExecutor = dockerExecutorMockObj
+
+	err := restoreState("", test_state)
+
+	if err != nil {
+		t.Errorf("Unexpected err: %s", err.Error())
+	}
+}
+
+func TestCalledRestoreStateInputSTART_ExpectSuccess(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	test_state := "START"
+	dockerExecutorMockObj := dockermocks.NewMockCommand(ctrl)
+
+	gomock.InOrder(
+		dockerExecutorMockObj.EXPECT().Up(gomock.Any(), gomock.Any()).Return(nil),
+	)
+
+	dockerExecutor = dockerExecutorMockObj
+
+	err := restoreState("", test_state)
+
+	if err != nil {
+		t.Errorf("Unexpected err: %s", err.Error())
+	}
+}
+
+func TestCalledRestoreStateInputUP_ExpectSuccess(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	test_state := "UP"
+	dockerExecutorMockObj := dockermocks.NewMockCommand(ctrl)
+
+	gomock.InOrder(
+		dockerExecutorMockObj.EXPECT().Up(gomock.Any(), gomock.Any()).Return(nil),
+	)
+
+	dockerExecutor = dockerExecutorMockObj
+
+	err := restoreState("", test_state)
+
+	if err != nil {
+		t.Errorf("Unexpected err: %s", err.Error())
+	}
+}
+
+func TestCalledRestoreStateInputDEPLOY_ExpectSuccess(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	test_state := "DEPLOY"
+	dockerExecutorMockObj := dockermocks.NewMockCommand(ctrl)
+
+	gomock.InOrder(
+		dockerExecutorMockObj.EXPECT().Up(gomock.Any(), gomock.Any()).Return(nil),
+	)
+
+	dockerExecutor = dockerExecutorMockObj
+
+	err := restoreState("", test_state)
+
+	if err != nil {
+		t.Errorf("Unexpected err: %s", err.Error())
+	}
+}
+
 func TestUpdateYamlFile_ExpectSuccess(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	_, err := updateYamlFile(APP_ID, ORIGIN_DESCRIPTION_JSON, SERVICE, REPOSITORY_WITH_PORT+":"+NEW_TAG)
+	_, err := updateYamlFile(APP_ID, ORIGIN_DESCRIPTION_JSON, SERVICE, REPOSITORY_WITH_PORT_IMAGE+":"+NEW_TAG)
 	if err != nil {
 		t.Errorf("Unexpected err: %s", err.Error())
 	}
@@ -1043,7 +1072,7 @@ func TestUpdateYamlFileWithInvalidJSON_ExpectReturnError(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	_, err := updateYamlFile(APP_ID, WRONG_DESCRIPTION_JSON, SERVICE, REPOSITORY_WITH_PORT+":"+NEW_TAG)
+	_, err := updateYamlFile(APP_ID, WRONG_DESCRIPTION_JSON, SERVICE, REPOSITORY_WITH_PORT_IMAGE+":"+NEW_TAG)
 	if err == nil {
 		t.Errorf("Expected err: %s, actual err: %s", "json unmarshal", "nil")
 	}
@@ -1053,7 +1082,7 @@ func TestUpdateYamlFileWithInvalidDescription_ExpectReturnError(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	_, err := updateYamlFile(APP_ID, DESCRIPTION_JSON_WITHOUT_SERVICE, SERVICE, REPOSITORY_WITH_PORT+":"+NEW_TAG)
+	_, err := updateYamlFile(APP_ID, DESCRIPTION_JSON_WITHOUT_SERVICE, SERVICE, REPOSITORY_WITH_PORT_IMAGE+":"+NEW_TAG)
 	if err == nil {
 		t.Errorf("Expected err: %s, actual err: %s", "can't find application info unmarshal", "nil")
 	}
@@ -1063,8 +1092,8 @@ func TestExtractQueryInfoWithRepoWithPortAndTag_ExpectSuccess(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	tagExist, repo, tag, err := extractQueryInfo(REPOSITORY_WITH_PORT + ":" + OLD_TAG)
-	if tagExist == false || repo != REPOSITORY_WITH_PORT || tag != OLD_TAG || err != nil {
+	tagExist, repo, tag, err := extractQueryInfo(REPOSITORY_WITH_PORT_IMAGE + ":" + OLD_TAG)
+	if tagExist == false || repo != REPOSITORY_WITH_PORT_IMAGE || tag != OLD_TAG || err != nil {
 		t.Errorf("Unexpected err: %s", err.Error())
 	}
 }
@@ -1073,8 +1102,8 @@ func TestExtractQueryInfoWithRepoWithPortAndNoTag_ExpectSuccess(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	tagExist, repo, tag, err := extractQueryInfo(REPOSITORY_WITH_PORT)
-	if tagExist == true || repo != REPOSITORY_WITH_PORT || tag != "" || err != nil {
+	tagExist, repo, tag, err := extractQueryInfo(REPOSITORY_WITH_PORT_IMAGE)
+	if tagExist == true || repo != REPOSITORY_WITH_PORT_IMAGE || tag != "" || err != nil {
 		t.Errorf("Unexpected err: %s", err.Error())
 	}
 }
@@ -1111,7 +1140,7 @@ func TestExtractQueryInfoWithInvalidRepository_ExpectReturnError(t *testing.T) {
 
 	tagExist, repo, tag, err := extractQueryInfo(INVALID_REPOSITORY)
 	if err == nil {
-		t.Errorf("Expected err: %s, actual err: %t %s %s %s", "invalid repogitory", tagExist, repo, tag, "nil")
+		t.Errorf("Expected err: %s, actual err: %t %s %s %s", "invalid repository", tagExist, repo, tag, "nil")
 	}
 }
 
@@ -1119,7 +1148,7 @@ func TestGetServiceName_ExpectSuccess(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	serviceName, err := getServiceName(REPOSITORY_WITH_PORT, []byte(UPDATED_DESCRIPTION_JSON))
+	serviceName, err := getServiceName(REPOSITORY_WITH_PORT_IMAGE, []byte(UPDATED_DESCRIPTION_JSON))
 	if serviceName != SERVICE {
 		t.Errorf("Expected service name: %s, actual service name: %s", SERVICE_NAME, serviceName)
 	}
@@ -1215,7 +1244,7 @@ func TestUpdateAppEventWhenJsonUnmarshalFailed_ExpectReturnError(t *testing.T) {
 		"description": WRONG_DESCRIPTION_JSON,
 		"images": []map[string]interface{}{
 			{
-				"name": REPOSITORY_WITH_PORT,
+				"name": REPOSITORY_WITH_PORT_IMAGE,
 				"changes": map[string]interface{}{
 					"tag":   NEW_TAG,
 					"state": "update",
