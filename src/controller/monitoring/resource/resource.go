@@ -70,9 +70,9 @@ func (resExecutorImpl) GetResourceInfo() (map[string]interface{}, error) {
 	}
 
 	resources := make(map[string]interface{})
-	resources["CPU"] = cpu
-	resources["DISK"] = disk
-	resources["MEM"] = mem
+	resources["cpu"] = cpu
+	resources["disk"] = disk
+	resources["mem"] = mem
 
 	return resources, err
 }
@@ -142,19 +142,19 @@ func getDiskUsage() ([]map[string]interface{}, error) {
 
 func convertToMemUsageMap(mem memoryUsage) map[string]interface{} {
 	return map[string]interface{}{
-		"Total":       mem.Total,
-		"Free":        mem.Free,
-		"Used":        mem.Used,
-		"UsedPercent": mem.UsedPercent,
+		"total":       mem.Total,
+		"free":        mem.Free,
+		"used":        mem.Used,
+		"usedpercent": mem.UsedPercent,
 	}
 }
 
 func convertToDiskUsageMap(disk diskUsage) map[string]interface{} {
 	return map[string]interface{}{
-		"Path":        disk.Path,
-		"Total":       disk.Total,
-		"Free":        disk.Free,
-		"Used":        disk.Used,
-		"UsedPercent": disk.UsedPercent,
+		"path":        disk.Path,
+		"total":       disk.Total,
+		"free":        disk.Free,
+		"used":        disk.Used,
+		"usedpercent": disk.UsedPercent,
 	}
 }
