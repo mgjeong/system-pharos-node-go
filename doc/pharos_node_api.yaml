@@ -40,20 +40,6 @@ paths:
           description: Successful operation.
           schema:
             $ref: '#/definitions/response_of_resource'
-  /api/v1/monitoring/resource/performance:
-    post:
-      tags:
-        - InfoCollecting
-      description: 'Returns device cpu, memory, disk usage information.'
-      consumes:
-        - application/json
-      produces:
-        - application/json
-      responses:
-        '200':
-          description: Successful operation.
-          schema:
-            $ref: '#/definitions/response_of_performance'
   /api/v1/management/nodes/register:
     post:
       tags:
@@ -260,28 +246,15 @@ paths:
         '200':
           description: Application stop succeeds
 definitions:
-  os:
-    description: OS information of edge device where Pharos Node exists
-    example: Linux 4.10.0-42-generic x86_64
-  processor_model_name:
-    description: The processor model name of an edge device where Pharos Node exists
-    example: Intel(R) Core(TM) i7-4790 CPU @ 3.60GHz
   cpu:
     description: Information about cpu usage of edge device where Pharos Node exists
-    example: |-
-      cpu 1562574 3836 740832 137355483 29108 0 22765 0 0 0 
-      cpu0 208670 29 89836 17181639 1062 0 5266 0 0 0
-  memory:
+    example: ["8.00%", "3.03%", "7.07%", "16.16%", "9.90%", "18.00%", "11.22%", "4.12%"]
+  mem:
     description: Information about memory usage of edge device where Pharos Node exists
-    example: |-
-      MemTotal: 8127136 kB
-      MemFree: 141108 kB
-      MemAvailable: 1515464 kB
+    example: {"free":"0KB", "total":"0KB", "used":"0KB", "usedpercnet":"0%"}
   disk:
     description: Information about disk usage of edge device where Pharos Node exists
-    example: |
-      Filesystem  1M-blocks  Used Available  Use%  Mounted on
-      udev  3947  0  3947  0%  /dev
+    example: [{"free":"0G", "path":"/root", "total":"0G", "used":"0G", "usedpercent":"0%"}]
   id:
     description: id
     example: asdjflkwjdfpaosdjfaposdf3423
@@ -365,31 +338,13 @@ definitions:
           $ref: '#/definitions/response_of_get_app'
   response_of_resource:
     required:
-      - os
-      - processor
       - cpu
-      - memory
-      - disk
-    properties:
-      os:
-        $ref: '#/definitions/os'
-      processor:
-        $ref: '#/definitions/processor_model_name'
-      cpu:
-        $ref: '#/definitions/cpu'
-      memory:
-        $ref: '#/definitions/memory'
-      disk:
-        $ref: '#/definitions/disk'
-  response_of_performance:
-    required:
-      - cpu
-      - memory
+      - mem
       - disk
     properties:
       cpu:
         $ref: '#/definitions/cpu'
-      memory:
-        $ref: '#/definitions/memory'
+      mem:
+        $ref: '#/definitions/mem'
       disk:
         $ref: '#/definitions/disk'
