@@ -24,6 +24,7 @@ import (
 	deploymentapi "api/deployment"
 	healthapi "api/health"
 	resourceapi "api/monitoring/resource"
+	configurationapi "api/configuration"
 	"commons/errors"
 	"commons/logger"
 	"commons/url"
@@ -42,6 +43,7 @@ func RunNodeWebServer(addr string, port int) {
 var deploymentApiExecutor deploymentapi.Command
 var healthApiExecutor healthapi.Command
 var resourceApiExecutor resourceapi.Command
+var configurationApiExecutor configurationapi.Command
 var NodeApis Executor
 
 type Executor struct{}
@@ -50,6 +52,7 @@ func init() {
 	deploymentApiExecutor = deploymentapi.Executor{}
 	healthApiExecutor = healthapi.Executor{}
 	resourceApiExecutor = resourceapi.Executor{}
+	configurationApiExecutor = configurationapi.Executor{}
 }
 
 // Implements of http serve interface.
@@ -76,5 +79,8 @@ func (Executor) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 	case strings.Contains(reqUrl, url.Resource()):
 		resourceApiExecutor.Handle(w, req)
+
+	case strings.Contains(reqUrl, url.Configuration()):
+		configurationApiExecutor.Handle(w, req)
 	}
 }
