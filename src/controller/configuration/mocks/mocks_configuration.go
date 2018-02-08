@@ -21,47 +21,54 @@
 package mocks
 
 import (
-        gomock "github.com/golang/mock/gomock"
+	gomock "github.com/golang/mock/gomock"
+	reflect "reflect"
 )
 
-// Mock of Command interface
+// MockCommand is a mock of Command interface
 type MockCommand struct {
-        ctrl     *gomock.Controller
-        recorder *_MockCommandRecorder
+	ctrl     *gomock.Controller
+	recorder *MockCommandMockRecorder
 }
 
-// Recorder for MockCommand (not exported)
-type _MockCommandRecorder struct {
-        mock *MockCommand
+// MockCommandMockRecorder is the mock recorder for MockCommand
+type MockCommandMockRecorder struct {
+	mock *MockCommand
 }
 
+// NewMockCommand creates a new mock instance
 func NewMockCommand(ctrl *gomock.Controller) *MockCommand {
-        mock := &MockCommand{ctrl: ctrl}
-        mock.recorder = &_MockCommandRecorder{mock}
-        return mock
+	mock := &MockCommand{ctrl: ctrl}
+	mock.recorder = &MockCommandMockRecorder{mock}
+	return mock
 }
 
-func (_m *MockCommand) EXPECT() *_MockCommandRecorder {
-        return _m.recorder
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockCommand) EXPECT() *MockCommandMockRecorder {
+	return m.recorder
 }
 
-func (_m *MockCommand) GetConfiguration() (map[string]interface{}, error) {
-        ret := _m.ctrl.Call(_m, "GetConfiguration")
-        ret0, _ := ret[0].(map[string]interface{})
-        ret1, _ := ret[1].(error)
-        return ret0, ret1
+// GetConfiguration mocks base method
+func (m *MockCommand) GetConfiguration() (map[string]interface{}, error) {
+	ret := m.ctrl.Call(m, "GetConfiguration")
+	ret0, _ := ret[0].(map[string]interface{})
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
-func (_mr *_MockCommandRecorder) GetConfiguration() *gomock.Call {
-        return _mr.mock.ctrl.RecordCall(_mr.mock, "GetConfiguration")
+// GetConfiguration indicates an expected call of GetConfiguration
+func (mr *MockCommandMockRecorder) GetConfiguration() *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetConfiguration", reflect.TypeOf((*MockCommand)(nil).GetConfiguration))
 }
 
-func (_m *MockCommand) SetConfiguration(_param0 map[string]interface{}) error {
-        ret := _m.ctrl.Call(_m, "SetConfiguration", _param0)
-        ret0, _ := ret[0].(error)
-        return ret0
+// SetConfiguration mocks base method
+func (m *MockCommand) SetConfiguration(body string) error {
+	ret := m.ctrl.Call(m, "SetConfiguration", body)
+	ret0, _ := ret[0].(error)
+	return ret0
 }
 
-func (_mr *_MockCommandRecorder) SetConfiguration(arg0 interface{}) *gomock.Call {
-        return _mr.mock.ctrl.RecordCall(_mr.mock, "SetConfiguration", arg0)
+// SetConfiguration indicates an expected call of SetConfiguration
+func (mr *MockCommandMockRecorder) SetConfiguration(body interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetConfiguration", reflect.TypeOf((*MockCommand)(nil).SetConfiguration), body)
 }
