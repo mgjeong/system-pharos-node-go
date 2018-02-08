@@ -22,9 +22,11 @@ ENV APP_DIR=/pharos
 ENV APP_PORT=48098
 ENV APP=pharos-node
 
+RUN apt-get update
+RUN apt-get install -y mongodb
+
 #copy files
 COPY $APP run.sh $APP_DIR
-COPY src/controller/configuration/configuration.json /configuration.json
 
 #expose notifications port
 EXPOSE $APP_PORT
