@@ -21,95 +21,233 @@ package configuration
 import (
 	"commons/errors"
 	"commons/logger"
+	"db/mongo/configuration"
 	"encoding/json"
-	"io/ioutil"
+	"github.com/shirou/gopsutil/cpu"
+	"github.com/shirou/gopsutil/host"
+	"os"
+	"strconv"
 )
-
-const configurationFileName = "/configuration.json"
 
 // Interface of configuration operations.
 type Command interface {
-	// GetConfiguration returns a map of configuration stored in predefined configuration file.
+	// GetConfiguration returns a map of configuration stored in database.
 	GetConfiguration() (map[string]interface{}, error)
-	// SetConfiguration updates one of configurations
-	SetConfiguration(map[string]interface{}) error
+
+	// SetConfiguration updates configuration sets.
+	SetConfiguration(body string) error
 }
 
 type Executor struct{}
 
-// Configuration schema
-type Configuration struct {
-	ServerAddress string `json:"serveraddress"`
-	DeviceName    string `json:"devicename"`
-	DeviceID      string `json:"deviceid"`
-	DeviceAddress string `json:"deviceaddress"`
-	Manufacturer  string `json:"manufacturer"`
-	ModelNumber   string `json:"modelnumber"`
-	SerialNumber  string `json:"serialnumber"`
-	Platform      string `json:"platform"`
-	OS            string `json:"os"`
-	Location      string `json:"location"`
-	PingInterval  string `json:"pinginterval"`
-	NodeID       string `json:"nodeid"`
+type (
+	platformInfo struct {
+		Platform string
+		Family   string
+		Version  string
+	}
+
+	processorInfo struct {
+		CPU       string
+		ModelName string
+	}
+)
+
+const (
+	PROPERTIES            = "properties"
+	NAME                  = "name"
+	VALUE                 = "value"
+	POLICY                = "policy"
+	READABLE              = "readable"
+	WRITABLE              = "writable"
+	DEFAULT_DEVICE_NAME   = "EdgeDevice"
+	DEFAULT_PING_INTERVAL = "10"
+)
+
+var dbExecutor configuration.Command
+
+func init() {
+	dbExecutor = configuration.Executor{}
+
+	// Initialize configuration before loading pharos-node.
+	initConfiguration()
 }
 
-func (conf Configuration) convertToMap() map[string]interface{} {
-	return map[string]interface{}{
-		"serveraddress": conf.ServerAddress,
-		"devicename":    conf.DeviceName,
-		"deviceid":      conf.DeviceID,
-		"manufacturer":  conf.Manufacturer,
-		"modelnumber":   conf.ModelNumber,
-		"serialnumber":  conf.SerialNumber,
-		"platform":      conf.Platform,
-		"os":            conf.OS,
-		"location":      conf.Location,
-		"pinginterval":  conf.PingInterval,
-		"deviceaddress": conf.DeviceAddress,
-		"nodeid":       conf.NodeID,
+func initConfiguration() {
+	anchoraddress := os.Getenv("ANCHOR_ADDRESS")
+	nodeaddress := os.Getenv("NODE_ADDRESS")
+
+	os, err := getOSInfo()
+	if err != nil {
+		logger.Logging(logger.ERROR, err.Error())
+	}
+
+	platform, err := getPlatformInfo()
+	if err != nil {
+		logger.Logging(logger.ERROR, err.Error())
+	}
+
+	processor, err := getProcessorInfo()
+	if err != nil {
+		logger.Logging(logger.ERROR, err.Error())
+	}
+
+	properties := make([]map[string]interface{}, 0)
+
+	properties = append(properties, makeProperty("anchoraddress", anchoraddress, []string{READABLE}))
+	properties = append(properties, makeProperty("nodeaddress", nodeaddress, []string{READABLE}))
+	properties = append(properties, makeProperty("devicename", DEFAULT_DEVICE_NAME, []string{READABLE, WRITABLE}))
+	properties = append(properties, makeProperty("pinginterval", DEFAULT_PING_INTERVAL, []string{READABLE, WRITABLE}))
+	properties = append(properties, makeProperty("os", os, []string{READABLE}))
+	properties = append(properties, makeProperty("platform", platform, []string{READABLE}))
+	properties = append(properties, makeProperty("processor", processor, []string{READABLE}))
+	properties = append(properties, makeProperty("nodeid", "", []string{READABLE, WRITABLE}))
+
+	for _, prop := range properties {
+		err = dbExecutor.SetProperty(prop)
+		if err != nil {
+			logger.Logging(logger.ERROR, err.Error())
+		}
 	}
 }
 
 func (Executor) GetConfiguration() (map[string]interface{}, error) {
-	raw, err := ioutil.ReadFile(configurationFileName)
+	logger.Logging(logger.DEBUG, "IN")
+	defer logger.Logging(logger.DEBUG, "OUT")
+
+	props, err := dbExecutor.GetProperties()
 	if err != nil {
-		logger.Logging(logger.DEBUG, "Configuration file is not found.")
-		return nil, errors.NotFound{configurationFileName}
+		logger.Logging(logger.ERROR, err.Error())
+		return nil, err
 	}
 
-	var conf map[string]interface{}
-	res := json.Unmarshal(raw, &conf)
-	if res != nil {
-		logger.Logging(logger.DEBUG, "Unmarshaling is failed")
-		return nil, errors.Unknown{"Unmarshaling is failed"}
-	}
+	res := make(map[string]interface{})
+	res[PROPERTIES] = props
 
-	return conf, nil
+	return res, nil
 }
 
-func (configurator Executor) SetConfiguration(newConf map[string]interface{}) error {
-	// Load a configuration file, first
-	curConf, err := configurator.GetConfiguration()
+func (configurator Executor) SetConfiguration(body string) error {
+	logger.Logging(logger.DEBUG, "IN")
+	defer logger.Logging(logger.DEBUG, "OUT")
+
+	bodyMap, err := convertJsonToMap(body)
 	if err != nil {
+		logger.Logging(logger.ERROR, err.Error())
 		return err
 	}
 
-	// Merge a current and new configuration into a single map
-	for k, v := range newConf {
-		curConf[k] = v
+	for _, prop := range bodyMap[PROPERTIES].([]interface{}) {
+		property, err := dbExecutor.GetProperty(prop.(map[string]interface{})[NAME].(string))
+		if err != nil {
+			logger.Logging(logger.ERROR, err.Error())
+			return errors.InvalidJSON{"not supported property"}
+		}
+
+		if !searchStringFromSlice(property[POLICY].([]string), WRITABLE) {
+			return errors.InvalidJSON{"read only property"}
+		}
+
+		property[VALUE] = prop.(map[string]interface{})[VALUE]
+		err = dbExecutor.SetProperty(property)
+		if err != nil {
+			logger.Logging(logger.ERROR, err.Error())
+			return convertDBError(err)
+		}
 	}
 
-	jsonBytes, err := json.Marshal(curConf)
+	return nil
+}
+
+func makeProperty(name string, value interface{}, policy []string) map[string]interface{} {
+	prop := make(map[string]interface{})
+	prop[NAME] = name
+	prop[VALUE] = value
+	prop[POLICY] = policy
+	return prop
+}
+
+func getOSInfo() (string, error) {
+	info, err := host.Info()
 	if err != nil {
-		logger.Logging(logger.DEBUG, "Converting map to JSON is failed")
-		return errors.InvalidParam{"Converting map to JSON is failed"}
+		logger.Logging(logger.ERROR, err.Error())
+		return "", errors.Unknown{"gopsutil host.PlatformInformation() error"}
 	}
 
-	err = ioutil.WriteFile(configurationFileName, jsonBytes, 0644)
+	return info.OS, nil
+}
+
+func getPlatformInfo() (map[string]interface{}, error) {
+	platform, family, version, err := host.PlatformInformation()
 	if err != nil {
-		logger.Logging(logger.DEBUG, "Writing configuration file is failed")
-		return errors.IOError{"Writing configuration file is failed"}
+		logger.Logging(logger.ERROR, err.Error())
+		return nil, errors.Unknown{"gopsutil host.PlatformInformation() error"}
 	}
 
-	return err
+	info := platformInfo{}
+	info.Platform = platform
+	info.Family = family
+	info.Version = version
+
+	return convertToPlatformMap(info), nil
+}
+
+func getProcessorInfo() ([]map[string]interface{}, error) {
+	infos, err := cpu.Info()
+	if err != nil {
+		logger.Logging(logger.ERROR, err.Error())
+		return nil, errors.Unknown{"cpu host.Info() error"}
+	}
+
+	result := make([]map[string]interface{}, 0)
+	for _, info := range infos {
+		procs := processorInfo{}
+		procs.CPU = strconv.FormatInt(int64(info.CPU), 10)
+		procs.ModelName = info.ModelName
+		result = append(result, convertToProcessorMap(procs))
+	}
+
+	return result, err
+}
+
+func convertToPlatformMap(info platformInfo) map[string]interface{} {
+	return map[string]interface{}{
+		"platform": info.Platform,
+		"family":   info.Family,
+		"version":  info.Version,
+	}
+}
+
+func convertToProcessorMap(info processorInfo) map[string]interface{} {
+	return map[string]interface{}{
+		"cpu":       info.CPU,
+		"modelname": info.ModelName,
+	}
+}
+
+func convertDBError(err error) error {
+	switch err.(type) {
+	case errors.NotFound:
+		return errors.NotFound{}
+	default:
+		return errors.Unknown{Msg: "db operation fail"}
+	}
+}
+
+func convertJsonToMap(jsonStr string) (map[string]interface{}, error) {
+	result := make(map[string]interface{})
+	err := json.Unmarshal([]byte(jsonStr), &result)
+	if err != nil {
+		return nil, errors.InvalidJSON{"Unmarshalling Failed"}
+	}
+	return result, err
+}
+
+func searchStringFromSlice(slice []string, str string) bool {
+	for _, value := range slice {
+		if value == str {
+			return true
+		}
+	}
+	return false
 }
