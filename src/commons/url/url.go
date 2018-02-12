@@ -62,3 +62,6 @@ func Resource() string { return "/resource" }
 
 //Returning Performance url as string.
 func Performance() string { return "/performance" }
+
+//Returning Configuration url as string.
+func Configuration() string { return "/configuration" }

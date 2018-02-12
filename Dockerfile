@@ -28,7 +28,6 @@ RUN apk add --no-cache mongodb bash && \
 
 # copy files
 COPY $APP run.sh $APP_DIR/
-COPY src/controller/configuration/configuration.json /configuration.json
 
 # expose notifications port
 EXPOSE $APP_PORT

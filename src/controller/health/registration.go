@@ -23,7 +23,9 @@ import (
 	"commons/logger"
 	"commons/url"
 	"controller/configuration"
+	"encoding/json"
 	"messenger"
+	"strings"
 	"time"
 )
 
@@ -72,8 +74,12 @@ func register() error {
 		return err
 	}
 
-	// Get system-edge-manager address from configuration.
-	common.managerAddress = config["serveraddress"].(string)
+	// Get pharos-anchor address from configuration.
+	for _, prop := range config["properties"].([]map[string]interface{}) {
+		if strings.Compare(prop["name"].(string), "anchoraddress") == 0 {
+			common.managerAddress = prop["value"].(string)
+		}
+	}
 
 	// Make a request body for registration.
 	body := makeRegistrationBody(config)
@@ -95,11 +101,16 @@ func register() error {
 		return errors.Unknown{"received error message from system-edge-manager" + message}
 	}
 
-	// Insert node id in configuration file.
-	newConfig := make(map[string]interface{})
-	newConfig["nodeid"] = respMap["id"]
+	// Insert node id in configuration db.
+	updatedProp := make(map[string]interface{})
+	updatedProp["name"] = "nodeid"
+	updatedProp["value"] = respMap["id"]
 
-	err = configurator.SetConfiguration(newConfig)
+	updatedProperties := make(map[string]interface{})
+	updatedProperties["properties"] = []map[string]interface{}{updatedProp}
+
+	jsonString, _ := json.Marshal(updatedProperties)
+	err = configurator.SetConfiguration(string(jsonString))
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
 		return err
@@ -118,10 +129,15 @@ func (Executor) Unregister() error {
 	defer logger.Logging(logger.DEBUG, "OUT")
 
 	// Reset node id.
-	newConfig := make(map[string]interface{})
-	newConfig["nodeid"] = ""
+	updatedProp := make(map[string]interface{})
+	updatedProp["name"] = "nodeid"
+	updatedProp["value"] = ""
 
-	err := configurator.SetConfiguration(newConfig)
+	updatedProperties := make(map[string]interface{})
+	updatedProperties["properties"] = []map[string]interface{}{updatedProp}
+
+	jsonString, _ := json.Marshal(updatedProperties)
+	err := configurator.SetConfiguration(string(jsonString))
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
 		return err
@@ -159,16 +175,28 @@ func sendUnregisterRequest(nodeID string) (int, string, error) {
 func makeRegistrationBody(config map[string]interface{}) map[string]interface{} {
 	data := make(map[string]interface{})
 
-	// Set device address from configuration.
-	data["ip"] = config["deviceaddress"].(string)
+	// Set pharos-node address from configuration.
+	properties := config["properties"].([]map[string]interface{})
+	for _, prop := range properties {
+		if strings.Compare(prop["name"].(string), "nodeaddress") == 0 {
+			data["ip"] = prop["value"].(string)
+		}
+	}
 
-	// Delete unused field.
-	delete(config, "serveraddress")
-	delete(config, "deviceaddress")
-	delete(config, "nodeid")
+	// Remove unnecessary property from configuration.
+	filteredProps := make([]map[string]interface{}, 0)
+	for _, prop := range properties {
+		if strings.Compare(prop["name"].(string), "nodeid") != 0 &&
+			strings.Compare(prop["name"].(string), "anchoraddress") != 0 &&
+			strings.Compare(prop["name"].(string), "nodeaddress") != 0 {
+			filteredProps = append(filteredProps, prop)
+		}
+	}
 
 	// Set configuration information in request body.
-	data["config"] = config
+	configData := make(map[string]interface{})
+	configData["properties"] = filteredProps
 
+	data["config"] = configData
 	return data
 }
