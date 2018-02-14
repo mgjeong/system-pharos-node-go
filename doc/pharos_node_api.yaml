@@ -23,6 +23,8 @@ tags:
       These APIs will not be used by users. It is used by Node to send request
       to Anchor. The description is provided for developers who need to know
       about Pharos Node's behavior.
+  - name: Configuration
+    description: Properties and configurations of Pharos Node
 paths:
   /api/v1/monitoring/resource:
     post:
@@ -245,6 +247,39 @@ paths:
       responses:
         '200':
           description: Application stop succeeds
+  '/api/v1/management/device/configuration':
+    get:
+      tags:
+        - Configuration
+      description: 'Returns device properties and configurations (deviceName, pinginterval, os, platform, processor)'
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      responses:
+        '200':
+          description: Configuration get succeeds
+          schema:
+            $ref: '#/definitions/response_of_get_configuration'
+    post:
+      tags:
+        - Configuration
+      description: 'Update device configurations (deviceName, pinginterval)'
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - name: properties
+          in: body
+          description: >-
+            Configuration sets to be updated.
+          required: false
+          schema:
+            $ref: '#/definitions/configuration'
+      responses:
+        '200':
+          description: Configuration update succeeds
 definitions:
   cpu:
     description: Information about cpu usage of edge device where Pharos Node exists
@@ -309,6 +344,15 @@ definitions:
         $ref: '#/definitions/address'
       healthCheck:
         $ref: '#/definitions/health_check'
+  configuration:
+    required:
+      - properties
+    properties:
+      properties:
+        type: array
+        example:
+          - {"name":"devicename", "value":"EdgeDevice"}
+          - {"name":"pinginterval", "value":"10"}
   response_of_deployment:
     required:
       - id
@@ -348,3 +392,17 @@ definitions:
         $ref: '#/definitions/mem'
       disk:
         $ref: '#/definitions/disk'
+  response_of_get_configuration:
+    required:
+      - properties
+    properties:
+      properties:
+        type: array
+        example:
+          - {"name":"anchoraddress", "value":"192.168.0.1", "policy":["readable"]}
+          - {"name":"nodeaddress", "value":"192.168.0.1", "policy":["readable"]}
+          - {"name":"devicename", "value":"EdgeDevice", "policy":["readable", "writable"]}
+          - {"name":"pinginterval", "value":"10", "policy":["readable", "writable"]}
+          - {"name":"os", "value":"linux", "policy":["readable"]}
+          - {"name":"platform", "value":{"family":"debian","platform":"ubuntu","version":"14.04"}, "policy":["readable"]}
+          - {"name":"processor", "value":[{"cpu":"0", "modelname":"Intel(R) Core(TM) i7-2600 CPU @ 3.40GHz"}], "policy":["readable"]}
