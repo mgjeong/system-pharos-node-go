@@ -17,135 +17,38 @@
 package resource
 
 import (
-	"bytes"
 	"commons/errors"
 	urls "commons/url"
-	"io"
+	resourcemocks "controller/monitoring/resource/mocks"
+	"github.com/golang/mock/gomock"
 	"net/http"
-	"net/url"
+	"net/http/httptest"
 	"testing"
 )
 
-// Test
-var status int
-var head http.Header
-var resourceApiExecutor Command
-
-type testResponseWriter struct {
-}
-
-func init() {
-	resourceApiExecutor = Executor{}
-}
-
-func (w testResponseWriter) Header() http.Header {
-	return head
-}
-func (w testResponseWriter) Write(b []byte) (int, error) {
-	if string(b) == http.StatusText(http.StatusOK) {
-		w.WriteHeader(http.StatusOK)
+var (
+	invalidOperationList = map[string][]string{
+		"/api/v1/monitoring/resource": []string{POST, PUT, DELETE},
 	}
-	return 0, nil
-}
-func (w testResponseWriter) WriteHeader(code int) {
-	status = code
-}
-
-func newRequest(method string, url string, body io.Reader) *http.Request {
-	status = 0
-	head = make(map[string][]string)
-
-	r, _ := http.NewRequest(method, url, body)
-	r.URL.Path = url
-	return r
-}
-
-func invalidOperation(t *testing.T, method string, url string, code int) {
-	w, req := testResponseWriter{}, newRequest(method, url, nil)
-	resourceApiExecutor.Handle(w, req)
-
-	t.Log(status)
-	if status != code {
-		t.Error()
+	testMap = map[string]interface{}{
+		"cpu":  "test",
+		"mem":  "test",
+		"disk": "test",
 	}
-}
-
-func getInvalidMethodList() map[string][]string {
-	urlList := make(map[string][]string)
-	urlList["/api/v1/monitoring/resource"] = []string{POST, PUT, DELETE}
-
-	return urlList
-}
-
-func TestInvalidMethod(t *testing.T) {
-	urlList := getInvalidMethodList()
-
-	for key, vals := range urlList {
-		for _, tc := range vals {
-			t.Run(key+"="+tc, func(t *testing.T) {
-				invalidOperation(t, tc, key, http.StatusMethodNotAllowed)
-			})
-		}
+	testList = []testObj{
+		{"InvalidYamlError", errors.InvalidYaml{}, http.StatusBadRequest},
+		{"InvalidAppId", errors.InvalidAppId{}, http.StatusBadRequest},
+		{"InvalidParamError", errors.InvalidParam{}, http.StatusBadRequest},
+		{"NotFoundImage", errors.NotFoundImage{}, http.StatusBadRequest},
+		{"AlreadyAllocatedPort", errors.AlreadyAllocatedPort{}, http.StatusBadRequest},
+		{"AlreadyUsedName", errors.AlreadyUsedName{}, http.StatusBadRequest},
+		{"InvalidContainerName", errors.InvalidContainerName{}, http.StatusBadRequest},
+		{"IOError", errors.IOError{}, http.StatusInternalServerError},
+		{"UnknownError", errors.Unknown{}, http.StatusInternalServerError},
+		{"NotFoundError", errors.NotFound{}, http.StatusServiceUnavailable},
+		{"AlreadyReported", errors.AlreadyReported{}, http.StatusAlreadyReported},
 	}
-}
-
-func setup(t *testing.T, mock mockingci) func(*testing.T) {
-	resourceExecutor = mock
-	return func(*testing.T) {}
-}
-
-var getResourceInfoCalled bool
-
-// Test using mocking for resourceinterface
-var doSomethingFunc func(*mockingci)
-
-type mockingci struct {
-	data map[string]interface{}
-	err  error
-}
-
-func makeMockingci() mockingci {
-	mock := mockingci{}
-	mock.data = make(map[string]interface{})
-	mock.err = nil
-	return mock
-}
-
-func (m mockingci) GetResourceInfo() (map[string]interface{}, error) {
-	doSomethingFunc(&m)
-	getResourceInfoCalled = true
-	return m.data, m.err
-}
-
-func getBody() io.Reader {
-	data := url.Values{}
-	data.Set("name", "test")
-	return bytes.NewBufferString(data.Encode())
-}
-
-type returnValue struct {
-	err error
-}
-
-func executeFuncImpl(t *testing.T, method string, url string, isBody bool) {
-	var body io.Reader
-	body = nil
-	if isBody {
-		body = getBody()
-	}
-	w, req := testResponseWriter{}, newRequest(method, url, body)
-	resourceApiExecutor.Handle(w, req)
-
-	t.Log(status)
-	t.Log(head)
-}
-
-func executeFunc(t *testing.T, method string, url string, r returnValue, isBody bool) {
-	doSomethingFunc = func(m *mockingci) {
-		m.err = r.err
-	}
-	executeFuncImpl(t, method, url, isBody)
-}
+)
 
 type testObj struct {
 	name       string
@@ -153,46 +56,73 @@ type testObj struct {
 	expectCode int
 }
 
-func getErrorTestList() []testObj {
-	testList := []testObj{
-		{"UnknownError", errors.Unknown{}, http.StatusInternalServerError},
-	}
-	return testList
+var resourceApiExecutor Command
+
+func init() {
+	resourceApiExecutor = Executor{}
 }
 
-func TestResource(t *testing.T) {
-	mock := makeMockingci()
-	tearDown := setup(t, mock)
-	defer tearDown(t)
+func TestResourceApiInvalidOperation(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
 
-	t.Run("Success", func(t *testing.T) {
-		getResourceInfoCalled = false
+	for api, invalidMethodList := range invalidOperationList {
+		for _, method := range invalidMethodList {
+			w := httptest.NewRecorder()
+			req, _ := http.NewRequest(method, api, nil)
 
-		r := returnValue{err: nil}
-		executeFunc(t, GET, urls.Base()+urls.Monitoring()+urls.Resource(), r, true)
+			resourceApiExecutor.Handle(w, req)
 
-		if status != http.StatusOK {
-			t.Error()
+			if w.Code != http.StatusMethodNotAllowed {
+				t.Error("Expected error : %d, Actual Error : %d", http.StatusMethodNotAllowed, w.Code)
+			}
 		}
-		if getResourceInfoCalled == false {
-			t.Error()
-		}
-	})
+	}
+}
 
-	testList := getErrorTestList()
+func TestResourceApi_ExpectSuccess(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	resourceExecutorMockObj := resourcemocks.NewMockCommand(ctrl)
+
+	gomock.InOrder(
+		resourceExecutorMockObj.EXPECT().GetResourceInfo().Return(testMap, nil),
+	)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest(GET, urls.Base()+urls.Monitoring()+urls.Resource(), nil)
+
+	resourceExecutor = resourceExecutorMockObj
+
+	resourceApiExecutor.Handle(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Error("Unexpected error code : %d", w.Code)
+	}
+}
+
+func TestResourceApiWhenControllerFailed_ExpectReturnError(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	resourceExecutorMockObj := resourcemocks.NewMockCommand(ctrl)
+
 	for _, test := range testList {
-		t.Run("Error/"+test.name, func(t *testing.T) {
-			getResourceInfoCalled = false
+		gomock.InOrder(
+			resourceExecutorMockObj.EXPECT().GetResourceInfo().Return(nil, test.err),
+		)
 
-			r := returnValue{err: test.err}
-			executeFunc(t, GET, urls.Base()+urls.Monitoring()+urls.Resource(), r, true)
+		w := httptest.NewRecorder()
+		print(urls.Base()+urls.Monitoring()+urls.Resource())
+		req, _ := http.NewRequest(GET, urls.Base()+urls.Monitoring()+urls.Resource(), nil)
 
-			if status != test.expectCode {
-				t.Error()
-			}
-			if getResourceInfoCalled == false {
-				t.Error()
-			}
-		})
+		resourceExecutor = resourceExecutorMockObj
+
+		resourceApiExecutor.Handle(w, req)
+
+		if w.Code != test.expectCode {
+			t.Error("Unexpected error code : %d\n", w.Code)
+		}
 	}
 }

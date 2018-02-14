@@ -20,190 +20,29 @@ import (
 	"bytes"
 	"commons/errors"
 	urls "commons/url"
-	"io"
+	deploymentmocks "controller/deployment/mocks"
+	"github.com/golang/mock/gomock"
 	"net/http"
+	"net/http/httptest"
 	"net/url"
 	"testing"
 )
 
-// Test
-var status int
-var head http.Header
-var deploymentApiExecutor Command
+const (
+	ID string = "id"
+)
 
-type testResponseWriter struct {
-}
-
-func init() {
-	deploymentApiExecutor = Executor{}
-}
-
-func (w testResponseWriter) Header() http.Header {
-	return head
-}
-func (w testResponseWriter) Write(b []byte) (int, error) {
-	if string(b) == http.StatusText(http.StatusOK) {
-		w.WriteHeader(http.StatusOK)
+var (
+	appId          = "0000000000001"
+	invalidOperationList = map[string][]string{
+		"/api/v1/management/apps":           []string{PUT, POST, DELETE},
+		"/api/v1/management/apps/deploy":    []string{GET, PUT, DELETE},
+		"/api/v1/management/apps/11":        []string{PUT},
+		"/api/v1/management/apps/11/update": []string{GET, PUT, DELETE},
+		"/api/v1/management/apps/11/stop":   []string{GET, PUT, DELETE},
+		"/api/v1/management/apps/11/start":  []string{GET, PUT, DELETE},
 	}
-	return 0, nil
-}
-func (w testResponseWriter) WriteHeader(code int) {
-	status = code
-}
-
-func newRequest(method string, url string, body io.Reader) *http.Request {
-	status = 0
-	head = make(map[string][]string)
-
-	r, _ := http.NewRequest(method, url, body)
-	r.URL.Path = url
-	return r
-}
-
-func invalidOperation(t *testing.T, method string, url string, code int) {
-	w, req := testResponseWriter{}, newRequest(method, url, nil)
-	deploymentApiExecutor.Handle(w, req)
-
-	t.Log(status)
-	if status != code {
-		t.Error()
-	}
-}
-
-func getInvalidMethodList() map[string][]string {
-	urlList := make(map[string][]string)
-	urlList["/api/v1/management/apps"] = []string{PUT, POST, DELETE}
-	urlList["/api/v1/management/apps/deploy"] = []string{GET, PUT, DELETE}
-	urlList["/api/v1/management/apps/11"] = []string{PUT}
-	urlList["/api/v1/management/apps/11/update"] = []string{GET, PUT, DELETE}
-	urlList["/api/v1/management/apps/11/stop"] = []string{GET, PUT, DELETE}
-	urlList["/api/v1/management/apps/11/start"] = []string{GET, PUT, DELETE}
-
-	return urlList
-}
-
-func TestInvalidMethod(t *testing.T) {
-	urlList := getInvalidMethodList()
-
-	for key, vals := range urlList {
-		for _, tc := range vals {
-			t.Run(key+"="+tc, func(t *testing.T) {
-				invalidOperation(t, tc, key, http.StatusMethodNotAllowed)
-			})
-		}
-	}
-}
-
-// Test using mocking for controllerinterface
-var doSomethingFunc func(*mockingci)
-var doSomethingFuncWithAppId func(*mockingci, string)
-
-type mockingci struct {
-	data map[string]interface{}
-	path string
-	err  error
-}
-
-func makeMockingCi() mockingci {
-	mock := mockingci{}
-	mock.data = make(map[string]interface{})
-	mock.err = nil
-	return mock
-}
-
-func (m mockingci) DeployApp(body string) (map[string]interface{}, error) {
-	doSomethingFunc(&m)
-	return m.data, m.err
-}
-func (m mockingci) App(appId string) (map[string]interface{}, error) {
-	doSomethingFuncWithAppId(&m, appId)
-	return m.data, m.err
-}
-func (m mockingci) Apps() (map[string]interface{}, error) {
-	doSomethingFunc(&m)
-	return m.data, m.err
-}
-func (m mockingci) UpdateAppInfo(appId string, body string) error {
-	doSomethingFuncWithAppId(&m, appId)
-	return m.err
-}
-func (m mockingci) DeleteApp(appId string) error {
-	doSomethingFuncWithAppId(&m, appId)
-	return m.err
-}
-func (m mockingci) UpdateApp(appId string) error {
-	doSomethingFuncWithAppId(&m, appId)
-	return m.err
-}
-func (m mockingci) StopApp(appId string) error {
-	doSomethingFuncWithAppId(&m, appId)
-	return m.err
-}
-func (m mockingci) StartApp(appId string) error {
-	doSomethingFuncWithAppId(&m, appId)
-	return m.err
-}
-
-func getBody() io.Reader {
-	data := url.Values{}
-	data.Set("name", "test")
-	return bytes.NewBufferString(data.Encode())
-}
-
-func setup(t *testing.T, mock mockingci) func(*testing.T) {
-	deploymentExecutor = mock
-	return func(*testing.T) {}
-}
-
-type returnValue struct {
-	id   string
-	err  error
-	path string
-}
-
-func executeFuncImpl(t *testing.T, method string, url string, isBody bool) {
-	var body io.Reader
-	body = nil
-	if isBody {
-		body = getBody()
-	}
-	w, req := testResponseWriter{}, newRequest(method, url, body)
-	deploymentApiExecutor.Handle(w, req)
-
-	t.Log(status)
-	t.Log(head)
-}
-
-func executeFunc(t *testing.T, method string, url string, r returnValue, isBody bool) {
-	doSomethingFunc = func(m *mockingci) {
-		m.data["id"] = r.id
-		m.err = r.err
-		m.path = r.path
-	}
-	executeFuncImpl(t, method, url, isBody)
-}
-
-func executeFuncWithAppId(t *testing.T, appId string, method string, url string, r returnValue, isBody bool) {
-	doSomethingFuncWithAppId = func(m *mockingci, id string) {
-
-		m.data["id"] = r.id
-		m.err = r.err
-		m.path = r.path
-		if appId != id {
-			t.Error()
-		}
-	}
-	executeFuncImpl(t, method, url, isBody)
-}
-
-type testObj struct {
-	name       string
-	err        error
-	expectCode int
-}
-
-func getErrorTestList() []testObj {
-	testList := []testObj{
+	testList = []testObj{
 		{"InvalidYamlError", errors.InvalidYaml{}, http.StatusBadRequest},
 		{"InvalidAppId", errors.InvalidAppId{}, http.StatusBadRequest},
 		{"InvalidParamError", errors.InvalidParam{}, http.StatusBadRequest},
@@ -216,150 +55,468 @@ func getErrorTestList() []testObj {
 		{"NotFoundError", errors.NotFound{}, http.StatusServiceUnavailable},
 		{"AlreadyReported", errors.AlreadyReported{}, http.StatusAlreadyReported},
 	}
-	return testList
+	testMap = map[string]interface{}{
+		"id": appId,
+	}
+)
+
+type testObj struct {
+	name       string
+	err        error
+	expectCode int
 }
 
-func TestDeploy(t *testing.T) {
-	mock := makeMockingCi()
-	tearDown := setup(t, mock)
-	defer tearDown(t)
+var deploymentApiExecutor Command
 
-	id := "12345"
+func init() {
+	deploymentApiExecutor = Executor{}
+}
 
-	t.Run("Success", func(t *testing.T) {
-		r := returnValue{id: id, err: nil, path: ""}
-		executeFunc(t, POST, urls.Base()+urls.Management()+urls.Apps()+urls.Deploy(), r, true)
-		if status != http.StatusOK ||
-			head.Get("Location") != urls.Base()+urls.Management()+urls.Apps()+"/"+id {
-			t.Error()
+func TestDeploymentApiWithInvalidOperation(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	for api, invalidMethodList := range invalidOperationList {
+		for _, method := range invalidMethodList {
+			w := httptest.NewRecorder()
+			req, _ := http.NewRequest(method, api, nil)
+
+			deploymentApiExecutor.Handle(w, req)
+			
+			if w.Code != http.StatusMethodNotAllowed {
+				t.Error("Expected error : %d, Actual Error : %d", http.StatusMethodNotAllowed, w.Code)
+			}
 		}
-	})
+	}
+}
 
-	testList := getErrorTestList()
+func TestDeployApi_ExpectSuccess(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	deploymentExecutorMockObj := deploymentmocks.NewMockCommand(ctrl)
+
+	data := url.Values{}
+	data.Set("name", "test")
+	body := bytes.NewBufferString(data.Encode())
+
+	deployedApp := make(map[string]interface{})
+	deployedApp[ID] = appId
+
+	gomock.InOrder(
+		deploymentExecutorMockObj.EXPECT().DeployApp(gomock.Any()).Return(deployedApp, nil),
+	)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest(POST, urls.Base()+urls.Management()+urls.Apps()+urls.Deploy(), body)
+
+	deploymentExecutor = deploymentExecutorMockObj
+
+	deploymentApiExecutor.Handle(w, req)
+
+	if w.Header().Get("Location") != urls.Base()+urls.Management()+urls.Apps()+"/"+appId ||
+		w.Code != http.StatusOK {
+		t.Error()
+	}
+}
+
+func TestDeployApiWhenControllerFailed_ExpecReturnError(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	deploymentExecutorMockObj := deploymentmocks.NewMockCommand(ctrl)
 
 	for _, test := range testList {
-		t.Run("Error/"+test.name, func(t *testing.T) {
-			r := returnValue{id: id, err: test.err, path: ""}
-			executeFunc(t, POST, urls.Base()+urls.Management()+urls.Apps()+urls.Deploy(), r, true)
+		gomock.InOrder(
+			deploymentExecutorMockObj.EXPECT().DeployApp(gomock.Any()).Return(nil, test.err),
+		)
 
-			if status != test.expectCode {
-				t.Error()
-			}
-		})
-	}
+		data := url.Values{}
+		data.Set("name", "test")
+		body := bytes.NewBufferString(data.Encode())
 
-	t.Run("ErrorEmptyBody", func(t *testing.T) {
-		r := returnValue{id: id, err: errors.Unknown{}, path: ""}
-		executeFunc(t, POST, urls.Base()+urls.Management()+urls.Apps()+urls.Deploy(), r, false)
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest(POST, urls.Base()+urls.Management()+urls.Apps()+urls.Deploy(), body)
 
-		if status == http.StatusOK {
-			t.Error()
+		deploymentExecutor = deploymentExecutorMockObj
+
+		deploymentApiExecutor.Handle(w, req)
+
+		if w.Code != test.expectCode {
+			t.Error("Expected error code : %d, Actual error code : %d\n", test.expectCode, w.Code)
 		}
-	})
-
+	}
 }
 
-func TestApps(t *testing.T) {
-	mock := makeMockingCi()
-	tearDown := setup(t, mock)
-	defer tearDown(t)
+func TestDeployApiWithEmptyBodyStr_ExpecReturnError(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
 
-	t.Run("Success", func(t *testing.T) {
-		r := returnValue{id: "", err: nil, path: ""}
-		executeFunc(t, GET, urls.Base()+urls.Management()+urls.Apps(), r, false)
+	deploymentExecutorMockObj := deploymentmocks.NewMockCommand(ctrl)
 
-		if status != http.StatusOK {
-			t.Error()
-		}
-	})
+	deployedApp := make(map[string]interface{})
+	deployedApp[ID] = appId
 
-	testList := getErrorTestList()
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest(POST, urls.Base()+urls.Management()+urls.Apps()+urls.Deploy(), nil)
+
+	deploymentExecutor = deploymentExecutorMockObj
+
+	deploymentApiExecutor.Handle(w, req)
+
+	if w.Code == http.StatusOK {
+		t.Error("Expected return error but return http.StatusOK")
+	}
+}
+
+func TestAppsApi_ExpectSuccess(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	deploymentExecutorMockObj := deploymentmocks.NewMockCommand(ctrl)
+
+	apps := make(map[string]interface{})
+	apps["apps"] = "test"
+
+	gomock.InOrder(
+		deploymentExecutorMockObj.EXPECT().Apps().Return(apps, nil),
+	)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest(GET, urls.Base()+urls.Management()+urls.Apps(), nil)
+
+	deploymentExecutor = deploymentExecutorMockObj
+
+	deploymentApiExecutor.Handle(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Error("Expected return OK, Actual Return : %d", w.Code)
+	}
+}
+
+func TestAppsApiWhenControllerFailed_ExpectReturnError(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	deploymentExecutorMockObj := deploymentmocks.NewMockCommand(ctrl)
+
 	for _, test := range testList {
-		t.Run("Error/"+test.name, func(t *testing.T) {
-			r := returnValue{id: "", err: test.err, path: ""}
-			executeFunc(t, GET, urls.Base()+urls.Management()+urls.Apps(), r, false)
-			if status != test.expectCode {
-				t.Error()
-			}
-		})
+		gomock.InOrder(
+			deploymentExecutorMockObj.EXPECT().Apps().Return(nil, test.err),
+		)
+
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest(GET, urls.Base()+urls.Management()+urls.Apps(), nil)
+
+		deploymentExecutor = deploymentExecutorMockObj
+
+		deploymentApiExecutor.Handle(w, req)
+
+		if w.Code != test.expectCode {
+			t.Error("Expected error code : %d, Actual error code : %d\n", test.expectCode, w.Code)
+		}
 	}
 }
 
-func TestApp(t *testing.T) {
-	mock := makeMockingCi()
-	tearDown := setup(t, mock)
-	defer tearDown(t)
+func TestGETAppApi_ExpectSuccess(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
 
-	var list []string = []string{GET, POST, DELETE}
+	deploymentExecutorMockObj := deploymentmocks.NewMockCommand(ctrl)
 
-	id := "111"
-	url := urls.Base() + urls.Management() + urls.Apps() + "/" + id
+	gomock.InOrder(
+		deploymentExecutorMockObj.EXPECT().App(appId).Return(testMap, nil),
+	)
 
-	for _, method := range list {
-		t.Run(method+"/Success", func(t *testing.T) {
-			r := returnValue{id: id, err: nil, path: ""}
-			executeFuncWithAppId(t, id, method, url, r, true)
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest(GET, urls.Base()+urls.Management()+urls.Apps()+"/"+appId, nil)
 
-			if status != http.StatusOK {
-				t.Error()
-			}
-		})
+	deploymentExecutor = deploymentExecutorMockObj
 
-		testList := getErrorTestList()
-		for _, test := range testList {
-			t.Run(method+"/Error/"+test.name, func(t *testing.T) {
-				r := returnValue{id: id, err: test.err, path: ""}
-				executeFuncWithAppId(t, id, method, url, r, true)
+	deploymentApiExecutor.Handle(w, req)
 
-				if status != test.expectCode {
-					t.Error()
-				}
-			})
-		}
+	if w.Code != http.StatusOK {
+		t.Error("Expected return OK, Actual Return : %d", w.Code)
 	}
-
-	t.Run(POST+"/ErrorEmptyBody", func(t *testing.T) {
-		r := returnValue{id: id, err: errors.Unknown{}, path: ""}
-		executeFuncWithAppId(t, id, POST, url, r, false)
-
-		if status == http.StatusOK {
-			t.Error()
-		}
-	})
 }
 
-func TestFunc(t *testing.T) {
-	mock := makeMockingCi()
-	tearDown := setup(t, mock)
-	defer tearDown(t)
+func TestGETAppApiWhenControllerFailed_ExpectReturnError(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
 
-	id := "111"
-	url := urls.Base() + urls.Management() + urls.Apps() + "/" + id
+	deploymentExecutorMockObj := deploymentmocks.NewMockCommand(ctrl)
 
-	urls := []string{
-		urls.Update(), urls.Start(), urls.Stop(),
+	for _, test := range testList {
+		gomock.InOrder(
+			deploymentExecutorMockObj.EXPECT().App(appId).Return(nil, test.err),
+		)
+
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest(GET, urls.Base()+urls.Management()+urls.Apps()+"/"+appId, nil)
+
+		deploymentExecutor = deploymentExecutorMockObj
+
+		deploymentApiExecutor.Handle(w, req)
+
+		if w.Code != test.expectCode {
+			t.Error("Expected error code : %d, Actual error code : %d\n", test.expectCode, w.Code)
+		}
 	}
+}
 
-	for _, u := range urls {
-		t.Run(u+"/Success", func(t *testing.T) {
-			r := returnValue{id: "", err: nil, path: ""}
-			executeFuncWithAppId(t, id, POST, url+u, r, false)
+func TestPOSTAppApi_ExpectSuccess(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
 
-			if status != http.StatusOK {
-				t.Error()
-			}
-		})
+	deploymentExecutorMockObj := deploymentmocks.NewMockCommand(ctrl)
 
-		testList := getErrorTestList()
-		for _, test := range testList {
-			t.Run(u+"/Error/"+test.name, func(t *testing.T) {
-				r := returnValue{id: "", err: test.err, path: ""}
-				executeFuncWithAppId(t, id, POST, url+u, r, false)
+	data := url.Values{}
+	data.Set("name", "test")
+	body := bytes.NewBufferString(data.Encode())
 
-				if status != test.expectCode {
-					t.Error()
-				}
-			})
+	gomock.InOrder(
+		deploymentExecutorMockObj.EXPECT().UpdateAppInfo(appId, gomock.Any()).Return(nil),
+	)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest(POST, urls.Base()+urls.Management()+urls.Apps()+"/"+appId, body)
+
+	deploymentExecutor = deploymentExecutorMockObj
+
+	deploymentApiExecutor.Handle(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Error("Expected return OK, Actual Return : %d", w.Code)
+	}
+}
+
+func TestPOSTAppApiWithEmptyBody_ExpectSuccess(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	deploymentExecutorMockObj := deploymentmocks.NewMockCommand(ctrl)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest(POST, urls.Base()+urls.Management()+urls.Apps()+"/"+appId, nil)
+
+	deploymentExecutor = deploymentExecutorMockObj
+
+	deploymentApiExecutor.Handle(w, req)
+
+	if w.Code == http.StatusOK {
+		t.Error("Expected return error but return http.StatusOK")
+	}
+}
+
+func TestPOSTAppApiWhenControllerFailed_ExpectReturnError(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	deploymentExecutorMockObj := deploymentmocks.NewMockCommand(ctrl)
+
+	data := url.Values{}
+	data.Set("name", "test")
+	body := bytes.NewBufferString(data.Encode())
+
+	for _, test := range testList {
+		gomock.InOrder(
+			deploymentExecutorMockObj.EXPECT().UpdateAppInfo(appId, body.String()).Return(test.err),
+		)
+
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest(POST, urls.Base()+urls.Management()+urls.Apps()+"/"+appId, body)
+
+		deploymentExecutor = deploymentExecutorMockObj
+
+		deploymentApiExecutor.Handle(w, req)
+
+		if w.Code != test.expectCode {
+			t.Error("Expected error code : %d, Actual error code : %d\n", test.expectCode, w.Code)
+		}
+	}
+}
+
+func TestDELETEAppApi_ExpectSuccess(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	deploymentExecutorMockObj := deploymentmocks.NewMockCommand(ctrl)
+
+	gomock.InOrder(
+		deploymentExecutorMockObj.EXPECT().DeleteApp(appId).Return(nil),
+	)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest(DELETE, urls.Base()+urls.Management()+urls.Apps()+"/"+appId, nil)
+
+	deploymentExecutor = deploymentExecutorMockObj
+
+	deploymentApiExecutor.Handle(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Error("Expected return OK, Actual Return : %d", w.Code)
+	}
+}
+
+func TestDELETEAppApiWhenControllerFailed_ExpectReturnError(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	deploymentExecutorMockObj := deploymentmocks.NewMockCommand(ctrl)
+
+	for _, test := range testList {
+		gomock.InOrder(
+			deploymentExecutorMockObj.EXPECT().DeleteApp(appId).Return(test.err),
+		)
+
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest(DELETE, urls.Base()+urls.Management()+urls.Apps()+"/"+appId, nil)
+
+		deploymentExecutor = deploymentExecutorMockObj
+
+		deploymentApiExecutor.Handle(w, req)
+
+		if w.Code != test.expectCode {
+			t.Error("Expected error code : %d, Actual error code : %d\n", test.expectCode, w.Code)
+		}
+	}
+}
+
+func TestStartApi_ExpectSuccess(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	deploymentExecutorMockObj := deploymentmocks.NewMockCommand(ctrl)
+
+	gomock.InOrder(
+		deploymentExecutorMockObj.EXPECT().StartApp(appId).Return(nil),
+	)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest(POST, urls.Base()+urls.Management()+urls.Apps()+"/"+appId+urls.Start(), nil)
+
+	deploymentExecutor = deploymentExecutorMockObj
+
+	deploymentApiExecutor.Handle(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Error("Expected return OK, Actual Return : %d", w.Code)
+	}
+}
+
+func TestStartApiWhenControllerFailed_ExpectReturnError(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	deploymentExecutorMockObj := deploymentmocks.NewMockCommand(ctrl)
+
+	for _, test := range testList {
+		gomock.InOrder(
+			deploymentExecutorMockObj.EXPECT().StartApp(appId).Return(test.err),
+		)
+
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest(POST, urls.Base()+urls.Management()+urls.Apps()+"/"+appId+urls.Start(), nil)
+
+		deploymentExecutor = deploymentExecutorMockObj
+
+		deploymentApiExecutor.Handle(w, req)
+
+		if w.Code != test.expectCode {
+			t.Error("Expected error code : %d, Actual error code : %d\n", test.expectCode, w.Code)
+		}
+	}
+}
+
+func TestStopApi_ExpectSuccess(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	deploymentExecutorMockObj := deploymentmocks.NewMockCommand(ctrl)
+
+	gomock.InOrder(
+		deploymentExecutorMockObj.EXPECT().StopApp(appId).Return(nil),
+	)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest(POST, urls.Base()+urls.Management()+urls.Apps()+"/"+appId+urls.Stop(), nil)
+
+	deploymentExecutor = deploymentExecutorMockObj
+
+	deploymentApiExecutor.Handle(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Error("Expected return OK, Actual Return : %d", w.Code)
+	}
+}
+
+func TestStopApiWhenControllerFailed_ExpectReturnError(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	deploymentExecutorMockObj := deploymentmocks.NewMockCommand(ctrl)
+
+	for _, test := range testList {
+		gomock.InOrder(
+			deploymentExecutorMockObj.EXPECT().StopApp(appId).Return(test.err),
+		)
+
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest(POST, urls.Base()+urls.Management()+urls.Apps()+"/"+appId+urls.Stop(), nil)
+
+		deploymentExecutor = deploymentExecutorMockObj
+
+		deploymentApiExecutor.Handle(w, req)
+
+		if w.Code != test.expectCode {
+			t.Error("Expected error code : %d, Actual error code : %d\n", test.expectCode, w.Code)
+		}
+	}
+}
+
+func TestUpdateApi_ExpectSuccess(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	deploymentExecutorMockObj := deploymentmocks.NewMockCommand(ctrl)
+
+	gomock.InOrder(
+		deploymentExecutorMockObj.EXPECT().UpdateApp(appId, nil).Return(nil),
+	)
+
+	w := httptest.NewRecorder()
+	print(urls.Base() + urls.Management() + urls.Apps() + appId + urls.Update())
+	req, _ := http.NewRequest(POST, urls.Base()+urls.Management()+urls.Apps()+"/"+appId+urls.Update(), nil)
+
+	deploymentExecutor = deploymentExecutorMockObj
+
+	deploymentApiExecutor.Handle(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Error("Expected return OK, Actual Return : %d", w.Code)
+	}
+}
+
+func TestUpdateApiWhenControllerFailed_ExpectReturnError(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	deploymentExecutorMockObj := deploymentmocks.NewMockCommand(ctrl)
+
+	for _, test := range testList {
+		gomock.InOrder(
+			deploymentExecutorMockObj.EXPECT().UpdateApp(appId, nil).Return(test.err),
+		)
+
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest(POST, urls.Base()+urls.Management()+urls.Apps()+"/"+appId+urls.Update(), nil)
+
+		deploymentExecutor = deploymentExecutorMockObj
+
+		deploymentApiExecutor.Handle(w, req)
+
+		if w.Code != test.expectCode {
+			t.Error("Expected error code : %d, Actual error code : %d\n", test.expectCode, w.Code)
 		}
 	}
 }
