@@ -38,12 +38,15 @@ Note that, you can find other Dockerfiles, **Dockerfile_arm** and **Dockerfile_a
 Required options to run Docker image
 - port
     - 48098:48098
+- environment variables
+    - ANCHOR_ADDRESS='...'
+    - NODE_ADDRESS='...'
 - volume
     - "host folder"/data/db:/data/db (Note that you should replace "host folder" to a desired folder on your host machine)
 
 You can execute it with a Docker image as follows:
 ```shell
-$ docker run -it -p 48098:48098 -v /data/db:/data/db -v /var/run/docker.sock:/var/run/docker.sock system-pharos-node-go-ubuntu
+$ docker run -it -p 48098:48098 -e ANCHOR_ADDRESS='...' -e NODE_ADDRESS='...' -v /data/db:/data/db -v /var/run/docker.sock:/var/run/docker.sock system-pharos-node-go-ubuntu
 ```
 If it succeeds, you can see log messages on your screen as follows:
 ```shell
