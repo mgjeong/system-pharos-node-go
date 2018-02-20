@@ -35,12 +35,17 @@ func (e InvalidParam) Error() string { return "invalid parameter : " + e.Msg }
 // Struct InvalidJSON will be used for return case of error
 // which value of malformed json format.
 type InvalidJSON struct {
-	Message string
+	Msg string
+}
+
+// Set error message of InvalidJSON.
+func (e *InvalidJSON) SetMsg(msg string) {
+	e.Msg = msg
 }
 
 // Error sets an error message of InvalidJSON.
 func (e InvalidJSON) Error() string {
-	return "invalid json format: " + e.Message
+	return "invalid json format: " + e.Msg
 }
 
 // Struct InvalidJSON will be used for return case of error

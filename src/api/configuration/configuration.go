@@ -14,13 +14,13 @@
  * limitations under the License.
  *
  *******************************************************************************/
-package resource
+package configuration
 
 import (
 	"api/common"
 	"commons/errors"
 	"commons/logger"
-	"controller/monitoring/resource"
+	"controller/configuration"
 	"net/http"
 	"strings"
 )
@@ -37,48 +37,64 @@ type Command interface {
 }
 
 type apiInnerCommand interface {
-	resource(w http.ResponseWriter, req *http.Request)
+	configuration(w http.ResponseWriter, req *http.Request)
 }
 
 type Executor struct{}
 type innerExecutorImpl struct{}
 
 var apiInnerExecutor apiInnerCommand
-var resourceExecutor resource.Command
+var configurationExecutor configuration.Command
 
 func init() {
 	apiInnerExecutor = innerExecutorImpl{}
-	resourceExecutor = resource.Executor
+	configurationExecutor = configuration.Executor{}
 }
 
-// Handling requests which is getting device resource or performance information
 func (Executor) Handle(w http.ResponseWriter, req *http.Request) {
 	logger.Logging(logger.DEBUG)
 	defer logger.Logging(logger.DEBUG, "OUT")
 
 	switch reqUrl, split := req.URL.Path, strings.Split(req.URL.Path, "/"); {
-	case len(split) == 5:
-		apiInnerExecutor.resource(w, req)
+	case len(split) == 6:
+		apiInnerExecutor.configuration(w, req)
 	default:
 		logger.Logging(logger.DEBUG, "Unmatched url")
 		common.MakeErrorResponse(w, errors.NotFoundURL{reqUrl})
 	}
 }
 
-// Handling requests which is getting resources information
-func (innerExecutorImpl) resource(w http.ResponseWriter, req *http.Request) {
+// configuration handles requests which is used to get/set a node configuration.
+func (innerExecutorImpl) configuration(w http.ResponseWriter, req *http.Request) {
 	logger.Logging(logger.DEBUG)
 	defer logger.Logging(logger.DEBUG, "OUT")
 
-	if !common.CheckSupportedMethod(w, req.Method, GET) {
+	if !common.CheckSupportedMethod(w, req.Method, GET, POST) {
 		return
 	}
 
-	response, e := resourceExecutor.GetResourceInfo()
-
+	response := make(map[string]interface{})
+	var e error
+	switch req.Method {
+	case GET:
+		response, e = configurationExecutor.GetConfiguration()
+	case POST:
+		var bodyStr string
+		bodyStr, e = common.GetBodyFromReq(req)
+		if e != nil {
+			common.MakeErrorResponse(w, errors.InvalidYaml{"body is empty"})
+			return
+		}
+		e = configurationExecutor.SetConfiguration(bodyStr)
+	}
 	if e != nil {
 		common.MakeErrorResponse(w, e)
 		return
 	}
+
+	if req.Method != GET {
+		response["result"] = "success"
+	}
+
 	common.MakeResponse(w, common.ChangeToJson(response))
 }

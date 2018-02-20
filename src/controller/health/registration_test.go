@@ -25,19 +25,13 @@ import (
 )
 
 var (
+	ANCHOR_ADDRESS = map[string]interface{}{
+		"name":   "anchoraddress",
+		"value":  "192.168.0.1",
+		"policy": []string{"readable"},
+	}
 	CONFIGURATION = map[string]interface{}{
-		"serveraddress": "192.168.0.1",
-		"devicename":    "Edge Device #1",
-		"deviceid":      "54919CA5-4101-4AE4-595B-353C51AA983C",
-		"manufacturer":  "Manufacturer Name",
-		"modelnumber":   "Model number as designated by the manufacturer",
-		"serialnumber":  "Serial number",
-		"platform":      "Platform name and version",
-		"os":            "Operationg system name and version",
-		"location":      "Human readable location",
-		"pinginterval":  "10",
-		"deviceaddress": "192.168.0.1",
-		"nodeid":       "Pharos Node ID",
+		"properties": []map[string]interface{}{ANCHOR_ADDRESS},
 	}
 )
 
@@ -74,9 +68,7 @@ func TestCalledRegisterWhenFailedToSetConfiguration_ExpectErrorReturn(t *testing
 
 	url := "http://192.168.0.1:48099/api/v1/management/nodes/register"
 	expectedResp := `{"id":"nodeid"}`
-	expectedNewConfig := map[string]interface{}{
-		"nodeid": "nodeid",
-	}
+	expectedNewConfig := `{"properties":[{"name":"nodeid","value":"nodeid"}]}`
 
 	gomock.InOrder(
 		configMockObj.EXPECT().GetConfiguration().Return(CONFIGURATION, nil),
@@ -99,9 +91,7 @@ func TestCalledUnregister_ExpectSuccess(t *testing.T) {
 
 	configMockObj := configmocks.NewMockCommand(ctrl)
 
-	expectedNewConfig := map[string]interface{}{
-		"nodeid": "",
-	}
+	expectedNewConfig := `{"properties":[{"name":"nodeid","value":""}]}`
 
 	gomock.InOrder(
 		configMockObj.EXPECT().SetConfiguration(expectedNewConfig).Return(nil),

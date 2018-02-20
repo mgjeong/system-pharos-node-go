@@ -6,10 +6,12 @@ go get github.com/golang/mock/gomock
 go get github.com/ghodss/yaml
 go get -d docker.io/go-docker
 go get -d github.com/docker/libcompose
+go get golang.org/x/sys/unix
+go get github.com/shirou/gopsutil
 
 rm -rf $GOPATH/src/github.com/docker/distribution/vendor/github.com/opencontainers
 
-pkg_list=("api/common" "api/deployment" "api/health" "api/resource" "controller/deployment" "controller/deployment/dockercontroller" "controller/health" "controller/resource" "controller/shellcommand" "db/mongo/service" "messenger")
+pkg_list=("api/common" "api/health" "api/monitoring/resource" "controller/deployment/dockercontroller" "controller/health" "controller/monitoring/resource" "controller/shellcommand" "db/mongo/service" "messenger")
 
 function func_cleanup(){
     rm *.out *.test

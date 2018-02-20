@@ -1,205 +1,46 @@
+/*******************************************************************************
+ * Copyright 2017 Samsung Electronics All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ *******************************************************************************/
 package resource
 
 import (
-	"commons/errors"
-	shellmocks "controller/shellcommand/mocks"
-	"reflect"
-	"testing"
-
 	"github.com/golang/mock/gomock"
+	"testing"
 )
 
-
-const (
-	BASH                        = "bash"
-	BASH_C_OPTION               = "-c"
-	GET_PROCESSOR_MODELNAME_CMD = "grep -m1 ^'model name' /proc/cpuinfo"
-	GET_OS_CMD                  = "uname -mrs"
-	GET_CPU_USAGE_CMD           = "cat /proc/stat | grep cpu"
-	GET_MEM_USAGE_CMD           = "cat /proc/meminfo"
-	GET_DISK_USAGE_CMD          = "df -m"
-
-	MODEL_NAME = "model name	: Intel(R) Core(TM) i7-4790 CPU @ 3.60GHz\n"
-	UNAME      = "Linux 4.10.0-42-generic x86_64\n"
-	CPU_USAGE  = "cpu 101622 702 40379 12153720 11897 0 1222 0 0 0\ncpu0 13661 262 4994 1520352 413 0 250 0 0 0\ncpu1 13453 43 4188 1521872 346 0 136 0 0 0"
-	MEM_USAGE  = "MemTotal: 8127136 kB\nMemFree: 1189944 kB\nMemAvailable: 3407004 kB"
-	DISK_USAGE = "Filesystem 1M-blocks Used Available Use% Mounted on\nudev 3947 0 3947 0% /dev\ntmpfs 794 50 744 7% /run"
-)
-
-var (
-	processor   = "Intel(R) Core(TM) i7-4790 CPU @ 3.60GHz"
-	os          = "Linux 4.10.0-42-generic x86_64"
-	procStatCPU = "cpu 101622 702 40379 12153720 11897 0 1222 0 0 0\ncpu0 13661 262 4994 1520352 413 0 250 0 0 0\ncpu1 13453 43 4188 1521872 346 0 136 0 0 0"
-	procMeminfo = "MemTotal: 8127136 kB\nMemFree: 1189944 kB\nMemAvailable: 3407004 kB"
-	df          = "Filesystem 1M-blocks Used Available Use% Mounted on\nudev 3947 0 3947 0% /dev\ntmpfs 794 50 744 7% /run"
-)
-
-func TestGetResourceInfo_ExpectSuccess(t *testing.T) {
+func TestGetResrouceInfo_ExpectSuccess(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	shellMockObj := shellmocks.NewMockCommand(ctrl)
-
-	gomock.InOrder(
-		shellMockObj.EXPECT().ExecuteCommand(BASH, BASH_C_OPTION, GET_PROCESSOR_MODELNAME_CMD).Return(MODEL_NAME, nil),
-		shellMockObj.EXPECT().ExecuteCommand(BASH, BASH_C_OPTION, GET_OS_CMD).Return(UNAME, nil),
-		shellMockObj.EXPECT().ExecuteCommand(BASH, BASH_C_OPTION, GET_CPU_USAGE_CMD).Return(CPU_USAGE, nil),
-		shellMockObj.EXPECT().ExecuteCommand(BASH, BASH_C_OPTION, GET_MEM_USAGE_CMD).Return(MEM_USAGE, nil),
-		shellMockObj.EXPECT().ExecuteCommand(BASH, BASH_C_OPTION, GET_DISK_USAGE_CMD).Return(DISK_USAGE, nil),
-	)
-
-	// pass mockObj to a real object.
-	shellExecutor = shellMockObj
-	res, err := Executor.GetResourceInfo()
+	result, err := Executor.GetResourceInfo()
 
 	if err != nil {
 		t.Errorf("Unexpected err: %s", err.Error())
 	}
-	compareReturnVal := map[string]interface{}{
-		"processor": processor,
-		"os":        os,
-		"cpu":       procStatCPU,
-		"disk":      df,
-		"mem":       procMeminfo,
+
+	if _, ok := result["cpu"]; !ok {
+		t.Errorf("Unexpected err: cpu key does not exist")
 	}
-	if !reflect.DeepEqual(res, compareReturnVal) {
-		t.Errorf("Exepcted ret %s Actual ret %s", compareReturnVal, res)
+
+	if _, ok := result["disk"]; !ok {
+		t.Errorf("Unexpected err: disk key does not exist")
 	}
-}
 
-func TestGetPerformanceInfo_ExpectSuccess(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	shellMockObj := shellmocks.NewMockCommand(ctrl)
-
-	gomock.InOrder(
-		shellMockObj.EXPECT().ExecuteCommand(BASH, BASH_C_OPTION, GET_CPU_USAGE_CMD).Return(CPU_USAGE, nil),
-		shellMockObj.EXPECT().ExecuteCommand(BASH, BASH_C_OPTION, GET_MEM_USAGE_CMD).Return(MEM_USAGE, nil),
-		shellMockObj.EXPECT().ExecuteCommand(BASH, BASH_C_OPTION, GET_DISK_USAGE_CMD).Return(DISK_USAGE, nil),
-	)
-
-	// pass mockObj to a real object.
-	shellExecutor = shellMockObj
-	res, err := Executor.GetPerformanceInfo()
-
-	if err != nil {
-		t.Errorf("Unexpected err: %s", err.Error())
-	}
-	compareReturnVal := map[string]interface{}{
-		"cpu":  procStatCPU,
-		"disk": df,
-		"mem":  procMeminfo,
-	}
-	if !reflect.DeepEqual(res, compareReturnVal) {
-		t.Errorf("Expected ret %s Actual ret %s", compareReturnVal, res)
-	}
-}
-
-func TestGetProcessorModel_ExpectSuccess(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	shellMockObj := shellmocks.NewMockCommand(ctrl)
-
-	gomock.InOrder(
-		shellMockObj.EXPECT().ExecuteCommand(BASH, BASH_C_OPTION, GET_PROCESSOR_MODELNAME_CMD).Return(MODEL_NAME, nil),
-	)
-
-	// pass mockObj to a real object.
-	shellExecutor = shellMockObj
-	res, err := getProcessorModel()
-
-	if err != nil {
-		t.Errorf("Unexpected err: %s", err.Error())
-	}
-	compareReturnVal := processor
-	if !reflect.DeepEqual(res, compareReturnVal) {
-		t.Errorf("Expected ret %s Actual ret %s", compareReturnVal, res)
-	}
-}
-
-func TestGetProcessorModelWithShellError_ExpectErrorReturn(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	shellMockObj := shellmocks.NewMockCommand(ctrl)
-
-	gomock.InOrder(
-		shellMockObj.EXPECT().ExecuteCommand(BASH, BASH_C_OPTION, GET_PROCESSOR_MODELNAME_CMD).Return("", errors.NotFound{"/proc/cpuinfo: No such file or directory"}),
-	)
-
-	shellExecutor = shellMockObj
-	_, err := getProcessorModel()
-
-	if err == nil {
-		t.Errorf("Expected err: %s, actual err: %s", "NotFoundError", "nil")
-	} else if reflect.TypeOf(err) != reflect.TypeOf(errors.NotFound{}) {
-		t.Errorf("Expected err: %s, actual err: %s", "NotFound", reflect.TypeOf(err))
-	}
-}
-
-func TestGetProcessorModelWithEmptyModelName_ExpectErrorReturn(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	shellMockObj := shellmocks.NewMockCommand(ctrl)
-
-	gomock.InOrder(
-		shellMockObj.EXPECT().ExecuteCommand(BASH, BASH_C_OPTION, GET_PROCESSOR_MODELNAME_CMD).Return("", nil),
-	)
-
-	shellExecutor = shellMockObj
-	_, err := getProcessorModel()
-
-	if err == nil {
-		t.Errorf("Expected err: %s, actual err: %s", "UnknownError", "nil")
-	} else if reflect.TypeOf(err) != reflect.TypeOf(errors.Unknown{}) {
-		t.Errorf("Expected err: %s, actual err: %s", "UnknownError", reflect.TypeOf(err))
-	}
-}
-
-func TestGetOS_ExpectSuccess(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	shellMockObj := shellmocks.NewMockCommand(ctrl)
-
-	gomock.InOrder(
-		shellMockObj.EXPECT().ExecuteCommand(BASH, BASH_C_OPTION, GET_OS_CMD).Return(UNAME, nil),
-	)
-
-	// pass mockObj to a real object.
-	shellExecutor = shellMockObj
-	res, err := getOS()
-
-	if err != nil {
-		t.Errorf("Unexpected err: %s", err.Error())
-	}
-	compareReturnVal := os
-	if !reflect.DeepEqual(res, compareReturnVal) {
-		t.Error()
-	}
-}
-
-func TestGetOSWithShellError_ExpectErrorReturn(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	shellMockObj := shellmocks.NewMockCommand(ctrl)
-
-	gomock.InOrder(
-		shellMockObj.EXPECT().ExecuteCommand(BASH, BASH_C_OPTION, GET_OS_CMD).Return("", errors.Unknown{}),
-	)
-
-	// pass mockObj to a real object.
-	shellExecutor = shellMockObj
-	_, err := getOS()
-
-	if err == nil {
-		t.Errorf("Expected err: %s, actual err: %s", "UnknownError", "nil")
-	} else if reflect.TypeOf(err) != reflect.TypeOf(errors.Unknown{}) {
-		t.Errorf("Expected err: %s, actual err: %s", "UnknownError", reflect.TypeOf(err))
+	if _, ok := result["mem"]; !ok {
+		t.Errorf("Unexpected err: mem key does not exist")
 	}
 }
 
@@ -207,64 +48,15 @@ func TestGetCPUUsage_ExpectSuccess(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	shellMockObj := shellmocks.NewMockCommand(ctrl)
-
-	gomock.InOrder(
-		shellMockObj.EXPECT().ExecuteCommand(BASH, BASH_C_OPTION, GET_CPU_USAGE_CMD).Return(CPU_USAGE, nil),
-	)
-
-	// pass mockObj to a real object.
-	shellExecutor = shellMockObj
-	res, err := getCPUUsage()
+	result, err := getCPUUsage()
 
 	if err != nil {
 		t.Errorf("Unexpected err: %s", err.Error())
 	}
-	compareReturnVal := procStatCPU
-	if !reflect.DeepEqual(res, compareReturnVal) {
-		t.Error()
-	}
-}
 
-func TestGetCPUUsageWithShellError_ExpectErrorReturn(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
+	if result == nil || len(result) == 0 {
+		t.Errorf("Unexpected err : cpu usage array is empty")
 
-	shellMockObj := shellmocks.NewMockCommand(ctrl)
-
-	gomock.InOrder(
-		shellMockObj.EXPECT().ExecuteCommand(BASH, BASH_C_OPTION, GET_CPU_USAGE_CMD).Return("", errors.NotFound{"/proc/cpuinfo: No such file or directory"}),
-	)
-
-	// pass mockObj to a real object.
-	shellExecutor = shellMockObj
-	_, err := getCPUUsage()
-
-	if err == nil {
-		t.Errorf("Expected err: %s, actual err: %s", "UnknownError", "nil")
-	} else if reflect.TypeOf(err) != reflect.TypeOf(errors.NotFound{}) {
-		t.Errorf("Expected err: %s, actual err: %s", "UnknownError", reflect.TypeOf(err))
-	}
-}
-
-func TestGetCPUUsageWithEmptyCPUInfo_ExpectErrorReturn(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	shellMockObj := shellmocks.NewMockCommand(ctrl)
-
-	gomock.InOrder(
-		shellMockObj.EXPECT().ExecuteCommand(BASH, BASH_C_OPTION, GET_CPU_USAGE_CMD).Return("", nil),
-	)
-
-	// pass mockObj to a real object.
-	shellExecutor = shellMockObj
-	_, err := getCPUUsage()
-
-	if err == nil {
-		t.Errorf("Expected err: %s, actual err: %s", "UnknownError", "nil")
-	} else if reflect.TypeOf(err) != reflect.TypeOf(errors.Unknown{}) {
-		t.Errorf("Expected err: %s, actual err: %s", "UnknownError", reflect.TypeOf(err))
 	}
 }
 
@@ -272,67 +64,26 @@ func TestGetMemUsage_ExpectSuccess(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	shellMockObj := shellmocks.NewMockCommand(ctrl)
-
-	gomock.InOrder(
-		shellMockObj.EXPECT().ExecuteCommand(BASH, BASH_C_OPTION, GET_MEM_USAGE_CMD).Return(MEM_USAGE, nil),
-	)
-
-	// pass mockObj to a real object.
-	shellExecutor = shellMockObj
-
-	res, err := getMemUsage()
+	result, err := getMemUsage()
 
 	if err != nil {
 		t.Errorf("Unexpected err: %s", err.Error())
 	}
 
-	compareReturnVal := procMeminfo
-
-	if !reflect.DeepEqual(res, compareReturnVal) {
-		t.Error()
+	if _, ok := result["total"]; !ok {
+		t.Errorf("Unexpected err: total key does not exist")
 	}
-}
 
-func TestGetMemUsageWithShellError_ExpectErrorReturn(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	shellMockObj := shellmocks.NewMockCommand(ctrl)
-
-	gomock.InOrder(
-		shellMockObj.EXPECT().ExecuteCommand(BASH, BASH_C_OPTION, GET_MEM_USAGE_CMD).Return("", errors.NotFound{"/proc/meminfo: No such file or directory"}),
-	)
-
-	// pass mockObj to a real object.
-	shellExecutor = shellMockObj
-	_, err := getMemUsage()
-
-	if err == nil {
-		t.Errorf("Expected err: %s, actual err: %s", "NotFoundError", "nil")
-	} else if reflect.TypeOf(err) != reflect.TypeOf(errors.NotFound{}) {
-		t.Errorf("Expected err: %s, actual err: %s", "NotFoundError", reflect.TypeOf(err))
+	if _, ok := result["free"]; !ok {
+		t.Errorf("Unexpected err: free key does not exist")
 	}
-}
 
-func TestGetMemUsageWithEmptyMemInfo_ExpectErrorReturn(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
+	if _, ok := result["used"]; !ok {
+		t.Errorf("Unexpected err: used key does not exist")
+	}
 
-	shellMockObj := shellmocks.NewMockCommand(ctrl)
-
-	gomock.InOrder(
-		shellMockObj.EXPECT().ExecuteCommand(BASH, BASH_C_OPTION, GET_MEM_USAGE_CMD).Return("", nil),
-	)
-
-	// pass mockObj to a real object.
-	shellExecutor = shellMockObj
-	_, err := getMemUsage()
-
-	if err == nil {
-		t.Errorf("Expected err: %s, actual err: %s", "UnknownError", "nil")
-	} else if reflect.TypeOf(err) != reflect.TypeOf(errors.Unknown{}) {
-		t.Errorf("Expected err: %s, actual err: %s", "UnknownError", reflect.TypeOf(err))
+	if _, ok := result["usedpercent"]; !ok {
+		t.Errorf("Unexpected err: usedpercent key does not exist")
 	}
 }
 
@@ -340,66 +91,31 @@ func TestGetDiskUsage_ExpectSuccess(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	shellMockObj := shellmocks.NewMockCommand(ctrl)
-
-	gomock.InOrder(
-		shellMockObj.EXPECT().ExecuteCommand(BASH, BASH_C_OPTION, GET_DISK_USAGE_CMD).Return(DISK_USAGE, nil),
-	)
-
-	// pass mockObj to a real object.
-	shellExecutor = shellMockObj
-
-	res, err := getDiskUsage()
+	result, err := getDiskUsage()
 
 	if err != nil {
 		t.Errorf("Unexpected err: %s", err.Error())
 	}
 
-	compareReturnVal := df
+	for _, value := range result {
+		if _, ok := value["path"]; !ok {
+			t.Errorf("Unexpected err: path key does not exist")
+		}
 
-	if !reflect.DeepEqual(res, compareReturnVal) {
-		t.Error()
-	}
-}
+		if _, ok := value["total"]; !ok {
+			t.Errorf("Unexpected err: total key does not exist")
+		}
 
-func TestGetDiskUsageWithShellError_ExpectErrorReturn(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
+		if _, ok := value["free"]; !ok {
+			t.Errorf("Unexpected err: free key does not exist")
+		}
 
-	shellMockObj := shellmocks.NewMockCommand(ctrl)
+		if _, ok := value["used"]; !ok {
+			t.Errorf("Unexpected err: used key does not exist")
+		}
 
-	gomock.InOrder(
-		shellMockObj.EXPECT().ExecuteCommand(BASH, BASH_C_OPTION, GET_DISK_USAGE_CMD).Return("", errors.NotFound{}),
-	)
-
-	// pass mockObj to a real object.
-	shellExecutor = shellMockObj
-	_, err := getDiskUsage()
-
-	if err == nil {
-		t.Errorf("Expected err: %s, actual err: %s", "NotFoundError", "nil")
-	} else if reflect.TypeOf(err) != reflect.TypeOf(errors.NotFound{}) {
-		t.Errorf("Expected err: %s, actual err: %s", "NotFoundError", reflect.TypeOf(err))
-	}
-}
-
-func TestGetDiskUsageWithEmptyMemInfo_ExpectErrorReturn(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	shellMockObj := shellmocks.NewMockCommand(ctrl)
-
-	gomock.InOrder(
-		shellMockObj.EXPECT().ExecuteCommand(BASH, BASH_C_OPTION, GET_DISK_USAGE_CMD).Return("", nil),
-	)
-
-	// pass mockObj to a real object.
-	shellExecutor = shellMockObj
-	_, err := getDiskUsage()
-
-	if err == nil {
-		t.Errorf("Expected err: %s, actual err: %s", "UnknownError", "nil")
-	} else if reflect.TypeOf(err) != reflect.TypeOf(errors.Unknown{}) {
-		t.Errorf("Expected err: %s, actual err: %s", "UnknownError", reflect.TypeOf(err))
+		if _, ok := value["usedpercent"]; !ok {
+			t.Errorf("Unexpected err: usedpercent key does not exist")
+		}
 	}
 }

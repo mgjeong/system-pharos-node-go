@@ -27,7 +27,7 @@ import (
 )
 
 const (
-	valid_URL          = "localhost:27017"
+	valid_URL          = "127.0.0.1:27017"
 	dummy_error_msg    = "dummy_errors"
 	emptyString        = ""
 	invalidID          = ""

@@ -73,7 +73,6 @@ func invalidOperation(t *testing.T, method string, url string, code int) {
 func getInvalidMethodList() map[string][]string {
 	urlList := make(map[string][]string)
 	urlList["/api/v1/monitoring/resource"] = []string{POST, PUT, DELETE}
-	urlList["/api/v1/monitoring/resource/performance"] = []string{POST, PUT, DELETE}
 
 	return urlList
 }
@@ -96,7 +95,6 @@ func setup(t *testing.T, mock mockingci) func(*testing.T) {
 }
 
 var getResourceInfoCalled bool
-var getPerformanceInfoCalled bool
 
 // Test using mocking for resourceinterface
 var doSomethingFunc func(*mockingci)
@@ -116,12 +114,6 @@ func makeMockingci() mockingci {
 func (m mockingci) GetResourceInfo() (map[string]interface{}, error) {
 	doSomethingFunc(&m)
 	getResourceInfoCalled = true
-	return m.data, m.err
-}
-
-func (m mockingci) GetPerformanceInfo() (map[string]interface{}, error) {
-	doSomethingFunc(&m)
-	getPerformanceInfoCalled = true
 	return m.data, m.err
 }
 
@@ -175,7 +167,6 @@ func TestResource(t *testing.T) {
 
 	t.Run("Success", func(t *testing.T) {
 		getResourceInfoCalled = false
-		getPerformanceInfoCalled = false
 
 		r := returnValue{err: nil}
 		executeFunc(t, GET, urls.Base()+urls.Monitoring()+urls.Resource(), r, true)
@@ -183,7 +174,7 @@ func TestResource(t *testing.T) {
 		if status != http.StatusOK {
 			t.Error()
 		}
-		if getResourceInfoCalled == false || getPerformanceInfoCalled == true {
+		if getResourceInfoCalled == false {
 			t.Error()
 		}
 	})
@@ -192,7 +183,6 @@ func TestResource(t *testing.T) {
 	for _, test := range testList {
 		t.Run("Error/"+test.name, func(t *testing.T) {
 			getResourceInfoCalled = false
-			getPerformanceInfoCalled = false
 
 			r := returnValue{err: test.err}
 			executeFunc(t, GET, urls.Base()+urls.Monitoring()+urls.Resource(), r, true)
@@ -200,33 +190,7 @@ func TestResource(t *testing.T) {
 			if status != test.expectCode {
 				t.Error()
 			}
-			if getResourceInfoCalled == false || getPerformanceInfoCalled == true {
-				t.Error()
-			}
-		})
-	}
-}
-
-func TestPerformance(t *testing.T) {
-	mock := makeMockingci()
-	tearDown := setup(t, mock)
-	defer tearDown(t)
-
-	t.Run("Success", func(t *testing.T) {
-		r := returnValue{err: nil}
-		executeFunc(t, GET, urls.Base()+urls.Monitoring()+urls.Resource()+urls.Performance(), r, true)
-
-		if status != http.StatusOK {
-			t.Error()
-		}
-	})
-
-	testList := getErrorTestList()
-	for _, test := range testList {
-		t.Run("Error/"+test.name, func(t *testing.T) {
-			r := returnValue{err: test.err}
-			executeFunc(t, GET, urls.Base()+urls.Monitoring()+urls.Performance(), r, true)
-			if status != test.expectCode {
+			if getResourceInfoCalled == false {
 				t.Error()
 			}
 		})

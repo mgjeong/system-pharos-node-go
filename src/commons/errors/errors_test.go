@@ -41,7 +41,7 @@ func TestTError(t *testing.T) {
 		{testName: "InvalidParam", testPrefix: "invalid parameter",
 			testError: &InvalidParam{}},
 		{testName: "InvalidJSON", testPrefix: "invalid json format",
-			testError: &InvalidJSON{msg}},
+			testError: &InvalidJSON{}},
 		{testName: "NotFound", testPrefix: "not find target",
 			testError: &NotFound{}},
 		{testName: "InvalidYamlError", testPrefix: "invalid yaml file",
