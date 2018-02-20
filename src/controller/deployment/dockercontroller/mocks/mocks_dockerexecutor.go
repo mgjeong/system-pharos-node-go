@@ -168,17 +168,17 @@ func (mr *MockCommandMockRecorder) Ps(id, path interface{}, args ...interface{})
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Ps", reflect.TypeOf((*MockCommand)(nil).Ps), varargs...)
 }
 
-// GetContainerStateByName mocks base method
-func (m *MockCommand) GetContainerStateByName(containerName string) (map[string]interface{}, error) {
-	ret := m.ctrl.Call(m, "GetContainerStateByName", containerName)
+// GetContainerConfigByName mocks base method
+func (m *MockCommand) GetContainerConfigByName(containerName string) (map[string]interface{}, error) {
+	ret := m.ctrl.Call(m, "GetContainerConfigByName", containerName)
 	ret0, _ := ret[0].(map[string]interface{})
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// GetContainerStateByName indicates an expected call of GetContainerStateByName
-func (mr *MockCommandMockRecorder) GetContainerStateByName(containerName interface{}) *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetContainerStateByName", reflect.TypeOf((*MockCommand)(nil).GetContainerStateByName), containerName)
+// GetContainerConfigByName indicates an expected call of GetContainerConfigByName
+func (mr *MockCommandMockRecorder) GetContainerConfigByName(containerName interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetContainerConfigByName", reflect.TypeOf((*MockCommand)(nil).GetContainerConfigByName), containerName)
 }
 
 // GetImageDigestByName mocks base method
