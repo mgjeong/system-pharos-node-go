@@ -121,8 +121,16 @@ func (Executor) GetConfiguration() (map[string]interface{}, error) {
 		return nil, err
 	}
 
+	values := make([]map[string]interface{}, 0)
+	for _, prop := range props {
+		value := make(map[string]interface{})
+		value[prop["name"].(string)] = prop["value"]
+		value["policy"] = prop["policy"]
+		values = append(values, value)
+	}
+
 	res := make(map[string]interface{})
-	res[PROPERTIES] = props
+	res[PROPERTIES] = values
 
 	return res, nil
 }
@@ -138,21 +146,23 @@ func (configurator Executor) SetConfiguration(body string) error {
 	}
 
 	for _, prop := range bodyMap[PROPERTIES].([]interface{}) {
-		property, err := dbExecutor.GetProperty(prop.(map[string]interface{})[NAME].(string))
-		if err != nil {
-			logger.Logging(logger.ERROR, err.Error())
-			return errors.InvalidJSON{"not supported property"}
-		}
+		for key, value := range prop.(map[string]interface{}) {
+			property, err := dbExecutor.GetProperty(key)
+			if err != nil {
+				logger.Logging(logger.ERROR, err.Error())
+				return errors.InvalidJSON{"not supported property"}
+			}
 
-		if !searchStringFromSlice(property[POLICY].([]string), WRITABLE) {
-			return errors.InvalidJSON{"read only property"}
-		}
+			if !searchStringFromSlice(property[POLICY].([]string), WRITABLE) {
+				return errors.InvalidJSON{"read only property"}
+			}
 
-		property[VALUE] = prop.(map[string]interface{})[VALUE]
-		err = dbExecutor.SetProperty(property)
-		if err != nil {
-			logger.Logging(logger.ERROR, err.Error())
-			return convertDBError(err)
+			property[VALUE] = value
+			err = dbExecutor.SetProperty(property)
+			if err != nil {
+				logger.Logging(logger.ERROR, err.Error())
+				return convertDBError(err)
+			}
 		}
 	}
 
