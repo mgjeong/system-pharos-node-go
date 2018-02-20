@@ -766,7 +766,7 @@ func deletedDockerImageFromRegistry(appId string, imageInfo map[string]interface
 	logger.Logging(logger.DEBUG, "IN")
 	defer logger.Logging(logger.DEBUG, "OUT")
 
-	repository := imageInfo[HOST].(string) + imageInfo[REPOSITORY].(string)
+	repository := imageInfo[HOST].(string) + "/" + imageInfo[REPOSITORY].(string)
 
 	err := dbExecutor.UpdateAppEvent(appId, repository, imageInfo[TAG].(string), DELETE)
 	if err != nil {

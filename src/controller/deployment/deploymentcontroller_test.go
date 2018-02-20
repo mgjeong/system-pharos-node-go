@@ -49,6 +49,11 @@ const (
 	NONE_EVENT                        = "none"
 	SERVICE_STATUS                    = "running"
 	EXIT_CODE                         = "0"
+	EVENT_REPOSITORY                  = "localhost:5000/test_repo"
+	EVENT_TAG                         = "latest"
+	UPDATE_EVENTS_JSON                = `{"events":[{"action": "push","target": {"repository": "test_repo","tag": "latest"},"request": {"addr": "0.0.0.0:8888","host": "localhost:5000"}}]}`
+	DELETE_EVENTS_JSON                = `{"events":[{"action": "delete","target": {"repository": "test_repo","tag": "latest"},"request": {"addr": "0.0.0.0:8888","host": "localhost:5000"}}]}`
+	INVALID_JSON_FORMAT               = "invalid_json_format"
 )
 
 var (
@@ -455,6 +460,55 @@ func TestCalledAppWhenGetServiceStateComposeInspectFailed_ExpectErrorReturn(t *t
 
 	if err == nil {
 		t.Errorf("Expected err: %s, actual err: %s", "UnknownError", "nil")
+	}
+}
+
+func TestCalledHandleEventsWithUpdateEvent_ExpectSuccess(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	dbExecutorMockObj := dbmocks.NewMockCommand(ctrl)
+
+	gomock.InOrder(
+		dbExecutorMockObj.EXPECT().UpdateAppEvent(APP_ID, EVENT_REPOSITORY, EVENT_TAG, UPDATE).Return(nil),
+	)
+
+	dbExecutor = dbExecutorMockObj
+
+	err := Executor.HandleEvents(APP_ID, UPDATE_EVENTS_JSON)
+
+	if err != nil {
+		t.Errorf("Unexpected err: %s", err.Error())
+	}
+}
+
+func TestCalledHandleEventsWithDeleteEvent_ExpectSuccess(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	dbExecutorMockObj := dbmocks.NewMockCommand(ctrl)
+
+	gomock.InOrder(
+		dbExecutorMockObj.EXPECT().UpdateAppEvent(APP_ID, EVENT_REPOSITORY, EVENT_TAG, DELETE).Return(nil),
+	)
+
+	dbExecutor = dbExecutorMockObj
+
+	err := Executor.HandleEvents(APP_ID, DELETE_EVENTS_JSON)
+
+	if err != nil {
+		t.Errorf("Unexpected err: %s", err.Error())
+	}
+}
+
+func TestCalledHandleEventsWithInvalidJSONFormat_ExpectErrorReturn(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	err := Executor.HandleEvents(APP_ID, INVALID_JSON_FORMAT)
+
+	if err == nil {
+		t.Errorf("Expected err: %s, actual err: %s", "InvalidJSON", "nil")
 	}
 }
 
