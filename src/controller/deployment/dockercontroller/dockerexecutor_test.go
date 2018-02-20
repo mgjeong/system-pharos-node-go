@@ -117,7 +117,7 @@ func TestGetImageDigestByName(t *testing.T) {
 	})
 }
 
-func TestGetContainerStateByName(t *testing.T) {
+func TestGetContainerConfigByName(t *testing.T) {
 	tearDown := setUp(t)
 	defer tearDown(t)
 
@@ -125,7 +125,7 @@ func TestGetContainerStateByName(t *testing.T) {
 		fakeRunContainerList = func() ([]types.Container, error) {
 			return nil, origineErr.New("")
 		}
-		_, err := Executor.GetContainerStateByName("123")
+		_, err := Executor.GetContainerConfigByName("123")
 		switch err.(type) {
 		default:
 			t.Error()
@@ -135,7 +135,15 @@ func TestGetContainerStateByName(t *testing.T) {
 
 	retContainers := []types.Container{
 		{
-			ID:    "containerId",
+			ID: "containerId",
+			Ports: []types.Port{
+				{
+					IP:          "testIP",
+					PrivatePort: 1234,
+					PublicPort:  1234,
+					Type:        "testType",
+				},
+			},
 			State: "running",
 			Names: []string{"/test_latest", "/test_111", "/test_123"},
 		},
@@ -145,7 +153,7 @@ func TestGetContainerStateByName(t *testing.T) {
 		fakeRunContainerList = func() ([]types.Container, error) {
 			return retContainers, nil
 		}
-		_, err := Executor.GetContainerStateByName("123")
+		_, err := Executor.GetContainerConfigByName("123")
 		switch err.(type) {
 		default:
 			t.Error()
@@ -169,7 +177,7 @@ func TestGetContainerStateByName(t *testing.T) {
 		fakeRunContaienrInspect = func() (types.ContainerJSON, error) {
 			return retContainerInspect, origineErr.New("")
 		}
-		_, err := Executor.GetContainerStateByName("test_123")
+		_, err := Executor.GetContainerConfigByName("test_123")
 		switch err.(type) {
 		default:
 			t.Error()
@@ -178,8 +186,8 @@ func TestGetContainerStateByName(t *testing.T) {
 	})
 
 	t.Run("GetStatusSuccessful", func(t *testing.T) {
-		STATUS := "Status"
-		EXITCODE := "ExitCode"
+		STATUS := "status"
+		EXITCODE := "exitcode"
 
 		fakeRunContainerList = func() ([]types.Container, error) {
 			return retContainers, nil
@@ -187,7 +195,7 @@ func TestGetContainerStateByName(t *testing.T) {
 		fakeRunContaienrInspect = func() (types.ContainerJSON, error) {
 			return retContainerInspect, nil
 		}
-		inspect, _ := Executor.GetContainerStateByName("test_123")
+		inspect, _ := Executor.GetContainerConfigByName("test_123")
 		if strings.Compare(inspect[STATUS].(string), retContainers[0].State) != 0 ||
 			strings.Compare(inspect[EXITCODE].(string), strconv.Itoa(retContainerInspect.State.ExitCode)) != 0 {
 			t.Error()

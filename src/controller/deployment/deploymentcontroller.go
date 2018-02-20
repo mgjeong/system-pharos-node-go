@@ -40,6 +40,7 @@ const (
 	IMAGE        = "image"
 	IMAGES       = "images"
 	NAME         = "name"
+	PORTS        = "ports"
 	STATE        = "state"
 	EVENTS       = "events"
 	TARGETINFO   = "target"
@@ -204,14 +205,16 @@ func (depExecutorImpl) App(appId string) (map[string]interface{}, error) {
 	for _, serviceName := range reflect.ValueOf(description[SERVICES].(map[string]interface{})).MapKeys() {
 		service := make(map[string]interface{}, 0)
 
-		state, err := getServiceState(appId, serviceName.String())
+		config, err := getServiceState(appId, serviceName.String())
 		if err != nil {
 			logger.Logging(logger.ERROR, err.Error())
 			return nil, errors.Unknown{Msg: "get state fail"}
 		}
 
 		service[NAME] = serviceName.String()
-		service[STATE] = state
+		service[PORTS] = config[PORTS]
+		delete(config, PORTS)
+		service[STATE] = config
 		services = append(services, service)
 	}
 
@@ -682,7 +685,7 @@ func getImageNames(source []byte) ([]string, error) {
 
 // Get service state by service name.
 // First of all, get container name using docker-compose ps <service name>
-// And then, get service state from using docker inspect <container name>
+// And then, get service config from using docker inspect <container name>
 // if getting service state is succeed, return service state
 // otherwise, return error.
 func getServiceState(appId, serviceName string) (map[string]interface{}, error) {
@@ -694,7 +697,7 @@ func getServiceState(appId, serviceName string) (map[string]interface{}, error) 
 
 	containerName := infos[0]["Name"]
 
-	serviceInfo, err := dockerExecutor.GetContainerStateByName(containerName)
+	serviceInfo, err := dockerExecutor.GetContainerConfigByName(containerName)
 	if err != nil {
 		return nil, err
 	}
