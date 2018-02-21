@@ -176,7 +176,7 @@ func TestCalledDeployApp_ExpectSuccess(t *testing.T) {
 		dockerExecutorMockObj.EXPECT().Up(gomock.Any(), gomock.Any()).Return(nil),
 		dbExecutorMockObj.EXPECT().GetApp(APP_ID).Return(DB_GET_APP_OBJ, nil),
 		dockerExecutorMockObj.EXPECT().Ps(gomock.Any(), COMPOSE_FILE_PATH, SERVICE_NAME).Return(PS_EXPECT_RETURN, nil),
-		dockerExecutorMockObj.EXPECT().GetContainerStateByName(gomock.Any()).Return(INSPECT_RETURN_MSG, nil),
+		dockerExecutorMockObj.EXPECT().GetContainerConfigByName(gomock.Any()).Return(INSPECT_RETURN_MSG, nil),
 	)
 
 	// pass mockObj to a real object.
@@ -341,7 +341,7 @@ func TestCalledApp_ExpectSuccess(t *testing.T) {
 	gomock.InOrder(
 		dbExecutorMockObj.EXPECT().GetApp(APP_ID).Return(DB_GET_APP_OBJ, nil),
 		dockerExecutorMockObj.EXPECT().Ps(gomock.Any(), COMPOSE_FILE_PATH, SERVICE).Return(PS_EXPECT_RETURN, nil),
-		dockerExecutorMockObj.EXPECT().GetContainerStateByName(CONTAINER).Return(INSPECT_RETURN_MSG, nil),
+		dockerExecutorMockObj.EXPECT().GetContainerConfigByName(CONTAINER).Return(INSPECT_RETURN_MSG, nil),
 	)
 
 	// pass mockObj to a real object.
@@ -449,7 +449,7 @@ func TestCalledAppWhenGetServiceStateComposeInspectFailed_ExpectErrorReturn(t *t
 	gomock.InOrder(
 		dbExecutorMockObj.EXPECT().GetApp(APP_ID).Return(DB_GET_OBJ, nil),
 		dockerExecutorMockObj.EXPECT().Ps(gomock.Any(), COMPOSE_FILE_PATH, SERVICE_NAME).Return(PS_EXPECT_RETURN, nil),
-		dockerExecutorMockObj.EXPECT().GetContainerStateByName(CONTAINER_NAME).Return(nil, UnknownError),
+		dockerExecutorMockObj.EXPECT().GetContainerConfigByName(CONTAINER_NAME).Return(nil, UnknownError),
 	)
 
 	// pass mockObj to a real object.

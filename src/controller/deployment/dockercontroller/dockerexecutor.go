@@ -46,9 +46,15 @@ type Command interface {
 	Unpause(id, path string) error
 	Pull(id, path string, services ...string) error
 	Ps(id, path string, args ...string) ([]map[string]string, error)
-	GetContainerStateByName(containerName string) (map[string]interface{}, error)
+	GetContainerConfigByName(containerName string) (map[string]interface{}, error)
 	GetImageDigestByName(imageName string) (string, error)
 }
+
+const (
+	PORTS   string = "ports"
+	STATUS   string = "status"
+	EXITCODE string = "exitcode"
+)
 
 var Executor dockerExecutorImpl
 
@@ -231,15 +237,10 @@ func (dockerExecutorImpl) Ps(id, path string, args ...string) ([]map[string]stri
 	return retMap, retErr
 }
 
-const (
-	STATUS   string = "Status"
-	EXITCODE string = "ExitCode"
-)
-
-// Getting container state in the docker engine by container name.
+// Getting container config in the docker engine by container name.
 // if succeed to get, return state and exit code of container,
 // othewise, return error.
-func (d dockerExecutorImpl) GetContainerStateByName(containerName string) (map[string]interface{}, error) {
+func (d dockerExecutorImpl) GetContainerConfigByName(containerName string) (map[string]interface{}, error) {
 	logger.Logging(logger.DEBUG)
 	defer logger.Logging(logger.DEBUG, "OUT")
 
@@ -252,7 +253,6 @@ func (d dockerExecutorImpl) GetContainerStateByName(containerName string) (map[s
 	for _, container := range containers {
 		target_str := "/" + containerName
 		if isContainedStringInList(container.Names, target_str) {
-
 			ins, err := getContainerInspect(client, context.Background(), container.ID)
 			if err != nil {
 				logger.Logging(logger.ERROR, err.Error())
@@ -260,10 +260,10 @@ func (d dockerExecutorImpl) GetContainerStateByName(containerName string) (map[s
 			}
 
 			ret := make(map[string]interface{})
+			ret[PORTS] = container.Ports
 			ret[STATUS] = container.State
 			ret[EXITCODE] = strconv.Itoa(ins.State.ExitCode)
 
-			logger.Logging(logger.DEBUG, "returnning", ret[STATUS].(string), ret[EXITCODE].(string))
 			return ret, nil
 		}
 	}

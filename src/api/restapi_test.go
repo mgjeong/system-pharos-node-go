@@ -17,10 +17,16 @@
 package api
 
 import (
-	"io"
+	"github.com/golang/mock/gomock"
 	"net/http"
+	"encoding/json"
 	"net/http/httptest"
 	"testing"
+	"strings"
+
+	deploymentapi "api/deployment/mocks"
+	healthapi "api/health/mocks"
+	resourceapi "api/monitoring/resource/mocks"
 )
 
 const (
@@ -28,153 +34,99 @@ const (
 	PUT    string = "PUT"
 	POST   string = "POST"
 	DELETE string = "DELETE"
+
+	appId1 = "000000000000000000000000"
 )
 
-// Test
-var status int
-var head http.Header
+func TestInvalidUrlList(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
 
-type testResponseWriter struct {
-}
-
-func init() {
-	NodeApis = Executor{}
-}
-
-func (w testResponseWriter) Header() http.Header {
-	return head
-}
-
-func (w testResponseWriter) Write(b []byte) (int, error) {
-	if string(b) == http.StatusText(http.StatusOK) {
-		w.WriteHeader(http.StatusOK)
-	}
-	return 0, nil
-}
-
-func (w testResponseWriter) WriteHeader(code int) {
-	status = code
-}
-
-func newRequest(method string, url string, body io.Reader) *http.Request {
-	status = 0
-	head = make(map[string][]string)
-
-	r, _ := http.NewRequest(method, url, body)
-	r.URL.Path = url
-	return r
-}
-
-func invalidOperation(t *testing.T, method string, url string, code int) {
-	w, req := testResponseWriter{}, newRequest(method, url, nil)
-	NodeApis.ServeHTTP(w, req)
-
-	t.Log(status)
-	if status != code {
-		t.Error()
-	}
-}
-
-func getInvalidUrlList() map[string][]string {
 	urlList := make(map[string][]string)
 	urlList["/test"] = []string{GET, PUT, POST, DELETE}
 	urlList["/api/v1/test"] = []string{GET, PUT, POST, DELETE}
 	urlList["/api/v1/apps/11/test"] = []string{GET, PUT, POST, DELETE}
 	urlList["/api/v1/apps/11/test/"] = []string{GET, PUT, POST, DELETE}
 
-	return urlList
-}
-
-func TestInvalidUrl(t *testing.T) {
-	urlList := getInvalidUrlList()
-
 	for key, vals := range urlList {
-		for _, tc := range vals {
-			t.Run(key+"="+tc, func(t *testing.T) {
-				invalidOperation(t, tc, key, http.StatusNotFound)
-			})
+		for _, method := range vals {
+			w := httptest.NewRecorder()
+			req, _ := http.NewRequest(method, key, nil)
+
+			NodeApis.ServeHTTP(w, req)
+
+			msg := make(map[string]interface{})
+			err := json.Unmarshal(w.Body.Bytes(), &msg)
+			if err != nil {
+				t.Error("Expected results : invalid method msg, Actual err : json unmarshal failed.")
+			}
+
+			if !strings.Contains(msg["message"].(string), "unsupported url") {
+				t.Error("Expected results : invalid method msg, Actual err : %s.", msg["message"])
+			}
 		}
 	}
 }
 
-type deploymentApiExecutorMock struct {
-	handlerCall bool
-}
+func TestServeHTTPsendUnregisterApi(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
 
-type healthApiExecutorMock struct {
-	handlerCall bool
-}
+	healthApiExecutorMockObj := healthapi.NewMockCommand(ctrl)
 
-type resourceApiExecutorMock struct {
-	handlerCall bool
-}
+	gomock.InOrder(
+		healthApiExecutorMockObj.EXPECT().Handle(gomock.Any(), gomock.Any()),
+	)
 
-var dm deploymentApiExecutorMock
-var hm healthApiExecutorMock
-var rm resourceApiExecutorMock
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/api/v1/management/unregister", nil)
 
-func setUp() func() {
-	dm.handlerCall = false
-	hm.handlerCall = false
-	rm.handlerCall = false
-	defaultDeploymentApiExecutor := deploymentApiExecutor
-	defaultHealthApiExecutor := healthApiExecutor
-	defaultResourceApiExecutor := resourceApiExecutor
-	deploymentApiExecutor = &dm
-	healthApiExecutor = &hm
-	resourceApiExecutor = &rm
-
-	return func() {
-		deploymentApiExecutor = defaultDeploymentApiExecutor
-		healthApiExecutor = defaultHealthApiExecutor
-		resourceApiExecutor = defaultResourceApiExecutor
-	}
+	healthApiExecutor = healthApiExecutorMockObj
+	NodeApis.ServeHTTP(w, req)
 }
 
 func TestServeHTTPsendDeploymentApi(t *testing.T) {
-	tearDown := setUp()
-	defer tearDown()
-	w := httptest.NewRecorder()
-	req := newRequest("POST", "localhost:48098/api/v1/management/apps/deploy", nil)
-	NodeApis.ServeHTTP(w, req)
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
 
-	if rm.handlerCall && hm.handlerCall && !dm.handlerCall {
-		t.Error("TestServeHTTPsendDeploymentApi is invalid")
+	deploymentApiExecutorMockObj := deploymentapi.NewMockCommand(ctrl)
+
+	urlList := make(map[string][]string)
+	urlList["/api/v1/management/apps"] = []string{GET}
+	urlList["/api/v1/management/apps/deploy"] = []string{POST}
+	urlList["/api/v1/management/apps/"+appId1] = []string{GET, POST, DELETE}
+	urlList["/api/v1/management/apps/"+appId1+"/update"] = []string{POST}
+	urlList["/api/v1/management/apps/"+appId1+"/stop"] = []string{POST}
+	urlList["/api/v1/management/apps/"+appId1+"/start"] = []string{POST}
+
+	for key, vals := range urlList {
+		for _, method := range vals {
+			gomock.InOrder(
+				deploymentApiExecutorMockObj.EXPECT().Handle(gomock.Any(), gomock.Any()),
+			)
+
+			w := httptest.NewRecorder()
+			req, _ := http.NewRequest(method, key, nil)
+
+			deploymentApiExecutor = deploymentApiExecutorMockObj
+			NodeApis.ServeHTTP(w, req)
+		}
 	}
 }
 
-func TestServeHTTPsendUnregisterApi(t *testing.T) {
-	tearDown := setUp()
-	defer tearDown()
+func TestServeHTTPCallsendResourceApi(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	resourceApiExecutorMockObj := resourceapi.NewMockCommand(ctrl)
+
 	w := httptest.NewRecorder()
-	req := newRequest("POST", "localhost:48098/api/v1/management/unregister", nil)
+	req, _ := http.NewRequest("GET", "/api/v1/monitoring/resource", nil)
+
+	gomock.InOrder(
+		resourceApiExecutorMockObj.EXPECT().Handle(w, req),
+	)
+
+	resourceApiExecutor = resourceApiExecutorMockObj
 	NodeApis.ServeHTTP(w, req)
-
-	if rm.handlerCall && !hm.handlerCall && dm.handlerCall {
-		t.Error("TestServeHTTPsendUnregisterApi is invalid")
-	}
-}
-
-func TestServeHTTPsendResourceApi(t *testing.T) {
-	tearDown := setUp()
-	defer tearDown()
-	w := httptest.NewRecorder()
-	req := newRequest("POST", "localhost:48098/api/v1/monitoring/resource", nil)
-	NodeApis.ServeHTTP(w, req)
-
-	if !rm.handlerCall && hm.handlerCall && dm.handlerCall {
-		t.Error("TestServeHTTPsendResourceApi is invalid")
-	}
-}
-
-func (dm *deploymentApiExecutorMock) Handle(w http.ResponseWriter, req *http.Request) {
-	dm.handlerCall = true
-}
-
-func (hm *healthApiExecutorMock) Handle(w http.ResponseWriter, req *http.Request) {
-	hm.handlerCall = true
-}
-
-func (rm *resourceApiExecutorMock) Handle(w http.ResponseWriter, req *http.Request) {
-	rm.handlerCall = true
 }

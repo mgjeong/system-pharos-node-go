@@ -17,49 +17,34 @@
 package common
 
 import (
+	"github.com/golang/mock/gomock"
 	"net/http"
+	"net/http/httptest"
 	"testing"
 )
 
-// Test
-var status int
-var head http.Header
+func TestMakeResponseWithEmptyData_ExpectSuccess(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
 
-type testResponseWriter struct {
-}
+	var data []byte
+	w := httptest.NewRecorder()
 
-func (w testResponseWriter) Header() http.Header {
-	return head
-}
-func (w testResponseWriter) Write(b []byte) (int, error) {
-	if string(b) == http.StatusText(http.StatusOK) {
-		w.WriteHeader(http.StatusOK)
-	}
-	return 0, nil
-}
-func (w testResponseWriter) WriteHeader(code int) {
-	status = code
-}
-
-func testMakeResponse(t *testing.T, w testResponseWriter, data []byte, expect int) {
 	MakeResponse(w, data)
-
-	t.Log(status)
-	if status != expect {
-		t.Error()
+	if w.Code != http.StatusOK {
+		t.Error("Unexpected Error code : %d", w.Code)
 	}
 }
 
-// This unittest function does not work.
-func TestMakeResponse(t *testing.T) {
-	/*var data []byte
-	w := testResponseWriter{}
-	t.Run("ExpectSuccessWithEmptyData", func(t *testing.T) {
-		testMakeResponse(t, w, data, http.StatusOK)
-	})
+func TestMakeResponse_ExpectSuccess(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
 
-	data = []byte{'1', '2', '3'}
-	t.Run("ExpectSuccess", func(t *testing.T) {
-		testMakeResponse(t, w, data, http.StatusOK)
-	})*/
+	data := []byte{'1', '2', '3'}
+	w := httptest.NewRecorder()
+
+	MakeResponse(w, data)
+	if w.Code != http.StatusOK {
+		t.Error("Unexpected Error code : %d", w.Code)
+	}
 }
