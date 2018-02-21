@@ -57,9 +57,7 @@ const (
 	PROPERTIES            = "properties"
 	NAME                  = "name"
 	VALUE                 = "value"
-	POLICY                = "policy"
-	READABLE              = "readable"
-	WRITABLE              = "writable"
+	READONLY              = "readOnly"
 	DEFAULT_DEVICE_NAME   = "EdgeDevice"
 	DEFAULT_PING_INTERVAL = "10"
 )
@@ -94,14 +92,14 @@ func initConfiguration() {
 
 	properties := make([]map[string]interface{}, 0)
 
-	properties = append(properties, makeProperty("anchoraddress", anchoraddress, []string{READABLE}))
-	properties = append(properties, makeProperty("nodeaddress", nodeaddress, []string{READABLE}))
-	properties = append(properties, makeProperty("devicename", DEFAULT_DEVICE_NAME, []string{READABLE, WRITABLE}))
-	properties = append(properties, makeProperty("pinginterval", DEFAULT_PING_INTERVAL, []string{READABLE, WRITABLE}))
-	properties = append(properties, makeProperty("os", os, []string{READABLE}))
-	properties = append(properties, makeProperty("platform", platform, []string{READABLE}))
-	properties = append(properties, makeProperty("processor", processor, []string{READABLE}))
-	properties = append(properties, makeProperty("nodeid", "", []string{READABLE, WRITABLE}))
+	properties = append(properties, makeProperty("anchoraddress", anchoraddress, true))
+	properties = append(properties, makeProperty("nodeaddress", nodeaddress, true))
+	properties = append(properties, makeProperty("devicename", DEFAULT_DEVICE_NAME, false))
+	properties = append(properties, makeProperty("pinginterval", DEFAULT_PING_INTERVAL, false))
+	properties = append(properties, makeProperty("os", os, true))
+	properties = append(properties, makeProperty("platform", platform, true))
+	properties = append(properties, makeProperty("processor", processor, true))
+	properties = append(properties, makeProperty("nodeid", "", false))
 
 	for _, prop := range properties {
 		err = dbExecutor.SetProperty(prop)
@@ -125,7 +123,7 @@ func (Executor) GetConfiguration() (map[string]interface{}, error) {
 	for _, prop := range props {
 		value := make(map[string]interface{})
 		value[prop["name"].(string)] = prop["value"]
-		value["policy"] = prop["policy"]
+		value["readOnly"] = prop["readOnly"]
 		values = append(values, value)
 	}
 
@@ -153,7 +151,7 @@ func (configurator Executor) SetConfiguration(body string) error {
 				return errors.InvalidJSON{"not supported property"}
 			}
 
-			if !searchStringFromSlice(property[POLICY].([]string), WRITABLE) {
+			if property[READONLY].(bool) {
 				return errors.InvalidJSON{"read only property"}
 			}
 
@@ -169,11 +167,11 @@ func (configurator Executor) SetConfiguration(body string) error {
 	return nil
 }
 
-func makeProperty(name string, value interface{}, policy []string) map[string]interface{} {
+func makeProperty(name string, value interface{}, readOnly bool) map[string]interface{} {
 	prop := make(map[string]interface{})
 	prop[NAME] = name
 	prop[VALUE] = value
-	prop[POLICY] = policy
+	prop[READONLY] = readOnly
 	return prop
 }
 

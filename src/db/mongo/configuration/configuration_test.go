@@ -38,9 +38,9 @@ var (
 	dummy_error   = errors.Unknown{dummy_error_msg}
 	dummy_session mgomocks.MockSession
 	property      = map[string]interface{}{
-		"name":   "name",
-		"value":  "value",
-		"policy": []string{"readable", "writable"},
+		"name":     "name",
+		"value":    "value",
+		"readOnly": false,
 	}
 )
 
@@ -145,7 +145,7 @@ func TestCalledSetPropertyWhenAlreadyExistsInDB_ExpectSuccess(t *testing.T) {
 
 	query := bson.M{"_id": property["name"].(string)}
 	update := bson.M{"$set": bson.M{"value": property["value"].(interface{})}}
-	arg := Property{Name: property["name"].(string), Value: property["value"], Policy: property["policy"].([]string)}
+	arg := Property{Name: property["name"].(string), Value: property["value"], ReadOnly: property["readOnly"].(bool)}
 
 	connectionMockObj := mgomocks.NewMockConnection(mockCtrl)
 	sessionMockObj := mgomocks.NewMockSession(mockCtrl)
@@ -180,11 +180,11 @@ func TestCalledGetProperty_ExpectSuccess(t *testing.T) {
 	defer mockCtrl.Finish()
 
 	query := bson.M{"_id": property["name"].(string)}
-	arg := Property{Name: property["name"].(string), Value: property["value"], Policy: property["policy"].([]string)}
+	arg := Property{Name: property["name"].(string), Value: property["value"], ReadOnly: property["readOnly"].(bool)}
 	expectedRes := map[string]interface{}{
-		"name":   property["name"],
-		"value":  property["value"],
-		"policy": property["policy"].([]string),
+		"name":     property["name"],
+		"value":    property["value"],
+		"readOnly": property["readOnly"].(bool),
 	}
 
 	connectionMockObj := mgomocks.NewMockConnection(mockCtrl)
@@ -220,7 +220,7 @@ func TestCalledGetPropertyWhenDBReturnsError_ExpectErrorReturn(t *testing.T) {
 	defer mockCtrl.Finish()
 
 	query := bson.M{"_id": property["name"].(string)}
-	
+
 	connectionMockObj := mgomocks.NewMockConnection(mockCtrl)
 	sessionMockObj := mgomocks.NewMockSession(mockCtrl)
 	dbMockObj := mgomocks.NewMockDatabase(mockCtrl)
@@ -255,11 +255,11 @@ func TestCalledGetProperties_ExpectSuccess(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
-	args := []Property{{Name: property["name"].(string), Value: property["value"], Policy: property["policy"].([]string)}}
+	args := []Property{{Name: property["name"].(string), Value: property["value"], ReadOnly: property["readOnly"].(bool)}}
 	expectedRes := []map[string]interface{}{{
-		"name":   property["name"],
-		"value":  property["value"],
-		"policy": property["policy"].([]string),
+		"name":     property["name"],
+		"value":    property["value"],
+		"readOnly": property["readOnly"].(bool),
 	}}
 
 	connectionMockObj := mgomocks.NewMockConnection(mockCtrl)

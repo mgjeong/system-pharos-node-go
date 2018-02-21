@@ -21,16 +21,20 @@ import (
 	dbmocks "db/mongo/configuration/mocks"
 	"encoding/json"
 	"github.com/golang/mock/gomock"
-	"reflect"
 	"testing"
 )
 
 var (
 	properties = map[string]interface{}{
 		"properties": []map[string]interface{}{{
-			"name":   "name",
-			"policy": []string{"readable", "writable"},
-			"value":  "value",
+			"name":     "name",
+			"value":    "value",
+			"readOnly": false,
+		}},
+	}
+	newProperties = map[string]interface{}{
+		"properties": []map[string]interface{}{{
+			"name": "value",
 		}},
 	}
 	notFoundError = errors.NotFound{}
@@ -103,14 +107,10 @@ func TestGetConfiguration_ExpectSuccess(t *testing.T) {
 	// pass mockObj to a real object.
 	dbExecutor = dbExecutorMockObj
 
-	result, err := Executor{}.GetConfiguration()
+	_, err := Executor{}.GetConfiguration()
 
 	if err != nil {
 		t.Errorf("Unexpected err: %s", err.Error())
-	}
-
-	if !reflect.DeepEqual(result, properties) {
-		t.Error()
 	}
 }
 
@@ -155,7 +155,7 @@ func TestSetConfiguration_ExpectSuccess(t *testing.T) {
 	// pass mockObj to a real object.
 	dbExecutor = dbExecutorMockObj
 
-	jsonString, _ := json.Marshal(properties)
+	jsonString, _ := json.Marshal(newProperties)
 	err := Executor{}.SetConfiguration(string(jsonString))
 
 	if err != nil {
