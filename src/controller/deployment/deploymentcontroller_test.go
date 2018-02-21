@@ -47,8 +47,9 @@ const (
 	UPDATED_DESCRIPTION_JSON          = "{\"services\":{\"" + SERVICE + "\":{\"image\":\"" + REPOSITORY_WITH_PORT_IMAGE + ":" + NEW_TAG + "\"}},\"version\":\"2\"}"
 	FULL_IMAGE_NAME                   = REPOSITORY_WITH_PORT_IMAGE + ":" + NEW_TAG
 	NONE_EVENT                        = "none"
+	SERVICE_PORT                      = 1234
 	SERVICE_STATUS                    = "running"
-	EXIT_CODE                         = "0"
+	EXIT_CODE_VALUE                   = "0"
 	EVENT_REPOSITORY                  = "localhost:5000/test_repo"
 	EVENT_TAG                         = "latest"
 	UPDATE_EVENTS_JSON                = `{"events":[{"action": "push","target": {"repository": "test_repo","tag": "latest"},"request": {"addr": "0.0.0.0:8888","host": "localhost:5000"}}]}`
@@ -58,9 +59,11 @@ const (
 
 var (
 	INSPECT_RETURN_MSG = map[string]interface{}{
-		"Status":   SERVICE_STATUS,
-		"ExitCode": EXIT_CODE,
+		"ports":    SERVICE_PORT,
+		"status":   SERVICE_STATUS,
+		"exitcode": EXIT_CODE_VALUE,
 	}
+
 	PS_EXPECT_RETURN = []map[string]string{
 		{
 			"Name": CONTAINER,
@@ -111,10 +114,11 @@ var (
 		},
 		"services": []map[string]interface{}{
 			{
-				"name": SERVICE,
+				"name":  SERVICE,
+				"ports": SERVICE_PORT,
 				"state": map[string]interface{}{
-					"Status":   SERVICE_STATUS,
-					"ExitCode": EXIT_CODE,
+					"status":   SERVICE_STATUS,
+					"exitcode": EXIT_CODE_VALUE,
 				},
 			},
 		},
@@ -188,7 +192,6 @@ func TestCalledDeployApp_ExpectSuccess(t *testing.T) {
 	if err != nil {
 		t.Errorf("Unexpected err: %s", err.Error())
 	}
-
 	compareReturnVal := map[string]interface{}{
 		"id":          APP_ID,
 		"state":       "UP",
@@ -204,10 +207,11 @@ func TestCalledDeployApp_ExpectSuccess(t *testing.T) {
 		},
 		"services": []map[string]interface{}{
 			{
-				"name": SERVICE,
+				"name":  SERVICE,
+				"ports": SERVICE_PORT,
 				"state": map[string]interface{}{
-					"Status":   SERVICE_STATUS,
-					"ExitCode": EXIT_CODE,
+					"status":   SERVICE_STATUS,
+					"exitcode": EXIT_CODE_VALUE,
 				},
 			},
 		},
@@ -349,7 +353,6 @@ func TestCalledApp_ExpectSuccess(t *testing.T) {
 	dbExecutor = dbExecutorMockObj
 
 	res, err := Executor.App(APP_ID)
-
 	if err != nil {
 		t.Errorf("Unexpected err: %s", err.Error())
 	}
