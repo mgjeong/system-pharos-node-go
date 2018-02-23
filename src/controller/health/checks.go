@@ -22,7 +22,6 @@ import (
 	"commons/logger"
 	"commons/url"
 	"strconv"
-	"strings"
 	"time"
 )
 
@@ -38,8 +37,8 @@ func startHealthCheck(nodeID string) {
 
 	var interval string
 	for _, prop := range config["properties"].([]map[string]interface{}) {
-		if strings.Compare(prop["name"].(string), "pinginterval") == 0 {
-			interval = prop["value"].(string)
+		if value, exists := prop["pinginterval"]; exists {
+			interval = value.(string)
 		}
 	}
 

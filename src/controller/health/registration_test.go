@@ -26,9 +26,8 @@ import (
 
 var (
 	ANCHOR_ADDRESS = map[string]interface{}{
-		"name":   "anchoraddress",
-		"value":  "192.168.0.1",
-		"policy": []string{"readable"},
+		"anchoraddress": "192.168.0.1",
+		"policy":        []string{"readable"},
 	}
 	CONFIGURATION = map[string]interface{}{
 		"properties": []map[string]interface{}{ANCHOR_ADDRESS},
@@ -68,7 +67,7 @@ func TestCalledRegisterWhenFailedToSetConfiguration_ExpectErrorReturn(t *testing
 
 	url := "http://192.168.0.1:48099/api/v1/management/nodes/register"
 	expectedResp := `{"id":"nodeid"}`
-	expectedNewConfig := `{"properties":[{"name":"nodeid","value":"nodeid"}]}`
+	expectedNewConfig := `{"properties":[{"nodeid":"nodeid"}]}`
 
 	gomock.InOrder(
 		configMockObj.EXPECT().GetConfiguration().Return(CONFIGURATION, nil),

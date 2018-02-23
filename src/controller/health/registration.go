@@ -25,7 +25,6 @@ import (
 	"controller/configuration"
 	"encoding/json"
 	"messenger"
-	"strings"
 	"time"
 )
 
@@ -76,8 +75,8 @@ func register() error {
 
 	// Get pharos-anchor address from configuration.
 	for _, prop := range config["properties"].([]map[string]interface{}) {
-		if strings.Compare(prop["name"].(string), "anchoraddress") == 0 {
-			common.managerAddress = prop["value"].(string)
+		if value, exists := prop["anchoraddress"]; exists {
+			common.managerAddress = value.(string)
 		}
 	}
 
@@ -103,8 +102,7 @@ func register() error {
 
 	// Insert node id in configuration db.
 	updatedProp := make(map[string]interface{})
-	updatedProp["name"] = "nodeid"
-	updatedProp["value"] = respMap["id"]
+	updatedProp["nodeid"] = respMap["id"]
 
 	updatedProperties := make(map[string]interface{})
 	updatedProperties["properties"] = []map[string]interface{}{updatedProp}
@@ -178,19 +176,24 @@ func makeRegistrationBody(config map[string]interface{}) map[string]interface{} 
 	// Set pharos-node address from configuration.
 	properties := config["properties"].([]map[string]interface{})
 	for _, prop := range properties {
-		if strings.Compare(prop["name"].(string), "nodeaddress") == 0 {
-			data["ip"] = prop["value"].(string)
+		if value, exists := prop["nodeaddress"]; exists {
+			data["ip"] = value
 		}
 	}
 
 	// Remove unnecessary property from configuration.
 	filteredProps := make([]map[string]interface{}, 0)
 	for _, prop := range properties {
-		if strings.Compare(prop["name"].(string), "nodeid") != 0 &&
-			strings.Compare(prop["name"].(string), "anchoraddress") != 0 &&
-			strings.Compare(prop["name"].(string), "nodeaddress") != 0 {
-			filteredProps = append(filteredProps, prop)
+		if _, exists := prop["nodeid"]; exists {
+			continue
 		}
+		if _, exists := prop["anchoraddress"]; exists {
+			continue
+		}
+		if _, exists := prop["nodeaddress"]; exists {
+			continue
+		}
+		filteredProps = append(filteredProps, prop)
 	}
 
 	// Set configuration information in request body.

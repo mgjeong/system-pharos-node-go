@@ -57,9 +57,7 @@ const (
 	PROPERTIES            = "properties"
 	NAME                  = "name"
 	VALUE                 = "value"
-	POLICY                = "policy"
-	READABLE              = "readable"
-	WRITABLE              = "writable"
+	READONLY              = "readOnly"
 	DEFAULT_DEVICE_NAME   = "EdgeDevice"
 	DEFAULT_PING_INTERVAL = "10"
 )
@@ -94,14 +92,14 @@ func initConfiguration() {
 
 	properties := make([]map[string]interface{}, 0)
 
-	properties = append(properties, makeProperty("anchoraddress", anchoraddress, []string{READABLE}))
-	properties = append(properties, makeProperty("nodeaddress", nodeaddress, []string{READABLE}))
-	properties = append(properties, makeProperty("devicename", DEFAULT_DEVICE_NAME, []string{READABLE, WRITABLE}))
-	properties = append(properties, makeProperty("pinginterval", DEFAULT_PING_INTERVAL, []string{READABLE, WRITABLE}))
-	properties = append(properties, makeProperty("os", os, []string{READABLE}))
-	properties = append(properties, makeProperty("platform", platform, []string{READABLE}))
-	properties = append(properties, makeProperty("processor", processor, []string{READABLE}))
-	properties = append(properties, makeProperty("nodeid", "", []string{READABLE, WRITABLE}))
+	properties = append(properties, makeProperty("anchoraddress", anchoraddress, true))
+	properties = append(properties, makeProperty("nodeaddress", nodeaddress, true))
+	properties = append(properties, makeProperty("devicename", DEFAULT_DEVICE_NAME, false))
+	properties = append(properties, makeProperty("pinginterval", DEFAULT_PING_INTERVAL, false))
+	properties = append(properties, makeProperty("os", os, true))
+	properties = append(properties, makeProperty("platform", platform, true))
+	properties = append(properties, makeProperty("processor", processor, true))
+	properties = append(properties, makeProperty("nodeid", "", false))
 
 	for _, prop := range properties {
 		err = dbExecutor.SetProperty(prop)
@@ -121,8 +119,16 @@ func (Executor) GetConfiguration() (map[string]interface{}, error) {
 		return nil, err
 	}
 
+	values := make([]map[string]interface{}, 0)
+	for _, prop := range props {
+		value := make(map[string]interface{})
+		value[prop["name"].(string)] = prop["value"]
+		value["readOnly"] = prop["readOnly"]
+		values = append(values, value)
+	}
+
 	res := make(map[string]interface{})
-	res[PROPERTIES] = props
+	res[PROPERTIES] = values
 
 	return res, nil
 }
@@ -138,32 +144,34 @@ func (configurator Executor) SetConfiguration(body string) error {
 	}
 
 	for _, prop := range bodyMap[PROPERTIES].([]interface{}) {
-		property, err := dbExecutor.GetProperty(prop.(map[string]interface{})[NAME].(string))
-		if err != nil {
-			logger.Logging(logger.ERROR, err.Error())
-			return errors.InvalidJSON{"not supported property"}
-		}
+		for key, value := range prop.(map[string]interface{}) {
+			property, err := dbExecutor.GetProperty(key)
+			if err != nil {
+				logger.Logging(logger.ERROR, err.Error())
+				return errors.InvalidJSON{"not supported property"}
+			}
 
-		if !searchStringFromSlice(property[POLICY].([]string), WRITABLE) {
-			return errors.InvalidJSON{"read only property"}
-		}
+			if property[READONLY].(bool) {
+				return errors.InvalidJSON{"read only property"}
+			}
 
-		property[VALUE] = prop.(map[string]interface{})[VALUE]
-		err = dbExecutor.SetProperty(property)
-		if err != nil {
-			logger.Logging(logger.ERROR, err.Error())
-			return convertDBError(err)
+			property[VALUE] = value
+			err = dbExecutor.SetProperty(property)
+			if err != nil {
+				logger.Logging(logger.ERROR, err.Error())
+				return convertDBError(err)
+			}
 		}
 	}
 
 	return nil
 }
 
-func makeProperty(name string, value interface{}, policy []string) map[string]interface{} {
+func makeProperty(name string, value interface{}, readOnly bool) map[string]interface{} {
 	prop := make(map[string]interface{})
 	prop[NAME] = name
 	prop[VALUE] = value
-	prop[POLICY] = policy
+	prop[READONLY] = readOnly
 	return prop
 }
 

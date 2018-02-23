@@ -42,9 +42,9 @@ const (
 )
 
 type Property struct {
-	Name   string `bson:"_id,omitempty"`
-	Value  interface{}
-	Policy []string
+	Name     string `bson:"_id,omitempty"`
+	Value    interface{}
+	ReadOnly bool
 }
 
 type Executor struct {
@@ -85,9 +85,9 @@ func getCollection(mgoSession Session, dbname string, collectionName string) Col
 // will return App information as map.
 func (prop Property) convertToMap() map[string]interface{} {
 	return map[string]interface{}{
-		"name":   prop.Name,
-		"value":  prop.Value,
-		"policy": prop.Policy,
+		"name":     prop.Name,
+		"value":    prop.Value,
+		"readOnly": prop.ReadOnly,
 	}
 }
 
@@ -111,9 +111,9 @@ func (Executor) SetProperty(property map[string]interface{}) error {
 			return err
 		case errors.NotFound:
 			prop := Property{
-				Name:   property["name"].(string),
-				Value:  property["value"].(interface{}),
-				Policy: property["policy"].([]string),
+				Name:     property["name"].(string),
+				Value:    property["value"].(interface{}),
+				ReadOnly: property["readOnly"].(bool),
 			}
 
 			err = getCollection(session, DB_NAME, CONFIGURATION_COLLECTION).Insert(prop)

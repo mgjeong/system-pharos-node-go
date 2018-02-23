@@ -351,8 +351,8 @@ definitions:
       properties:
         type: array
         example:
-          - {"name":"devicename", "value":"EdgeDevice"}
-          - {"name":"pinginterval", "value":"10"}
+          - {"devicename":"EdgeDevice"}
+          - {"pinginterval":"10"}
   response_of_deployment:
     required:
       - id
@@ -399,10 +399,10 @@ definitions:
       properties:
         type: array
         example:
-          - {"name":"anchoraddress", "value":"192.168.0.1", "policy":["readable"]}
-          - {"name":"nodeaddress", "value":"192.168.0.1", "policy":["readable"]}
-          - {"name":"devicename", "value":"EdgeDevice", "policy":["readable", "writable"]}
-          - {"name":"pinginterval", "value":"10", "policy":["readable", "writable"]}
-          - {"name":"os", "value":"linux", "policy":["readable"]}
-          - {"name":"platform", "value":{"family":"debian","platform":"ubuntu","version":"14.04"}, "policy":["readable"]}
-          - {"name":"processor", "value":[{"cpu":"0", "modelname":"Intel(R) Core(TM) i7-2600 CPU @ 3.40GHz"}], "policy":["readable"]}
+          - {"anchoraddress":"192.168.0.1", "readOnly":true}
+          - {"nodeaddress":"192.168.0.1", "readOnly":true}
+          - {"devicename":"EdgeDevice", "readOnly":false}
+          - {"pinginterval":"10", "readOnly":false}
+          - {"os":"linux", "readOnly":true}
+          - {"platform":{"family":"debian","platform":"ubuntu","version":"14.04"}, "readOnly":true}
+          - {"processor":[{"cpu":"0", "modelname":"Intel(R) Core(TM) i7-2600 CPU @ 3.40GHz"}], "readOnly":true}
