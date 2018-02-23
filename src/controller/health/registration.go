@@ -128,8 +128,7 @@ func (Executor) Unregister() error {
 
 	// Reset node id.
 	updatedProp := make(map[string]interface{})
-	updatedProp["name"] = "nodeid"
-	updatedProp["value"] = ""
+	updatedProp["nodeid"] = ""
 
 	updatedProperties := make(map[string]interface{})
 	updatedProperties["properties"] = []map[string]interface{}{updatedProp}
