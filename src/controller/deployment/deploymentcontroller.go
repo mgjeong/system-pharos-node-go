@@ -42,6 +42,8 @@ const (
 	NAME         = "name"
 	PORTS        = "ports"
 	STATE        = "state"
+	STATUS       = "status"
+	EXIT_CODE    = "exitcode"
 	EVENTS       = "events"
 	TARGETINFO   = "target"
 	REQUESTINFO  = "request"
@@ -204,6 +206,7 @@ func (depExecutorImpl) App(appId string) (map[string]interface{}, error) {
 	services := make([]map[string]interface{}, 0)
 	for _, serviceName := range reflect.ValueOf(description[SERVICES].(map[string]interface{})).MapKeys() {
 		service := make(map[string]interface{}, 0)
+		state := make(map[string]interface{}, 0)
 
 		config, err := getServiceState(appId, serviceName.String())
 		if err != nil {
@@ -213,8 +216,9 @@ func (depExecutorImpl) App(appId string) (map[string]interface{}, error) {
 
 		service[NAME] = serviceName.String()
 		service[PORTS] = config[PORTS]
-		delete(config, PORTS)
-		service[STATE] = config
+		state[STATUS] = config[STATUS]
+		state[EXIT_CODE] = config[EXIT_CODE]
+		service[STATE] = state
 		services = append(services, service)
 	}
 
@@ -769,7 +773,7 @@ func deletedDockerImageFromRegistry(appId string, imageInfo map[string]interface
 	logger.Logging(logger.DEBUG, "IN")
 	defer logger.Logging(logger.DEBUG, "OUT")
 
-	repository := imageInfo[HOST].(string) + imageInfo[REPOSITORY].(string)
+	repository := imageInfo[HOST].(string) + "/" + imageInfo[REPOSITORY].(string)
 
 	err := dbExecutor.UpdateAppEvent(appId, repository, imageInfo[TAG].(string), DELETE)
 	if err != nil {

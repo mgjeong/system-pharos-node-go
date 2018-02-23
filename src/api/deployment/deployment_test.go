@@ -33,7 +33,7 @@ const (
 )
 
 var (
-	appId          = "0000000000001"
+	appId                = "0000000000001"
 	invalidOperationList = map[string][]string{
 		"/api/v1/management/apps":           []string{PUT, POST, DELETE},
 		"/api/v1/management/apps/deploy":    []string{GET, PUT, DELETE},
@@ -82,7 +82,7 @@ func TestDeploymentApiWithInvalidOperation(t *testing.T) {
 			req, _ := http.NewRequest(method, api, nil)
 
 			deploymentApiExecutor.Handle(w, req)
-			
+
 			if w.Code != http.StatusMethodNotAllowed {
 				t.Error("Expected error : %d, Actual Error : %d", http.StatusMethodNotAllowed, w.Code)
 			}
@@ -379,6 +379,53 @@ func TestDELETEAppApiWhenControllerFailed_ExpectReturnError(t *testing.T) {
 		if w.Code != test.expectCode {
 			t.Error("Expected error code : %d, Actual error code : %d\n", test.expectCode, w.Code)
 		}
+	}
+}
+
+func TestEventsApi_ExpectSuccess(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	deploymentExecutorMockObj := deploymentmocks.NewMockCommand(ctrl)
+
+	data := url.Values{}
+	data.Set("name", "test")
+	body := bytes.NewBufferString(data.Encode())
+
+	gomock.InOrder(
+		deploymentExecutorMockObj.EXPECT().HandleEvents(appId, body.String()).Return(nil),
+	)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest(POST, urls.Base()+urls.Management()+urls.Apps()+"/"+appId+urls.Events(), body)
+
+	deploymentExecutor = deploymentExecutorMockObj
+
+	deploymentApiExecutor.Handle(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Error("Expected return OK, Actual Return : %d", w.Code)
+	}
+}
+
+func TestEventsApiWithEmptyBodyStr_ExpecReturnError(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	deploymentExecutorMockObj := deploymentmocks.NewMockCommand(ctrl)
+
+	deployedApp := make(map[string]interface{})
+	deployedApp[ID] = appId
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest(POST, urls.Base()+urls.Management()+urls.Apps()+"/"+appId+urls.Events(), nil)
+
+	deploymentExecutor = deploymentExecutorMockObj
+
+	deploymentApiExecutor.Handle(w, req)
+
+	if w.Code == http.StatusOK {
+		t.Error("Expected return error but return http.StatusOK")
 	}
 }
 
