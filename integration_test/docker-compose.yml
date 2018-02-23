@@ -1,0 +1,20 @@
+## pharos-node docker compose file
+
+version: '2'
+services:
+  pharos-node:
+    image: system-pharos-node-go-ubuntu
+    hostname: pharos-node
+    ports:
+      - "48098"
+    volumes:
+      - /data/db
+      - /var/run:/var/run
+    networks:
+      - integration-network
+
+networks:
+  integration-network:
+    driver: "bridge"
+
+
