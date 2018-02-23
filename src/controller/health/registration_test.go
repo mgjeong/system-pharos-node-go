@@ -90,7 +90,7 @@ func TestCalledUnregister_ExpectSuccess(t *testing.T) {
 
 	configMockObj := configmocks.NewMockCommand(ctrl)
 
-	expectedNewConfig := `{"properties":[{"name":"nodeid","value":""}]}`
+	expectedNewConfig := `{"properties":[{"nodeid":""}]}`
 
 	gomock.InOrder(
 		configMockObj.EXPECT().SetConfiguration(expectedNewConfig).Return(nil),
