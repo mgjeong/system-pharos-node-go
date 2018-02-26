@@ -694,7 +694,7 @@ func getImageNames(source []byte) ([]string, error) {
 // otherwise, return error.
 func getServiceState(appId, serviceName string) (map[string]interface{}, error) {
 	infos, err := dockerExecutor.Ps(appId, COMPOSE_FILE, serviceName)
-	if err != nil {
+	if len(infos) == 0 || err != nil {
 		logger.Logging(logger.ERROR, err.Error())
 		return nil, err
 	}
