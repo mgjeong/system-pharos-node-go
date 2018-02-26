@@ -33,27 +33,30 @@ import (
 )
 
 const (
-	COMPOSE_FILE = "docker-compose.yaml"
-	ID           = "id"
-	DESCRIPTION  = "description"
-	SERVICES     = "services"
-	IMAGE        = "image"
-	IMAGES       = "images"
-	NAME         = "name"
-	PORTS        = "ports"
-	STATE        = "state"
-	STATUS       = "status"
-	EXIT_CODE    = "exitcode"
-	EVENTS       = "events"
-	TARGETINFO   = "target"
-	REQUESTINFO  = "request"
-	HOST         = "host"
-	REPOSITORY   = "repository"
-	TAG          = "tag"
-	ACTION       = "action"
-	PUSH         = "push"
-	UPDATE       = "update"
-	DELETE       = "delete"
+	COMPOSE_FILE   = "docker-compose.yaml"
+	ID             = "id"
+	DESCRIPTION    = "description"
+	SERVICES       = "services"
+	IMAGE          = "image"
+	IMAGES         = "images"
+	NAME           = "name"
+	PORTS          = "ports"
+	STATE          = "state"
+	STATUS         = "status"
+	EXIT_CODE      = "exitcode"
+	EVENTS         = "events"
+	TARGETINFO     = "target"
+	REQUESTINFO    = "request"
+	HOST           = "host"
+	REPOSITORY     = "repository"
+	TAG            = "tag"
+	ACTION         = "action"
+	PUSH           = "push"
+	UPDATE         = "update"
+	DELETE         = "delete"
+	RUNNING_STATE  = "running"
+	EXIT_STATE     = "exit"
+	UPDATING_STATE = "updating"
 )
 
 type Command interface {
@@ -113,7 +116,7 @@ func (executor depExecutorImpl) DeployApp(body string) (map[string]interface{}, 
 		return nil, errors.InvalidYaml{Msg: "invalid yaml syntax"}
 	}
 
-	data, err := dbExecutor.InsertComposeFile(string(jsonData))
+	data, err := dbExecutor.InsertComposeFile(string(jsonData), RUNNING_STATE)
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
 		return nil, errors.Unknown{Msg: "db operation fail"}
@@ -279,7 +282,7 @@ func (depExecutorImpl) StartApp(appId string) error {
 		return convertDBError(err, appId)
 	}
 
-	if state == "START" {
+	if state == RUNNING_STATE {
 		return errors.AlreadyReported{Msg: state}
 	}
 
@@ -299,7 +302,7 @@ func (depExecutorImpl) StartApp(appId string) error {
 		return err
 	}
 
-	err = dbExecutor.UpdateAppState(appId, "START")
+	err = dbExecutor.UpdateAppState(appId, RUNNING_STATE)
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
 		return convertDBError(err, appId)
@@ -321,7 +324,7 @@ func (depExecutorImpl) StopApp(appId string) error {
 		return convertDBError(err, appId)
 	}
 
-	if state == "STOP" {
+	if state == EXIT_STATE {
 		return errors.AlreadyReported{Msg: state}
 	}
 
@@ -341,7 +344,7 @@ func (depExecutorImpl) StopApp(appId string) error {
 		return err
 	}
 
-	err = dbExecutor.UpdateAppState(appId, "STOP")
+	err = dbExecutor.UpdateAppState(appId, EXIT_STATE)
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
 		return convertDBError(err, appId)
@@ -405,11 +408,19 @@ func (depExecutorImpl) HandleEvents(appId string, body string) error {
 func (depExecutorImpl) UpdateApp(appId string, query map[string]interface{}) error {
 	logger.Logging(logger.DEBUG, "IN", appId)
 	defer logger.Logging(logger.DEBUG, "OUT")
-	err := setYamlFile(appId)
+
+	err := dbExecutor.UpdateAppState(appId, UPDATING_STATE)
+	if err != nil {
+		logger.Logging(logger.ERROR, err.Error())
+		return convertDBError(err, appId)
+	}
+
+	err = setYamlFile(appId)
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
 		return err
 	}
+
 	app, err := dbExecutor.GetApp(appId)
 	if err != nil {
 		logger.Logging(logger.DEBUG, err.Error())
@@ -466,11 +477,19 @@ func (depExecutorImpl) UpdateApp(appId string, query map[string]interface{}) err
 			}
 		}
 	}
+
+	err = dbExecutor.UpdateAppState(appId, RUNNING_STATE)
+	if err != nil {
+		logger.Logging(logger.ERROR, err.Error())
+		return convertDBError(err, appId)
+	}
+
 	err = updateAppEvent(appId)
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
+		return err
 	}
-	return err
+	return nil
 }
 
 // Delete images and remove containers in the target by input appId.
@@ -590,13 +609,9 @@ func restoreState(appId, state string) error {
 	}
 
 	switch state {
-	case "STOP":
+	case EXIT_STATE:
 		err = dockerExecutor.Stop(appId, COMPOSE_FILE)
-	case "START":
-		err = dockerExecutor.Up(appId, COMPOSE_FILE)
-	case "UP":
-		err = dockerExecutor.Up(appId, COMPOSE_FILE)
-	case "DEPLOY":
+	case RUNNING_STATE:
 		err = dockerExecutor.Up(appId, COMPOSE_FILE)
 	}
 
