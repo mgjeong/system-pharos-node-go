@@ -84,7 +84,7 @@ func TestDeploymentApiWithInvalidOperation(t *testing.T) {
 			deploymentApiExecutor.Handle(w, req)
 
 			if w.Code != http.StatusMethodNotAllowed {
-				t.Error("Expected error : %d, Actual Error : %d", http.StatusMethodNotAllowed, w.Code)
+				t.Errorf("Expected error : %d, Actual Error : %d", http.StatusMethodNotAllowed, w.Code)
 			}
 		}
 	}
@@ -143,7 +143,7 @@ func TestDeployApiWhenControllerFailed_ExpecReturnError(t *testing.T) {
 		deploymentApiExecutor.Handle(w, req)
 
 		if w.Code != test.expectCode {
-			t.Error("Expected error code : %d, Actual error code : %d\n", test.expectCode, w.Code)
+			t.Errorf("Expected error code : %d, Actual error code : %d\n", test.expectCode, w.Code)
 		}
 	}
 }
@@ -165,7 +165,7 @@ func TestDeployApiWithEmptyBodyStr_ExpecReturnError(t *testing.T) {
 	deploymentApiExecutor.Handle(w, req)
 
 	if w.Code == http.StatusOK {
-		t.Error("Expected return error but return http.StatusOK")
+		t.Errorf("Expected return error but return http.StatusOK")
 	}
 }
 
@@ -190,7 +190,7 @@ func TestAppsApi_ExpectSuccess(t *testing.T) {
 	deploymentApiExecutor.Handle(w, req)
 
 	if w.Code != http.StatusOK {
-		t.Error("Expected return OK, Actual Return : %d", w.Code)
+		t.Errorf("Expected return OK, Actual Return : %d", w.Code)
 	}
 }
 
@@ -213,7 +213,7 @@ func TestAppsApiWhenControllerFailed_ExpectReturnError(t *testing.T) {
 		deploymentApiExecutor.Handle(w, req)
 
 		if w.Code != test.expectCode {
-			t.Error("Expected error code : %d, Actual error code : %d\n", test.expectCode, w.Code)
+			t.Errorf("Expected error code : %d, Actual error code : %d\n", test.expectCode, w.Code)
 		}
 	}
 }
@@ -236,7 +236,7 @@ func TestGETAppApi_ExpectSuccess(t *testing.T) {
 	deploymentApiExecutor.Handle(w, req)
 
 	if w.Code != http.StatusOK {
-		t.Error("Expected return OK, Actual Return : %d", w.Code)
+		t.Errorf("Expected return OK, Actual Return : %d", w.Code)
 	}
 }
 
@@ -259,7 +259,7 @@ func TestGETAppApiWhenControllerFailed_ExpectReturnError(t *testing.T) {
 		deploymentApiExecutor.Handle(w, req)
 
 		if w.Code != test.expectCode {
-			t.Error("Expected error code : %d, Actual error code : %d\n", test.expectCode, w.Code)
+			t.Errorf("Expected error code : %d, Actual error code : %d\n", test.expectCode, w.Code)
 		}
 	}
 }
@@ -286,7 +286,7 @@ func TestPOSTAppApi_ExpectSuccess(t *testing.T) {
 	deploymentApiExecutor.Handle(w, req)
 
 	if w.Code != http.StatusOK {
-		t.Error("Expected return OK, Actual Return : %d", w.Code)
+		t.Errorf("Expected return OK, Actual Return : %d", w.Code)
 	}
 }
 
@@ -304,7 +304,7 @@ func TestPOSTAppApiWithEmptyBody_ExpectSuccess(t *testing.T) {
 	deploymentApiExecutor.Handle(w, req)
 
 	if w.Code == http.StatusOK {
-		t.Error("Expected return error but return http.StatusOK")
+		t.Errorf("Expected return error but return http.StatusOK")
 	}
 }
 
@@ -331,7 +331,7 @@ func TestPOSTAppApiWhenControllerFailed_ExpectReturnError(t *testing.T) {
 		deploymentApiExecutor.Handle(w, req)
 
 		if w.Code != test.expectCode {
-			t.Error("Expected error code : %d, Actual error code : %d\n", test.expectCode, w.Code)
+			t.Errorf("Expected error code : %d, Actual error code : %d\n", test.expectCode, w.Code)
 		}
 	}
 }
@@ -354,7 +354,7 @@ func TestDELETEAppApi_ExpectSuccess(t *testing.T) {
 	deploymentApiExecutor.Handle(w, req)
 
 	if w.Code != http.StatusOK {
-		t.Error("Expected return OK, Actual Return : %d", w.Code)
+		t.Errorf("Expected return OK, Actual Return : %d", w.Code)
 	}
 }
 
@@ -377,7 +377,7 @@ func TestDELETEAppApiWhenControllerFailed_ExpectReturnError(t *testing.T) {
 		deploymentApiExecutor.Handle(w, req)
 
 		if w.Code != test.expectCode {
-			t.Error("Expected error code : %d, Actual error code : %d\n", test.expectCode, w.Code)
+			t.Errorf("Expected error code : %d, Actual error code : %d\n", test.expectCode, w.Code)
 		}
 	}
 }
@@ -404,7 +404,7 @@ func TestEventsApi_ExpectSuccess(t *testing.T) {
 	deploymentApiExecutor.Handle(w, req)
 
 	if w.Code != http.StatusOK {
-		t.Error("Expected return OK, Actual Return : %d", w.Code)
+		t.Errorf("Expected return OK, Actual Return : %d", w.Code)
 	}
 }
 
@@ -425,7 +425,7 @@ func TestEventsApiWithEmptyBodyStr_ExpecReturnError(t *testing.T) {
 	deploymentApiExecutor.Handle(w, req)
 
 	if w.Code == http.StatusOK {
-		t.Error("Expected return error but return http.StatusOK")
+		t.Errorf("Expected return error but return http.StatusOK")
 	}
 }
 
@@ -447,7 +447,7 @@ func TestStartApi_ExpectSuccess(t *testing.T) {
 	deploymentApiExecutor.Handle(w, req)
 
 	if w.Code != http.StatusOK {
-		t.Error("Expected return OK, Actual Return : %d", w.Code)
+		t.Errorf("Expected return OK, Actual Return : %d", w.Code)
 	}
 }
 
@@ -470,7 +470,7 @@ func TestStartApiWhenControllerFailed_ExpectReturnError(t *testing.T) {
 		deploymentApiExecutor.Handle(w, req)
 
 		if w.Code != test.expectCode {
-			t.Error("Expected error code : %d, Actual error code : %d\n", test.expectCode, w.Code)
+			t.Errorf("Expected error code : %d, Actual error code : %d\n", test.expectCode, w.Code)
 		}
 	}
 }
@@ -493,7 +493,7 @@ func TestStopApi_ExpectSuccess(t *testing.T) {
 	deploymentApiExecutor.Handle(w, req)
 
 	if w.Code != http.StatusOK {
-		t.Error("Expected return OK, Actual Return : %d", w.Code)
+		t.Errorf("Expected return OK, Actual Return : %d", w.Code)
 	}
 }
 
@@ -516,7 +516,7 @@ func TestStopApiWhenControllerFailed_ExpectReturnError(t *testing.T) {
 		deploymentApiExecutor.Handle(w, req)
 
 		if w.Code != test.expectCode {
-			t.Error("Expected error code : %d, Actual error code : %d\n", test.expectCode, w.Code)
+			t.Errorf("Expected error code : %d, Actual error code : %d\n", test.expectCode, w.Code)
 		}
 	}
 }
@@ -540,7 +540,7 @@ func TestUpdateApi_ExpectSuccess(t *testing.T) {
 	deploymentApiExecutor.Handle(w, req)
 
 	if w.Code != http.StatusOK {
-		t.Error("Expected return OK, Actual Return : %d", w.Code)
+		t.Errorf("Expected return OK, Actual Return : %d", w.Code)
 	}
 }
 
@@ -563,7 +563,7 @@ func TestUpdateApiWhenControllerFailed_ExpectReturnError(t *testing.T) {
 		deploymentApiExecutor.Handle(w, req)
 
 		if w.Code != test.expectCode {
-			t.Error("Expected error code : %d, Actual error code : %d\n", test.expectCode, w.Code)
+			t.Errorf("Expected error code : %d, Actual error code : %d\n", test.expectCode, w.Code)
 		}
 	}
 }

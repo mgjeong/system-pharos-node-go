@@ -62,7 +62,7 @@ func TestInvalidUrlList(t *testing.T) {
 			}
 
 			if !strings.Contains(msg["message"].(string), "unsupported url") {
-				t.Error("Expected results : invalid method msg, Actual err : %s.", msg["message"])
+				t.Errorf("Expected results : invalid method msg, Actual err : %s.", msg["message"])
 			}
 		}
 	}

@@ -32,7 +32,7 @@ func TestMakeResponseWithEmptyData_ExpectSuccess(t *testing.T) {
 
 	MakeResponse(w, data)
 	if w.Code != http.StatusOK {
-		t.Error("Unexpected Error code : %d", w.Code)
+		t.Errorf("Unexpected Error code : %d", w.Code)
 	}
 }
 
@@ -45,6 +45,6 @@ func TestMakeResponse_ExpectSuccess(t *testing.T) {
 
 	MakeResponse(w, data)
 	if w.Code != http.StatusOK {
-		t.Error("Unexpected Error code : %d", w.Code)
+		t.Errorf("Unexpected Error code : %d", w.Code)
 	}
 }
