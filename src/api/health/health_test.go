@@ -69,7 +69,7 @@ func TestHealthApiWithInvalidOperation(t *testing.T) {
 			healthApiExecutor.Handle(w, req)
 
 			if w.Code != http.StatusMethodNotAllowed {
-				t.Error("Expected error : %d, Actual Error : %d", http.StatusMethodNotAllowed, w.Code)
+				t.Errorf("Expected error : %d, Actual Error : %d", http.StatusMethodNotAllowed, w.Code)
 			}
 		}
 	}
@@ -93,7 +93,7 @@ func TestUnregisterApi_ExpectSuccess(t *testing.T) {
 	healthApiExecutor.Handle(w, req)
 
 	if w.Code != http.StatusOK {
-		t.Error("Unexpected error code : %d", w.Code)
+		t.Errorf("Unexpected error code : %d", w.Code)
 	}
 }
 
@@ -116,7 +116,7 @@ func TestUnregisterApiWhenControllerFailed_ExpectReturnError(t *testing.T) {
 		healthApiExecutor.Handle(w, req)
 
 		if w.Code != test.expectCode {
-			t.Error("Unexpected error code : %d\n", w.Code)
+			t.Errorf("Unexpected error code : %d\n", w.Code)
 		}
 	}
 }

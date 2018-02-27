@@ -74,7 +74,7 @@ func TestResourceApiInvalidOperation(t *testing.T) {
 			resourceApiExecutor.Handle(w, req)
 
 			if w.Code != http.StatusMethodNotAllowed {
-				t.Error("Expected error : %d, Actual Error : %d", http.StatusMethodNotAllowed, w.Code)
+				t.Errorf("Expected error : %d, Actual Error : %d", http.StatusMethodNotAllowed, w.Code)
 			}
 		}
 	}
@@ -98,7 +98,7 @@ func TestResourceApi_ExpectSuccess(t *testing.T) {
 	resourceApiExecutor.Handle(w, req)
 
 	if w.Code != http.StatusOK {
-		t.Error("Unexpected error code : %d", w.Code)
+		t.Errorf("Unexpected error code : %d", w.Code)
 	}
 }
 
@@ -122,7 +122,7 @@ func TestResourceApiWhenControllerFailed_ExpectReturnError(t *testing.T) {
 		resourceApiExecutor.Handle(w, req)
 
 		if w.Code != test.expectCode {
-			t.Error("Unexpected error code : %d\n", w.Code)
+			t.Errorf("Unexpected error code : %d\n", w.Code)
 		}
 	}
 }
