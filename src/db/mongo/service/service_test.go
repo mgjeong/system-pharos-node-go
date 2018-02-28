@@ -133,7 +133,7 @@ func TestCalled_getCollection_WithInvalidSession_ExpectErrorReturn(t *testing.T)
 func TestCalled_InsertComposeFile_WithEmptyDescription_ExpectErrorReturn(t *testing.T) {
 	dbExecutor := Executor{}
 
-	_, err := dbExecutor.InsertComposeFile(invalidDescription)
+	_, err := dbExecutor.InsertComposeFile(invalidDescription, valid_state)
 
 	if err == nil {
 		t.Errorf("Expected err: %s, actual err: %s", "InvalidYamlError or UnknownError", "nil")
@@ -152,7 +152,7 @@ func TestCalled_InsertComposeFile_WithInvalidDescription_Service_ExpectErrorRetu
 
 	invalid_description_without_service := `{"services":}`
 
-	_, err := dbExecutor.InsertComposeFile(invalid_description_without_service)
+	_, err := dbExecutor.InsertComposeFile(invalid_description_without_service, valid_state)
 
 	if err == nil {
 		t.Errorf("Expected err: %s, actual err: %s", "InvalidYamlError", "nil")
@@ -173,7 +173,7 @@ func TestCalled_InsertComposeFile_WithInvalidDescription_Image_ExpectErrorReturn
     "test_service_name": {}
   }
 }`
-	_, err := dbExecutor.InsertComposeFile(invalid_description_without_image)
+	_, err := dbExecutor.InsertComposeFile(invalid_description_without_image, valid_state)
 
 	if err == nil {
 		t.Errorf("Expected err: %s, actual err: %s", "InvalidYamlError", "nil")
@@ -208,10 +208,10 @@ func TestCalled_InsertComposeFile_WithValidDescription_ExpectSuccess(t *testing.
 		"id":          validID,
 		"description": valid_description,
 		"images":      []map[string]interface{}{image},
-		"state":       "DEPLOY",
+		"state":       valid_state,
 	}
 
-	res, err := dbExecutor.InsertComposeFile(valid_description)
+	res, err := dbExecutor.InsertComposeFile(valid_description, valid_state)
 
 	if err != nil {
 		t.Error()
