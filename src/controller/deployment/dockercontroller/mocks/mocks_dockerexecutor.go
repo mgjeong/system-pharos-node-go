@@ -193,3 +193,40 @@ func (m *MockCommand) GetImageDigestByName(imageName string) (string, error) {
 func (mr *MockCommandMockRecorder) GetImageDigestByName(imageName interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetImageDigestByName", reflect.TypeOf((*MockCommand)(nil).GetImageDigestByName), imageName)
 }
+
+// GetImageIDByRepoDigest mocks base method
+func (m *MockCommand) GetImageIDByRepoDigest(imageName string) (string, error) {
+	ret := m.ctrl.Call(m, "GetImageIDByRepoDigest", imageName)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetImageIDByRepoDigest indicates an expected call of GetImageIDByRepoDigest
+func (mr *MockCommandMockRecorder) GetImageIDByRepoDigest(imageName interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetImageIDByRepoDigest", reflect.TypeOf((*MockCommand)(nil).GetImageIDByRepoDigest), imageName)
+}
+
+// ImagePull mocks base method
+func (m *MockCommand) ImagePull(image string) error {
+	ret := m.ctrl.Call(m, "ImagePull", image)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ImagePull indicates an expected call of ImagePull
+func (mr *MockCommandMockRecorder) ImagePull(image interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ImagePull", reflect.TypeOf((*MockCommand)(nil).ImagePull), image)
+}
+
+// ImageTag mocks base method
+func (m *MockCommand) ImageTag(imageID, repoTags string) error {
+	ret := m.ctrl.Call(m, "ImageTag", imageID, repoTags)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ImageTag indicates an expected call of ImageTag
+func (mr *MockCommandMockRecorder) ImageTag(imageID, repoTags interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ImageTag", reflect.TypeOf((*MockCommand)(nil).ImageTag), imageID, repoTags)
+}

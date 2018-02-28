@@ -427,22 +427,18 @@ func (depExecutorImpl) UpdateApp(appId string, query map[string]interface{}) err
 		return convertDBError(err, appId)
 	}
 
-	repoDigests := make([]map[string]string, 0)
-	for _, image := range app.images {
-		repoDigest, err := dockerExecutor.GetImageDigestByName(image)
+	repoDigests := make(map[string]string)
+	for _, image := range app[IMAGES].([]map[string]interface{}) {
+		repoDigest, err := dockerExecutor.GetImageDigestByName(image[NAME].(string))
 		if err != nil {
 			logger.Logging(logger.DEBUG, err.Error())
+			return err
 		}
-		repoDigests[image] = repoDigest
-	}
-
-	if err != nil {
-		logger.Logging(logger.DEBUG, err.Error())
-		return err
+		repoDigests[image[NAME].(string)] = repoDigest
 	}
 
 	if query == nil {
-		err = updateApp(appId, app, true)
+		err = updateApp(appId, app, repoDigests)
 		if err != nil {
 			logger.Logging(logger.DEBUG, err.Error())
 			return err
@@ -470,7 +466,7 @@ func (depExecutorImpl) UpdateApp(appId string, query map[string]interface{}) err
 					return err
 				}
 			}
-			err = updateApp(appId, app, false, serviceName)
+			err = updateService(appId, app, repoDigests, serviceName)
 			if err != nil {
 				logger.Logging(logger.DEBUG, err.Error())
 				return err
@@ -487,7 +483,6 @@ func (depExecutorImpl) UpdateApp(appId string, query map[string]interface{}) err
 					logger.Logging(logger.ERROR, err.Error())
 					return convertDBError(err, appId)
 				}
-
 			}
 		}
 	}
@@ -546,64 +541,26 @@ func (depExecutorImpl) DeleteApp(appId string) error {
 	return nil
 }
 
-// Restore app images by previous disgests.
-// See also controller.UpdateApp()
-// if succeed to restore, return error as nil
-// otherwise, return error.
-func restoreRepoDigests(appId, desc, state string) error {
-	logger.Logging(logger.DEBUG, "IN")
-	defer logger.Logging(logger.DEBUG, "OUT")
-
-	imageNames, err := getImageNames([]byte(desc))
-	if err != nil {
-		logger.Logging(logger.DEBUG, err.Error())
-		return err
-	}
-	repoDigests := make([]string, 0)
-
-	for _, imageName := range imageNames {
-		digest, err := dockerExecutor.GetImageDigestByName(imageName)
+func restoreRepoDigests(appId string, repoDigests map[string]string, state string) error {
+	for imageName, repoDigest := range repoDigests {
+		err := dockerExecutor.ImagePull(repoDigest)
 		if err != nil {
 			logger.Logging(logger.ERROR, err.Error())
 			return err
 		}
-		repoDigests = append(repoDigests, digest)
+		imageID, err := dockerExecutor.GetImageIDByRepoDigest(repoDigest)
+		if err != nil {
+			logger.Logging(logger.ERROR, err.Error())
+			return err
+		}
+		err = dockerExecutor.ImageTag(imageID, imageName)
+		if err != nil {
+			logger.Logging(logger.ERROR, err.Error())
+			return err
+		}
 	}
 
-	description := make(map[string]interface{})
-
-	err = json.Unmarshal([]byte(desc), &description)
-	if err != nil {
-		return errors.IOError{Msg: "json unmarshal fail"}
-	}
-
-	if len(description[SERVICES].(map[string]interface{})) == 0 || description[SERVICES] == nil {
-		return errors.Unknown{Msg: "can't find application info"}
-	}
-
-	idx := 0
-	for _, service_info := range description[SERVICES].(map[string]interface{}) {
-		service_info.(map[string]interface{})[IMAGE] = repoDigests[idx]
-		idx++
-	}
-
-	yaml, err := yaml.Marshal(description)
-	if err != nil {
-		return errors.InvalidYaml{"invalid yaml syntax"}
-	}
-
-	err = ioutil.WriteFile(COMPOSE_FILE, yaml, fileMode)
-	if err != nil {
-		return errors.IOError{Msg: "file io fail"}
-	}
-
-	err = dockerExecutor.Up(appId, COMPOSE_FILE)
-	if err != nil {
-		logger.Logging(logger.ERROR, err.Error())
-		return err
-	}
-
-	err = restoreState(appId, state)
+	err := restoreState(appId, state)
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
 		return err
@@ -611,26 +568,48 @@ func restoreRepoDigests(appId, desc, state string) error {
 	return nil
 }
 
-func restoreRepoDigests(appId, repoDigests []map[string]string, state string) error {
-	for imageName, repoDigest := range repoDigests {
-		err := dockerExecutor.ImagePull(repoDigests)
-		if err != nil {
-			logger.Logging(logger.ERROR, err.Error())
-			return err
-		}
-		imageID, err := dockerExecutor.GetImageIDByImageName(imageName)
-		err = dockerExeuctor.ImageTag(imageID, imageName)
-		if err != nil {
-			logger.Logging(logger.ERROR, err.Error())
-			return err
-		}
-	}
-	err = restoreState(appId, state)
+func updateApp(appId string, app map[string]interface{}, repoDigests map[string]string) error {
+	err := dockerExecutor.Pull(appId, COMPOSE_FILE)
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
+		e := restoreRepoDigests(appId, repoDigests, app[STATE].(string))
+		if e != nil {
+			logger.Logging(logger.ERROR, e.Error())
+		}
 		return err
 	}
-	return nil
+	err = dockerExecutor.Up(appId, COMPOSE_FILE)
+	if err != nil {
+		logger.Logging(logger.ERROR, err.Error())
+		e := restoreRepoDigests(appId, repoDigests, app[STATE].(string))
+		if e != nil {
+			logger.Logging(logger.ERROR, e.Error())
+		}
+		return err
+	}
+	return err
+}
+
+func updateService(appId string, app map[string]interface{}, repoDigests map[string]string, services ...string) error {
+	err := dockerExecutor.Pull(appId, COMPOSE_FILE, services...)
+	if err != nil {
+		logger.Logging(logger.ERROR, err.Error())
+		e := restoreRepoDigests(appId, repoDigests, app[STATE].(string))
+		if e != nil {
+			logger.Logging(logger.ERROR, e.Error())
+		}
+		return err
+	}
+	err = dockerExecutor.Up(appId, COMPOSE_FILE, services...)
+	if err != nil {
+		logger.Logging(logger.ERROR, err.Error())
+		e := restoreRepoDigests(appId, repoDigests, app[STATE].(string))
+		if e != nil {
+			logger.Logging(logger.ERROR, e.Error())
+		}
+		return err
+	}
+	return err
 }
 
 // Restore app state by previous state.
@@ -907,50 +886,6 @@ func getServiceName(repository string, desc []byte) (string, error) {
 	}
 
 	return "", errors.Unknown{Msg: "can't find matched service"}
-}
-
-func updateApp(appId string, app map[string]interface{}, entireUpdate bool, services ...string, repoDigests []string) error {
-	if entireUpdate {
-		err := dockerExecutor.Pull(appId, COMPOSE_FILE)
-		if err != nil {
-			logger.Logging(logger.ERROR, err.Error())
-			e := restoreRepoDigests(repoDigests, app[STATE].(string))
-			if e != nil {
-				logger.Logging(logger.ERROR, e.Error())
-			}
-			return err
-		}
-		err = dockerExecutor.Up(appId, COMPOSE_FILE)
-		if err != nil {
-			logger.Logging(logger.ERROR, err.Error())
-			e := restoreRepoDigests(repoDigests, app[STATE].(string))
-			if e != nil {
-				logger.Logging(logger.ERROR, e.Error())
-			}
-			return err
-		}
-		return err
-	} else {
-		err := dockerExecutor.Pull(appId, COMPOSE_FILE, services...)
-		if err != nil {
-			logger.Logging(logger.ERROR, err.Error())
-			e := restoreRepoDigests(repoDigests, app[STATE].(string))
-			if e != nil {
-				logger.Logging(logger.ERROR, e.Error())
-			}
-			return err
-		}
-		err = dockerExecutor.Up(appId, COMPOSE_FILE, services...)
-		if err != nil {
-			logger.Logging(logger.ERROR, err.Error())
-			e := restoreRepoDigests(repoDigests, app[STATE].(string))
-			if e != nil {
-				logger.Logging(logger.ERROR, e.Error())
-			}
-			return err
-		}
-		return err
-	}
 }
 
 func updateAppEvent(appId string) error {

@@ -70,6 +70,56 @@ func fakeContainerExecInspect(*docker.Client, context.Context, string) (types.Co
 	return fakeRunContaienrInspect()
 }
 
+func TestGetImageIDByRepoDigest(t *testing.T) {
+	tearDown := setUp(t)
+	defer tearDown(t)
+
+	testID := "abcd"
+	testRepoDigest := "test@sha256"
+
+	t.Run("ReturnErrorWhenReceiveErrorFromDockerEngine", func(t *testing.T) {
+		fakeRunImageList = func() ([]types.ImageSummary, error) {
+			return nil, origineErr.New("")
+		}
+		_, err := Executor.GetImageIDByRepoDigest(testRepoDigest)
+		switch err.(type) {
+		default:
+			t.Error()
+		case errors.Unknown:
+		}
+	})
+
+	ret := []types.ImageSummary{
+		{
+			ID : testID,
+			RepoDigests: []string{"wrong"},
+		}}
+
+	t.Run("ReturnErrorWhenNotFoundImageInList", func(t *testing.T) {
+		fakeRunImageList = func() ([]types.ImageSummary, error) {
+			return ret, nil
+		}
+		_, err := Executor.GetImageIDByRepoDigest(testRepoDigest)
+		switch err.(type) {
+		default:
+			t.Error()
+		case errors.NotFoundImage:
+		}
+	})
+
+	expected := testID
+	t.Run("GetIDSuccessful", func(t *testing.T) {
+		ret[0].RepoDigests[0] = testRepoDigest
+		fakeRunImageList = func() ([]types.ImageSummary, error) {
+			return ret, nil
+		}
+		id, _ := Executor.GetImageIDByRepoDigest(testRepoDigest)
+		if strings.Compare(id, expected) != 0 {
+			t.Error()
+		}
+	})
+}
+
 func TestGetImageDigestByName(t *testing.T) {
 	tearDown := setUp(t)
 	defer tearDown(t)

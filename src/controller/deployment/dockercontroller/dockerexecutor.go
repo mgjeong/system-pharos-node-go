@@ -21,13 +21,12 @@ package dockercontroller
 import (
 	"commons/errors"
 	"commons/logger"
-	"strconv"
-	"strings"
-
-	"golang.org/x/net/context"
-
 	"docker.io/go-docker"
 	"docker.io/go-docker/api/types"
+	"golang.org/x/net/context"
+	"io/ioutil"
+	"strconv"
+	"strings"
 
 	dockercompose "github.com/docker/libcompose/docker"
 	"github.com/docker/libcompose/docker/ctx"
@@ -48,10 +47,13 @@ type Command interface {
 	Ps(id, path string, args ...string) ([]map[string]string, error)
 	GetContainerConfigByName(containerName string) (map[string]interface{}, error)
 	GetImageDigestByName(imageName string) (string, error)
+	GetImageIDByRepoDigest(imageName string) (string, error)
+	ImagePull(image string) error
+	ImageTag(imageID string, repoTags string) error
 }
 
 const (
-	PORTS   string = "ports"
+	PORTS    string = "ports"
 	STATUS   string = "status"
 	EXITCODE string = "exitcode"
 )
@@ -213,6 +215,25 @@ func (dockerExecutorImpl) Pull(id, path string, services ...string) error {
 	return compose.Pull(context.Background(), services...)
 }
 
+func (dockerExecutorImpl) ImagePull(image string) error {
+	logger.Logging(logger.DEBUG)
+	defer logger.Logging(logger.DEBUG, "OUT")
+	rc, err := client.ImagePull(context.TODO(), image, types.ImagePullOptions{})
+	if err != nil {
+		logger.Logging(logger.DEBUG, err.Error())
+	}
+	ioutil.ReadAll(rc)
+	return err
+}
+
+func (dockerExecutorImpl) ImageTag(imageID string, repoTags string) error {
+	logger.Logging(logger.DEBUG)
+	defer logger.Logging(logger.DEBUG, "OUT")
+
+	err := client.ImageTag(context.Background(), imageID, repoTags)
+	return err
+}
+
 // Getting container informations of service list in the yaml description.
 // (e.g. container name, command, state, port)
 // if succeed to get, return error as nil
@@ -277,7 +298,6 @@ func (d dockerExecutorImpl) GetImageDigestByName(imageName string) (string, erro
 	logger.Logging(logger.DEBUG)
 	defer logger.Logging(logger.DEBUG, "OUT")
 
-	//	images, err := client.(*docker.Client).ImageList(context.Background(), types.ImageListOptions{})
 	images, err := getImageList(client, context.Background(), types.ImageListOptions{})
 	if err != nil {
 		logger.Logging(logger.ERROR, "fail to get the image list from docker engine")
@@ -288,6 +308,24 @@ func (d dockerExecutorImpl) GetImageDigestByName(imageName string) (string, erro
 		if isContainedStringInList(image.RepoTags, imageName) &&
 			image.RepoDigests != nil && len(image.RepoDigests[0]) != 0 {
 			return image.RepoDigests[0], nil
+		}
+	}
+	return "", errors.NotFoundImage{Msg: "can not found image"}
+}
+
+func (dockerExecutorImpl) GetImageIDByRepoDigest(repoDigest string) (string, error) {
+	logger.Logging(logger.DEBUG)
+	defer logger.Logging(logger.DEBUG, "OUT")
+
+	images, err := getImageList(client, context.Background(), types.ImageListOptions{})
+	if err != nil {
+		logger.Logging(logger.ERROR, "fail to get the image list from docker engine")
+		return "", errors.Unknown{Msg: "fail to get the image list from docker engine"}
+	}
+
+	for _, image := range images {
+		if isContainedStringInList(image.RepoDigests, repoDigest) && len(image.RepoTags) == 0 {
+			return image.ID, nil
 		}
 	}
 	return "", errors.NotFoundImage{Msg: "can not found image"}
