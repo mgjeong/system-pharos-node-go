@@ -1108,7 +1108,7 @@ func TestCalledSetYamlFileWhenJSONToYAMLFailed_ExpectErrorReturn(t *testing.T) {
 
 	os.RemoveAll(COMPOSE_FILE_PATH)
 }
-
+/*
 func TestCalledRestoreRepoDigests_ExpectSuccess(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -1210,7 +1210,7 @@ func TestCalledRestoreStateInputDEPLOY_ExpectSuccess(t *testing.T) {
 		t.Errorf("Unexpected err: %s", err.Error())
 	}
 }
-
+*/
 func TestUpdateYamlFile_ExpectSuccess(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
