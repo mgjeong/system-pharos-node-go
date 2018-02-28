@@ -31,7 +31,7 @@ import (
 // Interface of Service model's operations.
 type Command interface {
 	// InsertComposeFile insert docker-compose file for new service.
-	InsertComposeFile(description string) (map[string]interface{}, error)
+	InsertComposeFile(description string, state string) (map[string]interface{}, error)
 
 	// GetAppList returns all of app's IDs.
 	GetAppList() ([]map[string]interface{}, error)
@@ -119,7 +119,7 @@ func (app App) convertToMap() map[string]interface{} {
 // Add app description to app collection in mongo server.
 // if succeed to add, return app information as map.
 // otherwise, return error.
-func (Executor) InsertComposeFile(description string) (map[string]interface{}, error) {
+func (Executor) InsertComposeFile(description string, state string) (map[string]interface{}, error) {
 	id, err := generateID(description)
 	if err != nil {
 		return nil, err
@@ -139,7 +139,7 @@ func (Executor) InsertComposeFile(description string) (map[string]interface{}, e
 	app := App{
 		ID:          id,
 		Description: description,
-		State:       "DEPLOY",
+		State:       state,
 		Images:      images,
 	}
 
