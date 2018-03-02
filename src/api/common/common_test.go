@@ -17,11 +17,71 @@
 package common
 
 import (
+	"bytes"
+	"commons/errors"
+	"encoding/json"
 	"github.com/golang/mock/gomock"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 )
+
+const (
+	testBodyString = `{"test":"body"}`
+)
+
+var testBody = map[string]interface{}{
+	"test": "body",
+}
+
+func TestMakeErrorResponseWithInternalDefinedError_ExpectConversionToMatchHttpErrorCode(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	w := httptest.NewRecorder()
+
+	MakeErrorResponse(w, errors.NotFoundURL{})
+	if w.Code != http.StatusNotFound {
+		t.Errorf("Unexpected Error code : %d", w.Code)
+	}
+
+	w = httptest.NewRecorder()
+	MakeErrorResponse(w, errors.InvalidMethod{})
+	if w.Code != http.StatusMethodNotAllowed {
+		t.Errorf("Unexpected Error code : %d", w.Code)
+	}
+
+	w = httptest.NewRecorder()
+	MakeErrorResponse(w, errors.InvalidYaml{})
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("Unexpected Error code : %d", w.Code)
+	}
+
+	w = httptest.NewRecorder()
+	MakeErrorResponse(w, errors.IOError{})
+	if w.Code != http.StatusInternalServerError {
+		t.Errorf("Unexpected Error code : %d", w.Code)
+	}
+
+	w = httptest.NewRecorder()
+	MakeErrorResponse(w, errors.ConnectionError{})
+	if w.Code != http.StatusServiceUnavailable {
+		t.Errorf("Unexpected Error code : %d", w.Code)
+	}
+
+	w = httptest.NewRecorder()
+	MakeErrorResponse(w, errors.AlreadyReported{})
+	if w.Code != http.StatusAlreadyReported {
+		t.Errorf("Unexpected Error code : %d", w.Code)
+	}
+
+	w = httptest.NewRecorder()
+	MakeErrorResponse(w, errors.Unknown{})
+	if w.Code != http.StatusInternalServerError {
+		t.Errorf("Unexpected Error code : %d", w.Code)
+	}
+}
 
 func TestMakeResponseWithEmptyData_ExpectSuccess(t *testing.T) {
 	ctrl := gomock.NewController(t)
@@ -46,5 +106,57 @@ func TestMakeResponse_ExpectSuccess(t *testing.T) {
 	MakeResponse(w, data)
 	if w.Code != http.StatusOK {
 		t.Errorf("Unexpected Error code : %d", w.Code)
+	}
+}
+
+func TestCheckSupportedMethodWithValidMethod_ExpectSuccess(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	w := httptest.NewRecorder()
+
+	if !CheckSupportedMethod(w, POST, GET, POST, DELETE) {
+		t.Error("Not Supported Method")
+	}
+}
+
+func TestCheckSupportedMethodWithInvalidMethod_ExpectResponseWithMethodNotAllowedCode(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	w := httptest.NewRecorder()
+
+	if !CheckSupportedMethod(w, PUT, GET, POST, DELETE) {
+		if w.Code != http.StatusMethodNotAllowed {
+			t.Errorf("Unexpected Error code : %d", w.Code)
+		}
+	}
+}
+
+func TestGetBodyFromReqWithValidBody_ExpectReturnBody(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	body, _ := json.Marshal(testBody)
+	req, _ := http.NewRequest(POST, "test/url", bytes.NewReader(body))
+
+	stringBody, err := GetBodyFromReq(req)
+	if err != nil {
+		t.Error("invalid body")
+	}
+	if strings.Compare(stringBody, testBodyString) != 0 {
+		t.Error("The value of the parsed body is incorrect.")
+	}
+}
+
+func TestGetBodyFromReqWithEmptyBody_ExpectReturnError(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	req, _ := http.NewRequest(POST, "test/url", nil)
+
+	_, err := GetBodyFromReq(req)
+	if err == nil {
+		t.Errorf("Expected err: %s, actual err: %s", "InvalidParam", "nil")
 	}
 }
