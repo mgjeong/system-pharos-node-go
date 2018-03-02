@@ -178,7 +178,7 @@ func TestSetConfigurationWhenDBReturnsError_ExpectErrorReturn(t *testing.T) {
 	// pass mockObj to a real object.
 	dbExecutor = dbExecutorMockObj
 
-	jsonString, _ := json.Marshal(properties)
+	jsonString, _ := json.Marshal(newProperties)
 	err := Executor{}.SetConfiguration(string(jsonString))
 
 	if err == nil {
