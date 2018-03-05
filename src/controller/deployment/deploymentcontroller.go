@@ -57,6 +57,8 @@ const (
 	RUNNING_STATE  = "running"
 	EXIT_STATE     = "exit"
 	UPDATING_STATE = "updating"
+	NONE           = "none"
+	CHANGES        = "changes"
 )
 
 type Command interface {
@@ -445,7 +447,7 @@ func (depExecutorImpl) UpdateApp(appId string, query map[string]interface{}) err
 		}
 	} else {
 		serviceName := ""
-		images := query["images"].([]string)
+		images := query[IMAGES].([]string)
 		updatedDescription := make(map[string]interface{})
 
 		for _, imageName := range images {
@@ -550,6 +552,7 @@ func restoreRepoDigests(appId string, repoDigests map[string]string, state strin
 		}
 		imageID, err := dockerExecutor.GetImageIDByRepoDigest(repoDigest)
 		if err != nil {
+
 			logger.Logging(logger.ERROR, err.Error())
 			return err
 		}
@@ -903,14 +906,14 @@ func updateAppEvent(appId string) error {
 	}
 
 	services := description[SERVICES].(map[string]interface{})
-	images := app["images"].([]map[string]interface{})
+	images := app[IMAGES].([]map[string]interface{})
 	for _, serviceInfo := range services {
 		descImageName := serviceInfo.(map[string]interface{})[IMAGE].(string)
 		for _, image := range images {
-			if changes, ok := image["changes"]; ok {
-				changesTag := changes.(map[string]interface{})["tag"].(string)
-				if (image["name"].(string) + ":" + changesTag) == descImageName {
-					err = dbExecutor.UpdateAppEvent(appId, image["name"].(string), changesTag, "none")
+			if changes, ok := image[CHANGES]; ok {
+				changesTag := changes.(map[string]interface{})[TAG].(string)
+				if (image[NAME].(string) + ":" + changesTag) == descImageName {
+					err = dbExecutor.UpdateAppEvent(appId, image[NAME].(string), changesTag, NONE)
 					if err != nil {
 						logger.Logging(logger.DEBUG, err.Error())
 						return convertDBError(err, appId)
