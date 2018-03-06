@@ -235,7 +235,7 @@ func TestCalledDeployApp_ExpectSuccess(t *testing.T) {
 	}
 
 	if !reflect.DeepEqual(res, compareReturnVal) {
-		t.Error("Expected result : %v, Actual Result : %v", compareReturnVal, res)
+		t.Errorf("Expected result : %v, Actual Result : %v", compareReturnVal, res)
 	}
 
 	os.RemoveAll(COMPOSE_FILE_PATH)
