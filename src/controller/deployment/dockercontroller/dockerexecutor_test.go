@@ -28,6 +28,7 @@ import (
 	"github.com/docker/libcompose/project"
 
 	origineErr "errors"
+	"io"
 	"strconv"
 	"strings"
 	"testing"
@@ -36,16 +37,22 @@ import (
 type tearDown func(t *testing.T)
 
 func setUp(t *testing.T) tearDown {
+	//client = nil
 	getComposeInstance = fakeGetComposeInstance
 	getImageList = fakeImageList
 	getContainerList = fakeContainerList
 	getContainerInspect = fakeContainerExecInspect
+	getImagePull = fakeImagePull
+	getImageTag = fakeImageTag
 
 	return func(t *testing.T) {
+		client, _ = docker.NewEnvClient()
 		getComposeInstance = getComposeInstanceImpl
 		getImageList = (*docker.Client).ImageList
 		getContainerList = (*docker.Client).ContainerList
 		getContainerInspect = (*docker.Client).ContainerInspect
+		getImagePull = (*docker.Client).ImagePull
+		getImageTag = (*docker.Client).ImageTag
 	}
 }
 
@@ -53,6 +60,16 @@ var fakeGetComposeInstanceImpl func() (project.APIProject, error)
 var fakeRunImageList func() ([]types.ImageSummary, error)
 var fakeRunContainerList func() ([]types.Container, error)
 var fakeRunContaienrInspect func() (types.ContainerJSON, error)
+var fakeRunImagePull func() (io.ReadCloser, error)
+var fakeRunImageTag func() error
+
+func fakeImagePull(*docker.Client, context.Context, string, types.ImagePullOptions) (io.ReadCloser, error) {
+	return fakeRunImagePull()
+}
+
+func fakeImageTag(*docker.Client, context.Context, string, string) error {
+	return fakeRunImageTag()
+}
 
 func fakeGetComposeInstance(string, string) (project.APIProject, error) {
 	return fakeGetComposeInstanceImpl()
@@ -91,7 +108,7 @@ func TestGetImageIDByRepoDigest(t *testing.T) {
 
 	ret := []types.ImageSummary{
 		{
-			ID : testID,
+			ID:          testID,
 			RepoDigests: []string{"wrong"},
 		}}
 
@@ -311,5 +328,20 @@ func TestComposeFunctionality(t *testing.T) {
 	err = Executor.Unpause("", "")
 	checkError(t, err)
 	err = Executor.Up("", "")
+	checkError(t, err)
+}
+
+func TestDockerFunctionality(t *testing.T) {
+	// TODO extending unit tests for docker.
+	fakeRunImagePull = func() (io.ReadCloser, error) {
+		return nil, origineErr.New("")
+	}
+	err := Executor.ImagePull("")
+	checkError(t, err)
+
+	fakeRunImageTag = func() error {
+		return origineErr.New("")
+	}
+	err = Executor.ImageTag("", "")
 	checkError(t, err)
 }

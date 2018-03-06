@@ -19,12 +19,13 @@
 package dockercontroller
 
 import (
+	"bytes"
 	"commons/errors"
 	"commons/logger"
 	"docker.io/go-docker"
 	"docker.io/go-docker/api/types"
 	"golang.org/x/net/context"
-	"io/ioutil"
+	"io"
 	"strconv"
 	"strings"
 
@@ -67,10 +68,14 @@ var client *docker.Client
 type typeGetImageList func(*docker.Client, context.Context, types.ImageListOptions) ([]types.ImageSummary, error)
 type typeGetContainerList func(*docker.Client, context.Context, types.ContainerListOptions) ([]types.Container, error)
 type typeGetContainerInspect func(*docker.Client, context.Context, string) (types.ContainerJSON, error)
+type typeGetImagePull func(*docker.Client, context.Context, string, types.ImagePullOptions) (io.ReadCloser, error)
+type typeGetImageTag func(*docker.Client, context.Context, string, string) error
 
 var getImageList typeGetImageList
 var getContainerList typeGetContainerList
 var getContainerInspect typeGetContainerInspect
+var getImagePull typeGetImagePull
+var getImageTag typeGetImageTag
 
 type createType func(*project.APIProject, context.Context, options.Create, ...string) error
 
@@ -84,6 +89,8 @@ func init() {
 	getImageList = (*docker.Client).ImageList
 	getContainerList = (*docker.Client).ContainerList
 	getContainerInspect = (*docker.Client).ContainerInspect
+	getImagePull = (*docker.Client).ImagePull
+	getImageTag = (*docker.Client).ImageTag
 }
 
 // Creating containers of service list in the yaml description.
@@ -215,23 +222,36 @@ func (dockerExecutorImpl) Pull(id, path string, services ...string) error {
 	return compose.Pull(context.Background(), services...)
 }
 
+// Pulling an image
+// if succeed to pull, return error as nil
+// otherwise, return error.
 func (dockerExecutorImpl) ImagePull(image string) error {
 	logger.Logging(logger.DEBUG)
 	defer logger.Logging(logger.DEBUG, "OUT")
-	rc, err := client.ImagePull(context.TODO(), image, types.ImagePullOptions{})
+
+	rc, err := getImagePull(client, context.Background(), image, types.ImagePullOptions{})
 	if err != nil {
 		logger.Logging(logger.DEBUG, err.Error())
+		return err
 	}
-	ioutil.ReadAll(rc)
+	var buf1 bytes.Buffer
+	io.Copy(&buf1, rc)
 	return err
 }
 
+// Tagging an image with repoTags
+// if succeed to tag, return error as nil
+// otherwise, return error.
 func (dockerExecutorImpl) ImageTag(imageID string, repoTags string) error {
 	logger.Logging(logger.DEBUG)
 	defer logger.Logging(logger.DEBUG, "OUT")
 
-	err := client.ImageTag(context.Background(), imageID, repoTags)
-	return err
+	err := getImageTag(client, context.Background(), imageID, repoTags)
+	if err != nil {
+		logger.Logging(logger.DEBUG, err.Error())
+		return err
+	}
+	return nil
 }
 
 // Getting container informations of service list in the yaml description.
