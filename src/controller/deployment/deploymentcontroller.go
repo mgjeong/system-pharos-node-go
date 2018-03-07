@@ -55,7 +55,7 @@ const (
 	UPDATE         = "update"
 	DELETE         = "delete"
 	RUNNING_STATE  = "running"
-	EXIT_STATE     = "exit"
+	EXITED_STATE     = "exited"
 	UPDATING_STATE = "updating"
 	NONE           = "none"
 	CHANGES        = "changes"
@@ -326,7 +326,7 @@ func (depExecutorImpl) StopApp(appId string) error {
 		return convertDBError(err, appId)
 	}
 
-	if state == EXIT_STATE {
+	if state == EXITED_STATE {
 		return errors.AlreadyReported{Msg: state}
 	}
 
@@ -346,7 +346,7 @@ func (depExecutorImpl) StopApp(appId string) error {
 		return err
 	}
 
-	err = dbExecutor.UpdateAppState(appId, EXIT_STATE)
+	err = dbExecutor.UpdateAppState(appId, EXITED_STATE)
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
 		return convertDBError(err, appId)
@@ -627,7 +627,7 @@ func restoreState(appId, state string) error {
 	}
 
 	switch state {
-	case EXIT_STATE:
+	case EXITED_STATE:
 		err = dockerExecutor.Stop(appId, COMPOSE_FILE)
 	case RUNNING_STATE:
 		err = dockerExecutor.Up(appId, COMPOSE_FILE)
