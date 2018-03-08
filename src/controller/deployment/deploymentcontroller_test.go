@@ -47,6 +47,7 @@ const (
 	UPDATED_DESCRIPTION_JSON          = "{\"services\":{\"" + SERVICE + "\":{\"image\":\"" + REPOSITORY_WITH_PORT_IMAGE + ":" + NEW_TAG + "\"}},\"version\":\"2\"}"
 	FULL_IMAGE_NAME                   = REPOSITORY_WITH_PORT_IMAGE + ":" + NEW_TAG
 	NONE_EVENT                        = "none"
+	CONTAINER_ID                      = 1234
 	SERVICE_PORT                      = 1234
 	SERVICE_STATUS                    = "running"
 	EXIT_CODE_VALUE                   = "0"
@@ -61,6 +62,7 @@ const (
 
 var (
 	INSPECT_RETURN_MSG = map[string]interface{}{
+		"cid":      CONTAINER_ID,
 		"ports":    SERVICE_PORT,
 		"status":   SERVICE_STATUS,
 		"exitcode": EXIT_CODE_VALUE,
@@ -132,6 +134,7 @@ var (
 		"services": []map[string]interface{}{
 			{
 				"name":  SERVICE,
+				"cid":   CONTAINER_ID,
 				"ports": SERVICE_PORT,
 				"state": map[string]interface{}{
 					"status":   SERVICE_STATUS,
@@ -225,6 +228,7 @@ func TestCalledDeployApp_ExpectSuccess(t *testing.T) {
 		"services": []map[string]interface{}{
 			{
 				"name":  SERVICE,
+				"cid":   CONTAINER_ID,
 				"ports": SERVICE_PORT,
 				"state": map[string]interface{}{
 					"status":   SERVICE_STATUS,

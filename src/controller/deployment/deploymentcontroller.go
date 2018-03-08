@@ -35,6 +35,7 @@ import (
 const (
 	COMPOSE_FILE   = "docker-compose.yaml"
 	ID             = "id"
+	CID            = "cid"
 	DESCRIPTION    = "description"
 	SERVICES       = "services"
 	IMAGE          = "image"
@@ -220,6 +221,7 @@ func (depExecutorImpl) App(appId string) (map[string]interface{}, error) {
 		}
 
 		service[NAME] = serviceName.String()
+		service[CID] = config[CID]
 		service[PORTS] = config[PORTS]
 		state[STATUS] = config[STATUS]
 		state[EXIT_CODE] = config[EXIT_CODE]
