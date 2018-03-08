@@ -381,7 +381,7 @@ definitions:
       services:
         type: array
         example:
-          - {"name":"container name", "ports":[], "state":{"exitcode": "0","status": "running"}}
+          - {"name":"container name", "cid":"container ID", "ports":[], "state":{"exitcode": "0","status": "running"}}
   response_of_app_list:
     required:
       - apps
