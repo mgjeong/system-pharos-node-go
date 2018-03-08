@@ -661,7 +661,7 @@ func TestCalledStopApp_ExpectSuccess(t *testing.T) {
 		dbExecutorMockObj.EXPECT().GetAppState(APP_ID).Return(APP_STATE, nil),
 		dbExecutorMockObj.EXPECT().GetApp(APP_ID).Return(DB_GET_OBJ, nil),
 		dockerExecutorMockObj.EXPECT().Stop(gomock.Any(), gomock.Any()).Return(nil),
-		dbExecutorMockObj.EXPECT().UpdateAppState(APP_ID, EXIT_STATE).Return(nil),
+		dbExecutorMockObj.EXPECT().UpdateAppState(APP_ID, EXITED_STATE).Return(nil),
 	)
 
 	// pass mockObj to a real object.
@@ -1582,7 +1582,7 @@ func TestRestoreStateWhenUpFailed_ExpectReturnError(t *testing.T) {
 	}
 }
 
-func TestRestoreStateWithEXIT_STATE_ExpectSuccess(t *testing.T) {
+func TestRestoreStateWithEXITED_STATE_ExpectSuccess(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -1594,7 +1594,7 @@ func TestRestoreStateWithEXIT_STATE_ExpectSuccess(t *testing.T) {
 
 	dockerExecutor = dockerExecutorMockObj
 
-	err := restoreState(APP_ID, EXIT_STATE)
+	err := restoreState(APP_ID, EXITED_STATE)
 	if err != nil {
 		t.Errorf("Unexpected err: %s", err.Error())
 	}
@@ -1612,7 +1612,7 @@ func TestRestoreStateWhenStopFailed_ExpectReturnError(t *testing.T) {
 
 	dockerExecutor = dockerExecutorMockObj
 
-	err := restoreState(APP_ID, EXIT_STATE)
+	err := restoreState(APP_ID, EXITED_STATE)
 	switch err.(type) {
 	default:
 		t.Errorf("Expected err: UnknownError, actual err: %s", err.Error())
