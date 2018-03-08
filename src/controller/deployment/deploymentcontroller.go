@@ -694,32 +694,6 @@ func updateYamlFile(appId string, orginDescription string, service string, newIm
 	return updatedDescription, err
 }
 
-// Get image names from an JSON file.
-// If getting image names is succeeded, return image names
-// otherwise, return error.
-func getImageNames(source []byte) ([]string, error) {
-	imageNames := make([]string, 0)
-	description := make(map[string]interface{})
-
-	err := json.Unmarshal(source, &description)
-	if err != nil {
-		return nil, errors.IOError{Msg: "json unmarshal fail"}
-	}
-
-	if len(description[SERVICES].(map[string]interface{})) == 0 || description[SERVICES] == nil {
-		return nil, errors.Unknown{Msg: "can't find application info"}
-	}
-
-	for _, service_info := range description[SERVICES].(map[string]interface{}) {
-		if service_info.(map[string]interface{})[IMAGE] == nil {
-			return nil, errors.Unknown{Msg: "can't find service info"}
-		}
-		imageNames = append(imageNames, service_info.(map[string]interface{})[IMAGE].(string))
-	}
-
-	return imageNames, nil
-}
-
 // Get service state by service name.
 // First of all, get container name using docker-compose ps <service name>
 // And then, get service config from using docker inspect <container name>
