@@ -194,6 +194,7 @@ func TestCalledDeployApp_ExpectSuccess(t *testing.T) {
 
 	gomock.InOrder(
 		dbExecutorMockObj.EXPECT().InsertComposeFile(DESCRIPTION_JSON, RUNNING_STATE).Return(DB_GET_APP_OBJ, nil),
+		dockerExecutorMockObj.EXPECT().Events(gomock.Any(), gomock.Any(), events).Return(nil),
 		dockerExecutorMockObj.EXPECT().Up(gomock.Any(), gomock.Any()).Return(nil),
 		dbExecutorMockObj.EXPECT().GetApp(APP_ID).Return(DB_GET_APP_OBJ, nil),
 		dockerExecutorMockObj.EXPECT().Ps(gomock.Any(), COMPOSE_FILE_PATH, SERVICE_NAME).Return(PS_EXPECT_RETURN, nil),
@@ -241,6 +242,32 @@ func TestCalledDeployApp_ExpectSuccess(t *testing.T) {
 	os.RemoveAll(COMPOSE_FILE_PATH)
 }
 
+func TestCalledDeployAppWhenFailedToSetEventChannelFailed_ExpectErrorReturn(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	dockerExecutorMockObj := dockermocks.NewMockCommand(ctrl)
+	dbExecutorMockObj := dbmocks.NewMockCommand(ctrl)
+
+	gomock.InOrder(
+		dbExecutorMockObj.EXPECT().InsertComposeFile(DESCRIPTION_JSON, RUNNING_STATE).Return(DB_OBJ, nil),
+		dockerExecutorMockObj.EXPECT().Events(gomock.Any(), gomock.Any(), events).Return(UnknownError),
+		dbExecutorMockObj.EXPECT().DeleteApp(gomock.Any()).Return(nil),
+	)
+
+	// pass mockObj to a real object.
+	dockerExecutor = dockerExecutorMockObj
+	dbExecutor = dbExecutorMockObj
+
+	_, err := Executor.DeployApp(DESCRIPTION_YAML)
+
+	if err == nil {
+		t.Errorf("Expected err: %s, actual err: %s", "UnknowError", "nil")
+	}
+
+	os.RemoveAll(COMPOSE_FILE_PATH)
+}
+
 func TestCalledDeployAppWhenComposeUpFailed_ExpectErrorReturn(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -250,6 +277,7 @@ func TestCalledDeployAppWhenComposeUpFailed_ExpectErrorReturn(t *testing.T) {
 
 	gomock.InOrder(
 		dbExecutorMockObj.EXPECT().InsertComposeFile(DESCRIPTION_JSON, RUNNING_STATE).Return(DB_OBJ, nil),
+		dockerExecutorMockObj.EXPECT().Events(gomock.Any(), gomock.Any(), events).Return(nil),
 		dockerExecutorMockObj.EXPECT().Up(gomock.Any(), gomock.Any()).Return(UnknownError),
 		dockerExecutorMockObj.EXPECT().DownWithRemoveImages(gomock.Any(), gomock.Any()).Return(nil),
 		dbExecutorMockObj.EXPECT().DeleteApp(gomock.Any()).Return(nil),
@@ -729,6 +757,7 @@ func TestCalledDeleteApp_ExpectSuccess(t *testing.T) {
 	gomock.InOrder(
 		dbExecutorMockObj.EXPECT().GetApp(APP_ID).Return(DB_GET_OBJ, nil),
 		dockerExecutorMockObj.EXPECT().DownWithRemoveImages(gomock.Any(), gomock.Any()).Return(nil),
+		dockerExecutorMockObj.EXPECT().Events(gomock.Any(), gomock.Any(), nil).Return(nil),
 		dbExecutorMockObj.EXPECT().DeleteApp(gomock.Any()).Return(nil),
 	)
 
@@ -787,6 +816,31 @@ func TestCalledDeleteAppWhenComposeDeleteFailed_ExpectErrorReturn(t *testing.T) 
 	}
 }
 
+func TestCalledDeleteAppWhenFailedToUnsetEventChannel_ExpectErrorReturn(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	dockerExecutorMockObj := dockermocks.NewMockCommand(ctrl)
+	dbExecutorMockObj := dbmocks.NewMockCommand(ctrl)
+
+	gomock.InOrder(
+		dbExecutorMockObj.EXPECT().GetApp(APP_ID).Return(DB_GET_OBJ, nil),
+		dockerExecutorMockObj.EXPECT().DownWithRemoveImages(gomock.Any(), gomock.Any()).Return(nil),
+		dockerExecutorMockObj.EXPECT().Events(gomock.Any(), gomock.Any(), nil).Return(UnknownError),
+		dbExecutorMockObj.EXPECT().DeleteApp(gomock.Any()).Return(nil),
+	)
+
+	// pass mockObj to a real object.
+	dockerExecutor = dockerExecutorMockObj
+	dbExecutor = dbExecutorMockObj
+
+	err := Executor.DeleteApp(APP_ID)
+
+	if err == nil {
+		t.Errorf("Expected err: %s, actual err: %s", "UnknownError", "nil")
+	}
+}
+
 func TestCalledDeleteAppWhenDBDeleteAppFailed_ExpectErrorReturn(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -797,6 +851,7 @@ func TestCalledDeleteAppWhenDBDeleteAppFailed_ExpectErrorReturn(t *testing.T) {
 	gomock.InOrder(
 		dbExecutorMockObj.EXPECT().GetApp(APP_ID).Return(DB_GET_OBJ, nil),
 		dockerExecutorMockObj.EXPECT().DownWithRemoveImages(gomock.Any(), gomock.Any()).Return(nil),
+		dockerExecutorMockObj.EXPECT().Events(gomock.Any(), gomock.Any(), nil).Return(nil),
 		dbExecutorMockObj.EXPECT().DeleteApp(gomock.Any()).Return(UnknownError),
 	)
 
