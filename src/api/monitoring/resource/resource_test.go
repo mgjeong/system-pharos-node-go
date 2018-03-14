@@ -87,7 +87,7 @@ func TestResourceApi_ExpectSuccess(t *testing.T) {
 	resourceExecutorMockObj := resourcemocks.NewMockCommand(ctrl)
 
 	gomock.InOrder(
-		resourceExecutorMockObj.EXPECT().GetResourceInfo().Return(testMap, nil),
+		resourceExecutorMockObj.EXPECT().GetHostResourceInfo().Return(testMap, nil),
 	)
 
 	w := httptest.NewRecorder()
@@ -110,7 +110,7 @@ func TestResourceApiWhenControllerFailed_ExpectReturnError(t *testing.T) {
 
 	for _, test := range testList {
 		gomock.InOrder(
-			resourceExecutorMockObj.EXPECT().GetResourceInfo().Return(nil, test.err),
+			resourceExecutorMockObj.EXPECT().GetHostResourceInfo().Return(nil, test.err),
 		)
 
 		w := httptest.NewRecorder()
