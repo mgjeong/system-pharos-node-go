@@ -22,12 +22,38 @@ import (
 	"github.com/shirou/gopsutil/cpu"
 	"github.com/shirou/gopsutil/disk"
 	"github.com/shirou/gopsutil/mem"
+	"github.com/shirou/gopsutil/net"
 	"strconv"
 	"time"
 )
 
+const (
+	CPU           = "cpu"
+	MEM           = "mem"
+	DISK          = "disk"
+	NETWORK       = "network"
+	INTERFACENAME = "interfacename"
+	BYTESSENT     = "bytessent"
+	BYTESRECV     = "bytesrecv"
+	PACKETSSENT   = "packetssent"
+	PACKETSRECV   = "packetsrecv"
+	TOTAL         = "total"
+	FREE          = "free"
+	USED          = "used"
+	USEDPERCENT   = "usedpercent"
+	PATH          = "path"
+)
+
 type Command interface {
 	GetResourceInfo() (map[string]interface{}, error)
+}
+
+type networkTraffic struct {
+	InterfaceName string
+	BytesSent     string
+	BytesRecv     string
+	PacketsSent   string
+	PacketsRecv   string
 }
 
 type memoryUsage struct {
@@ -68,11 +94,17 @@ func (resExecutorImpl) GetResourceInfo() (map[string]interface{}, error) {
 		logger.Logging(logger.ERROR, err.Error())
 		return nil, err
 	}
+	network, err := getNetworkTrafficInfo()
+	if err != nil {
+		logger.Logging(logger.ERROR, err.Error())
+		return nil, err
+	}
 
 	resources := make(map[string]interface{})
-	resources["cpu"] = cpu
-	resources["disk"] = disk
-	resources["mem"] = mem
+	resources[CPU] = cpu
+	resources[DISK] = disk
+	resources[MEM] = mem
+	resources[NETWORK] = network
 
 	return resources, err
 }
@@ -140,21 +172,48 @@ func getDiskUsage() ([]map[string]interface{}, error) {
 	return result, err
 }
 
+func getNetworkTrafficInfo() ([]map[string]interface{}, error) {
+	logger.Logging(logger.DEBUG, "IN")
+	defer logger.Logging(logger.DEBUG, "OUT")
+
+	result := make([]map[string]interface{}, 0)
+	IOCountersStats, err := net.IOCounters(true)
+	for _, IOCountersStat := range IOCountersStats {
+		network := networkTraffic{}
+		network.InterfaceName = IOCountersStat.Name
+		network.BytesSent = strconv.FormatUint(IOCountersStat.BytesSent, 10)
+		network.BytesRecv = strconv.FormatUint(IOCountersStat.BytesRecv, 10)
+		network.PacketsSent = strconv.FormatUint(IOCountersStat.PacketsSent, 10)
+		network.PacketsRecv = strconv.FormatUint(IOCountersStat.PacketsRecv, 10)
+		result = append(result, convertToNetworkTrafficMap(network))
+	}
+	return result, err
+}
+
+func convertToNetworkTrafficMap(network networkTraffic) map[string]interface{} {
+	return map[string]interface{}{
+		INTERFACENAME: network.InterfaceName,
+		BYTESSENT:     network.BytesSent,
+		BYTESRECV:     network.BytesRecv,
+		PACKETSSENT:   network.PacketsSent,
+		PACKETSRECV:   network.PacketsRecv,
+	}
+}
 func convertToMemUsageMap(mem memoryUsage) map[string]interface{} {
 	return map[string]interface{}{
-		"total":       mem.Total,
-		"free":        mem.Free,
-		"used":        mem.Used,
-		"usedpercent": mem.UsedPercent,
+		TOTAL:       mem.Total,
+		FREE:        mem.Free,
+		USED:        mem.Used,
+		USEDPERCENT: mem.UsedPercent,
 	}
 }
 
 func convertToDiskUsageMap(disk diskUsage) map[string]interface{} {
 	return map[string]interface{}{
-		"path":        disk.Path,
-		"total":       disk.Total,
-		"free":        disk.Free,
-		"used":        disk.Used,
-		"usedpercent": disk.UsedPercent,
+		PATH:        disk.Path,
+		TOTAL:       disk.Total,
+		FREE:        disk.Free,
+		USED:        disk.Used,
+		USEDPERCENT: disk.UsedPercent,
 	}
 }

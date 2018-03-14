@@ -35,6 +35,7 @@ import (
 const (
 	COMPOSE_FILE   = "docker-compose.yaml"
 	ID             = "id"
+	CID            = "cid"
 	DESCRIPTION    = "description"
 	SERVICES       = "services"
 	IMAGE          = "image"
@@ -55,7 +56,7 @@ const (
 	UPDATE         = "update"
 	DELETE         = "delete"
 	RUNNING_STATE  = "running"
-	EXIT_STATE     = "exit"
+	EXITED_STATE     = "exited"
 	UPDATING_STATE = "updating"
 	NONE           = "none"
 	CHANGES        = "changes"
@@ -231,6 +232,7 @@ func (depExecutorImpl) App(appId string) (map[string]interface{}, error) {
 		}
 
 		service[NAME] = serviceName.String()
+		service[CID] = config[CID]
 		service[PORTS] = config[PORTS]
 		state[STATUS] = config[STATUS]
 		state[EXIT_CODE] = config[EXIT_CODE]
@@ -337,7 +339,7 @@ func (depExecutorImpl) StopApp(appId string) error {
 		return convertDBError(err, appId)
 	}
 
-	if state == EXIT_STATE {
+	if state == EXITED_STATE {
 		return errors.AlreadyReported{Msg: state}
 	}
 
@@ -357,7 +359,7 @@ func (depExecutorImpl) StopApp(appId string) error {
 		return err
 	}
 
-	err = dbExecutor.UpdateAppState(appId, EXIT_STATE)
+	err = dbExecutor.UpdateAppState(appId, EXITED_STATE)
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
 		return convertDBError(err, appId)
@@ -644,7 +646,7 @@ func restoreState(appId, state string) error {
 	}
 
 	switch state {
-	case EXIT_STATE:
+	case EXITED_STATE:
 		err = dockerExecutor.Stop(appId, COMPOSE_FILE)
 	case RUNNING_STATE:
 		err = dockerExecutor.Up(appId, COMPOSE_FILE)
@@ -709,32 +711,6 @@ func updateYamlFile(appId string, orginDescription string, service string, newIm
 		return nil, errors.IOError{Msg: "file io fail"}
 	}
 	return updatedDescription, err
-}
-
-// Get image names from an JSON file.
-// If getting image names is succeeded, return image names
-// otherwise, return error.
-func getImageNames(source []byte) ([]string, error) {
-	imageNames := make([]string, 0)
-	description := make(map[string]interface{})
-
-	err := json.Unmarshal(source, &description)
-	if err != nil {
-		return nil, errors.IOError{Msg: "json unmarshal fail"}
-	}
-
-	if len(description[SERVICES].(map[string]interface{})) == 0 || description[SERVICES] == nil {
-		return nil, errors.Unknown{Msg: "can't find application info"}
-	}
-
-	for _, service_info := range description[SERVICES].(map[string]interface{}) {
-		if service_info.(map[string]interface{})[IMAGE] == nil {
-			return nil, errors.Unknown{Msg: "can't find service info"}
-		}
-		imageNames = append(imageNames, service_info.(map[string]interface{})[IMAGE].(string))
-	}
-
-	return imageNames, nil
 }
 
 // Get service state by service name.

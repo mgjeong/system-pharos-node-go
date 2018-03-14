@@ -61,6 +61,7 @@ type Command interface {
 }
 
 const (
+	CID      string = "cid"
 	PORTS    string = "ports"
 	STATUS   string = "status"
 	EXITCODE string = "exitcode"
@@ -312,6 +313,7 @@ func (d dockerExecutorImpl) GetContainerConfigByName(containerName string) (map[
 			}
 
 			ret := make(map[string]interface{})
+			ret[CID] = container.ID
 			ret[PORTS] = container.Ports
 			ret[STATUS] = container.State
 			ret[EXITCODE] = strconv.Itoa(ins.State.ExitCode)

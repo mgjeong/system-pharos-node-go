@@ -47,6 +47,7 @@ const (
 	UPDATED_DESCRIPTION_JSON          = "{\"services\":{\"" + SERVICE + "\":{\"image\":\"" + REPOSITORY_WITH_PORT_IMAGE + ":" + NEW_TAG + "\"}},\"version\":\"2\"}"
 	FULL_IMAGE_NAME                   = REPOSITORY_WITH_PORT_IMAGE + ":" + NEW_TAG
 	NONE_EVENT                        = "none"
+	CONTAINER_ID                      = 1234
 	SERVICE_PORT                      = 1234
 	SERVICE_STATUS                    = "running"
 	EXIT_CODE_VALUE                   = "0"
@@ -61,6 +62,7 @@ const (
 
 var (
 	INSPECT_RETURN_MSG = map[string]interface{}{
+		"cid":      CONTAINER_ID,
 		"ports":    SERVICE_PORT,
 		"status":   SERVICE_STATUS,
 		"exitcode": EXIT_CODE_VALUE,
@@ -132,6 +134,7 @@ var (
 		"services": []map[string]interface{}{
 			{
 				"name":  SERVICE,
+				"cid":   CONTAINER_ID,
 				"ports": SERVICE_PORT,
 				"state": map[string]interface{}{
 					"status":   SERVICE_STATUS,
@@ -226,6 +229,7 @@ func TestCalledDeployApp_ExpectSuccess(t *testing.T) {
 		"services": []map[string]interface{}{
 			{
 				"name":  SERVICE,
+				"cid":   CONTAINER_ID,
 				"ports": SERVICE_PORT,
 				"state": map[string]interface{}{
 					"status":   SERVICE_STATUS,
@@ -689,7 +693,7 @@ func TestCalledStopApp_ExpectSuccess(t *testing.T) {
 		dbExecutorMockObj.EXPECT().GetAppState(APP_ID).Return(APP_STATE, nil),
 		dbExecutorMockObj.EXPECT().GetApp(APP_ID).Return(DB_GET_OBJ, nil),
 		dockerExecutorMockObj.EXPECT().Stop(gomock.Any(), gomock.Any()).Return(nil),
-		dbExecutorMockObj.EXPECT().UpdateAppState(APP_ID, EXIT_STATE).Return(nil),
+		dbExecutorMockObj.EXPECT().UpdateAppState(APP_ID, EXITED_STATE).Return(nil),
 	)
 
 	// pass mockObj to a real object.
@@ -1637,7 +1641,7 @@ func TestRestoreStateWhenUpFailed_ExpectReturnError(t *testing.T) {
 	}
 }
 
-func TestRestoreStateWithEXIT_STATE_ExpectSuccess(t *testing.T) {
+func TestRestoreStateWithEXITED_STATE_ExpectSuccess(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -1649,7 +1653,7 @@ func TestRestoreStateWithEXIT_STATE_ExpectSuccess(t *testing.T) {
 
 	dockerExecutor = dockerExecutorMockObj
 
-	err := restoreState(APP_ID, EXIT_STATE)
+	err := restoreState(APP_ID, EXITED_STATE)
 	if err != nil {
 		t.Errorf("Unexpected err: %s", err.Error())
 	}
@@ -1667,7 +1671,7 @@ func TestRestoreStateWhenStopFailed_ExpectReturnError(t *testing.T) {
 
 	dockerExecutor = dockerExecutorMockObj
 
-	err := restoreState(APP_ID, EXIT_STATE)
+	err := restoreState(APP_ID, EXITED_STATE)
 	switch err.(type) {
 	default:
 		t.Errorf("Expected err: UnknownError, actual err: %s", err.Error())
