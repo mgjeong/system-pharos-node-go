@@ -37,7 +37,8 @@ type Command interface {
 }
 
 type apiInnerCommand interface {
-	resource(w http.ResponseWriter, req *http.Request)
+	hostResource(w http.ResponseWriter, req *http.Request)
+	appResource(w http.ResponseWriter, req *http.Request, appId string)
 }
 
 type Executor struct{}
@@ -51,14 +52,16 @@ func init() {
 	resourceExecutor = resource.Executor
 }
 
-// Handling requests which is getting device resource or performance information
+// Handling requests which is getting device resource or app's resource information
 func (Executor) Handle(w http.ResponseWriter, req *http.Request) {
 	logger.Logging(logger.DEBUG)
 	defer logger.Logging(logger.DEBUG, "OUT")
 
 	switch reqUrl, split := req.URL.Path, strings.Split(req.URL.Path, "/"); {
-	case len(split) == 5:
-		apiInnerExecutor.resource(w, req)
+	case len(split) == 5: ///api/v1/monitoring/resource
+		apiInnerExecutor.hostResource(w, req)
+	case len(split) == 7: ///api/v1/monitoring/apps/{appid}/resource
+		apiInnerExecutor.appResource(w, req, split[len(split)-2])
 	default:
 		logger.Logging(logger.DEBUG, "Unmatched url")
 		common.MakeErrorResponse(w, errors.NotFoundURL{reqUrl})
@@ -66,7 +69,7 @@ func (Executor) Handle(w http.ResponseWriter, req *http.Request) {
 }
 
 // Handling requests which is getting resources information
-func (innerExecutorImpl) resource(w http.ResponseWriter, req *http.Request) {
+func (innerExecutorImpl) hostResource(w http.ResponseWriter, req *http.Request) {
 	logger.Logging(logger.DEBUG)
 	defer logger.Logging(logger.DEBUG, "OUT")
 
@@ -74,8 +77,24 @@ func (innerExecutorImpl) resource(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	response, e := resourceExecutor.GetResourceInfo()
+	response, e := resourceExecutor.GetHostResourceInfo()
+	if e != nil {
+		common.MakeErrorResponse(w, e)
+		return
+	}
+	common.MakeResponse(w, common.ChangeToJson(response))
+}
 
+// Handling requests which is getting app's resource information
+func (innerExecutorImpl) appResource(w http.ResponseWriter, req *http.Request, appId string) {
+	logger.Logging(logger.DEBUG)
+	defer logger.Logging(logger.DEBUG, "OUT")
+
+	if !common.CheckSupportedMethod(w, req.Method, GET) {
+		return
+	}
+
+	response, e := resourceExecutor.GetAppResourceInfo(appId)
 	if e != nil {
 		common.MakeErrorResponse(w, e)
 		return

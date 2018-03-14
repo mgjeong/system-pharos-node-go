@@ -24,15 +24,16 @@ import (
 	"commons/logger"
 	"docker.io/go-docker"
 	"docker.io/go-docker/api/types"
-	"golang.org/x/net/context"
-	"io"
-	"strconv"
-	"strings"
-
+	"encoding/json"
+	"fmt"
 	dockercompose "github.com/docker/libcompose/docker"
 	"github.com/docker/libcompose/docker/ctx"
 	"github.com/docker/libcompose/project"
 	"github.com/docker/libcompose/project/options"
+	"golang.org/x/net/context"
+	"io"
+	"strconv"
+	"strings"
 )
 
 type Command interface {
@@ -46,6 +47,7 @@ type Command interface {
 	Unpause(id, path string) error
 	Pull(id, path string, services ...string) error
 	Ps(id, path string, args ...string) ([]map[string]string, error)
+	GetAppStats(id, path string) ([]map[string]interface{}, error)
 	GetContainerConfigByName(containerName string) (map[string]interface{}, error)
 	GetImageDigestByName(imageName string) (string, error)
 	GetImageIDByRepoDigest(imageName string) (string, error)
@@ -54,10 +56,20 @@ type Command interface {
 }
 
 const (
-	CID      string = "cid"
-	PORTS    string = "ports"
-	STATUS   string = "status"
-	EXITCODE string = "exitcode"
+	CID           string = "cid"
+	PORTS         string = "ports"
+	STATUS        string = "status"
+	EXITCODE      string = "exitcode"
+	CNAME         string = "cname"
+	CPU           string = "cpu"
+	MEM           string = "mem"
+	MEMUSAGE      string = "memusage"
+	MEMLIMIT      string = "memlimit"
+	BLOCKINPUT    string = "blockinput"
+	BLOCKOUTPUT   string = "blockoutput"
+	NETWORKINPUT  string = "networkinput"
+	NETWORKOUTPUT string = "networkoutput"
+	PIDS          string = "pids"
 )
 
 var Executor dockerExecutorImpl
@@ -67,16 +79,18 @@ type dockerExecutorImpl struct{}
 var client *docker.Client
 
 type typeGetImageList func(*docker.Client, context.Context, types.ImageListOptions) ([]types.ImageSummary, error)
-type typeGetContainerList func(*docker.Client, context.Context, types.ContainerListOptions) ([]types.Container, error)
-type typeGetContainerInspect func(*docker.Client, context.Context, string) (types.ContainerJSON, error)
 type typeGetImagePull func(*docker.Client, context.Context, string, types.ImagePullOptions) (io.ReadCloser, error)
 type typeGetImageTag func(*docker.Client, context.Context, string, string) error
+type typeGetContainerList func(*docker.Client, context.Context, types.ContainerListOptions) ([]types.Container, error)
+type typeGetContainerInspect func(*docker.Client, context.Context, string) (types.ContainerJSON, error)
+type typeGetContainerStats func(*docker.Client, context.Context, string, bool) (types.ContainerStats, error)
 
 var getImageList typeGetImageList
-var getContainerList typeGetContainerList
-var getContainerInspect typeGetContainerInspect
 var getImagePull typeGetImagePull
 var getImageTag typeGetImageTag
+var getContainerList typeGetContainerList
+var getContainerInspect typeGetContainerInspect
+var getContainerStats typeGetContainerStats
 
 type createType func(*project.APIProject, context.Context, options.Create, ...string) error
 
@@ -92,6 +106,78 @@ func init() {
 	getContainerInspect = (*docker.Client).ContainerInspect
 	getImagePull = (*docker.Client).ImagePull
 	getImageTag = (*docker.Client).ImageTag
+	getContainerStats = (*docker.Client).ContainerStats
+}
+
+func (dockerExecutorImpl) GetAppStats(id, path string) ([]map[string]interface{}, error) {
+	logger.Logging(logger.DEBUG)
+	defer logger.Logging(logger.DEBUG, "OUT")
+
+	compose, err := getComposeInstance(id, path)
+	if err != nil {
+		return nil, err
+	}
+
+	appContainers, err := compose.Ps(context.Background())
+	if err != nil {
+		logger.Logging(logger.ERROR, "fail to execute dockercompose ps")
+		return nil, errors.Unknown{Msg: "fail to execute dockercompose ps"}
+	}
+
+	appContainersNames := make([]string, 0)
+	for _, appContainer := range appContainers {
+		appContainersNames = append(appContainersNames, "/"+appContainer["Name"])
+	}
+
+	containers, err := getContainerList(client, context.Background(), types.ContainerListOptions{All: true})
+	if err != nil {
+		logger.Logging(logger.ERROR)
+		return nil, errors.Unknown{Msg: "fail to get the container list from docker engine"}
+	}
+
+	result := make([]map[string]interface{}, 0)
+	for _, container := range containers {
+		if isContainedStringInList(appContainersNames, container.Names[0]) {
+			cStats, err := getContainerStats(client, context.Background(), container.ID, false)
+			if err != nil {
+				logger.Logging(logger.ERROR, err.Error())
+				return nil, errors.Unknown{Msg: "fail to get ContainerStats from docker engine"}
+			}
+			defer cStats.Body.Close()
+
+			decoder := json.NewDecoder(cStats.Body)
+
+			var statsJSON *types.StatsJSON
+			err = decoder.Decode(&statsJSON)
+			if err != nil {
+				logger.Logging(logger.ERROR)
+				return nil, errors.Unknown{Msg: "fail to decode types.StatsJSON"}
+			}
+
+			cpuPercent := calcCPUPercent(statsJSON)
+			memPercent := 0.0
+			memUsage := float64(statsJSON.MemoryStats.Usage)
+			memLimit := float64(statsJSON.MemoryStats.Limit)
+			memPercent = memUsage / memLimit * 100.0
+			bi, bo := calcBlockIO(statsJSON.BlkioStats)
+			ni, no := calcNetworkIO(statsJSON.Networks)
+
+			stats := make(map[string]interface{})
+			stats[CID] = container.ID
+			stats[CNAME] = strings.Replace(container.Names[0], "/", "", -1)
+			stats[CPU] = fmt.Sprintf("%.3f", cpuPercent) + "%%"
+			stats[MEM] = fmt.Sprintf("%.3f", memPercent) + "%%"
+			stats[MEMUSAGE] = convertToHumanReadableBinaryUnit(float64(statsJSON.MemoryStats.Usage))
+			stats[MEMLIMIT] = convertToHumanReadableBinaryUnit(float64(statsJSON.MemoryStats.Limit))
+			stats[BLOCKINPUT] = convertToHumanReadableUnit(float64(bi))
+			stats[BLOCKOUTPUT] = convertToHumanReadableUnit(float64(bo))
+			stats[NETWORKINPUT] = convertToHumanReadableUnit(ni)
+			stats[NETWORKOUTPUT] = convertToHumanReadableUnit(no)
+			stats[PIDS] = statsJSON.PidsStats.Current
+			result = append(result, stats)
+		}
+	}
+	return result, nil
 }
 
 // Creating containers of service list in the yaml description.
@@ -369,4 +455,61 @@ func getComposeInstanceImpl(id, path string) (project.APIProject, error) {
 			ProjectName:  id,
 		},
 	}, nil)
+}
+
+func calcCPUPercent(stats *types.StatsJSON) float64 {
+	cpuPercent := 0.0
+	cpuDelta := float64(stats.CPUStats.CPUUsage.TotalUsage) - float64(stats.PreCPUStats.CPUUsage.TotalUsage)
+	systemDelta := float64(stats.CPUStats.SystemUsage) - float64(stats.PreCPUStats.SystemUsage)
+
+	if systemDelta > 0.0 && cpuDelta > 0.0 {
+		cpuPercent = (cpuDelta / systemDelta) * float64(len(stats.CPUStats.CPUUsage.PercpuUsage)) * 100.0
+	}
+	return cpuPercent
+}
+
+func calcBlockIO(blockio types.BlkioStats) (blockRead uint64, blockWrite uint64) {
+	for _, bio := range blockio.IoServiceBytesRecursive {
+		switch strings.ToLower(bio.Op) {
+		case "read":
+			blockRead = blockRead + bio.Value
+		case "write":
+			blockWrite = blockWrite + bio.Value
+		}
+	}
+	return
+}
+
+func calcNetworkIO(network map[string]types.NetworkStats) (float64, float64) {
+	var rx, tx float64
+
+	for _, v := range network {
+		rx += float64(v.RxBytes)
+		tx += float64(v.TxBytes)
+	}
+	return rx, tx
+}
+
+func convertToHumanReadableBinaryUnit(num float64) string {
+	if num > 1024*1024*1024 {
+		return fmt.Sprintf("%.3f", num/1024/1024/1024) + "GiB"
+	} else if num > 1024*1024 {
+		return fmt.Sprintf("%.3f", num/1024/1024) + "MiB"
+	} else if num > 1024 {
+		return fmt.Sprintf("%.3f", num/1024) + "KiB"
+	} else {
+		return fmt.Sprintf("%.3f", num) + "B"
+	}
+}
+
+func convertToHumanReadableUnit(num float64) string {
+	if num > 1000*1000*1000 {
+		return fmt.Sprintf("%.3f", num/1000/1000/1000) + "GB"
+	} else if num > 1000*1000 {
+		return fmt.Sprintf("%.3f", num/1000/1000) + "MB"
+	} else if num > 1000 {
+		return fmt.Sprintf("%.3f", num/1000) + "KB"
+	} else {
+		return fmt.Sprintf("%.3f", num) + "B"
+	}
 }
