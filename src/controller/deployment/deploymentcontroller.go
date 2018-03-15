@@ -121,7 +121,7 @@ func (executor depExecutorImpl) DeployApp(body string) (map[string]interface{}, 
 	data, err := dbExecutor.InsertComposeFile(string(jsonData), RUNNING_STATE)
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
-		return nil, errors.Unknown{Msg: "db operation fail"}
+		return nil, err
 	}
 
 	err = dockerExecutor.Up(data[ID].(string), COMPOSE_FILE)

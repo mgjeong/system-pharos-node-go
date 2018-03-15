@@ -131,12 +131,18 @@ func (Executor) InsertComposeFile(description string, state string) (map[string]
 	}
 	defer close(session)
 
+	app := App{}
+	err = getCollection(session, DB_NAME, APP_COLLECTION).Find(bson.M{"_id": id}).One(&app)
+	if err == nil {
+		return nil, errors.AlreadyReported{Msg: id}
+	}
+
 	images, err := getImageNames([]byte(description))
 	if err != nil {
 		return nil, err
 	}
 
-	app := App{
+	app = App{
 		ID:          id,
 		Description: description,
 		State:       state,
