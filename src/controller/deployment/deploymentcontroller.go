@@ -56,7 +56,7 @@ const (
 	UPDATE         = "update"
 	DELETE         = "delete"
 	RUNNING_STATE  = "running"
-	EXITED_STATE     = "exited"
+	EXITED_STATE   = "exited"
 	UPDATING_STATE = "updating"
 	NONE           = "none"
 	CHANGES        = "changes"
@@ -122,7 +122,7 @@ func (executor depExecutorImpl) DeployApp(body string) (map[string]interface{}, 
 	data, err := dbExecutor.InsertComposeFile(string(jsonData), RUNNING_STATE)
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
-		return nil, errors.Unknown{Msg: "db operation fail"}
+		return nil, err
 	}
 
 	err = dockerExecutor.Up(data[ID].(string), COMPOSE_FILE)
