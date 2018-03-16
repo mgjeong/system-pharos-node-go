@@ -29,12 +29,18 @@ import (
 	dockercompose "github.com/docker/libcompose/docker"
 	"github.com/docker/libcompose/docker/ctx"
 	"github.com/docker/libcompose/project"
+	events "github.com/docker/libcompose/project/events"
 	"github.com/docker/libcompose/project/options"
 	"golang.org/x/net/context"
 	"io"
 	"strconv"
 	"strings"
 )
+
+type Event struct {
+	Service string
+	Event   string
+}
 
 type Command interface {
 	Create(id, path string) error
@@ -53,6 +59,7 @@ type Command interface {
 	GetImageIDByRepoDigest(imageName string) (string, error)
 	ImagePull(image string) error
 	ImageTag(imageID string, repoTags string) error
+	Events(id, path string, evt chan Event, services ...string) error
 }
 
 const (
@@ -97,7 +104,11 @@ type createType func(*project.APIProject, context.Context, options.Create, ...st
 var getComposeInstance func(string, string) (project.APIProject, error)
 var create createType
 
+var evts map[string]chan events.ContainerEvent
+
 func init() {
+	evts = make(map[string]chan events.ContainerEvent, 0)
+
 	getComposeInstance = getComposeInstanceImpl
 
 	client, _ = docker.NewEnvClient()
@@ -437,6 +448,49 @@ func (dockerExecutorImpl) GetImageIDByRepoDigest(repoDigest string) (string, err
 		}
 	}
 	return "", errors.NotFoundImage{Msg: "can not found image"}
+}
+
+func (dockerExecutorImpl) Events(id, path string, evt chan Event, services ...string) error {
+	logger.Logging(logger.DEBUG)
+	defer logger.Logging(logger.DEBUG, "OUT")
+
+	if evt == nil {
+		e := events.ContainerEvent{}
+		evts[id] <- e
+		delete(evts, id)
+		return nil
+	}
+
+	compose, err := getComposeInstance(id, path)
+	if err != nil {
+		return err
+	}
+
+	ctx, cancelFun := context.WithCancel(context.Background())
+	containerEvents, err := compose.Events(ctx)
+	if err != nil {
+		return err
+	}
+	evts[id] = containerEvents
+
+	go func() {
+		for {
+			for event := range containerEvents {
+				if _, exists := evts[id]; !exists {
+					cancelFun()
+					close(containerEvents)
+					return
+				}
+				e := Event{
+					Service: event.Service,
+					Event:   event.Event,
+				}
+				evt <- e
+			}
+		}
+	}()
+
+	return nil
 }
 
 func isContainedStringInList(list []string, name string) bool {

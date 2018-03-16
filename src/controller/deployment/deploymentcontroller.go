@@ -82,9 +82,14 @@ var dockerExecutor dockercontroller.Command
 var fileMode = os.FileMode(0755)
 var dbExecutor service.Command
 
+var events chan dockercontroller.Event
+
 func init() {
 	dockerExecutor = dockercontroller.Executor
 	dbExecutor = service.Executor{}
+
+	events = make(chan dockercontroller.Event)
+	startContainerEventMonitoring()
 }
 
 // Deploy app to target by yaml description.
@@ -122,6 +127,12 @@ func (executor depExecutorImpl) DeployApp(body string) (map[string]interface{}, 
 	data, err := dbExecutor.InsertComposeFile(string(jsonData), RUNNING_STATE)
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
+		return nil, err
+	}
+
+	err = dockerExecutor.Events(data[ID].(string), COMPOSE_FILE, events)
+	if err != nil {
+		dbExecutor.DeleteApp(data[ID].(string))
 		return nil, err
 	}
 
@@ -536,6 +547,12 @@ func (depExecutorImpl) DeleteApp(appId string) error {
 		return err
 	}
 
+	err = dockerExecutor.Events(appId, COMPOSE_FILE, nil)
+	if err != nil {
+		dbExecutor.DeleteApp(appId)
+		return err
+	}
+
 	err = dbExecutor.DeleteApp(appId)
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
@@ -899,4 +916,15 @@ func updateAppEvent(appId string) error {
 		}
 	}
 	return err
+}
+
+func startContainerEventMonitoring() {
+	go func() {
+		for {
+			for event := range events {
+				// TODO: Notify container event.
+				logger.Logging(logger.DEBUG, "ServiceName:"+event.Service+", Event:"+event.Event)
+			}
+		}
+	}()
 }
