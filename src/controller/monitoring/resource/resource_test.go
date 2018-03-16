@@ -21,11 +21,11 @@ import (
 	"testing"
 )
 
-func TestGetResrouceInfo_ExpectSuccess(t *testing.T) {
+func TestGetHostResourceInfo_ExpectSuccess(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	result, err := Executor.GetResourceInfo()
+	result, err := Executor.GetHostResourceInfo()
 
 	if err != nil {
 		t.Errorf("Unexpected err: %s", err.Error())

@@ -21,10 +21,10 @@ package api
 
 import (
 	"api/common"
+	configurationapi "api/configuration"
 	deploymentapi "api/deployment"
 	healthapi "api/health"
 	resourceapi "api/monitoring/resource"
-	configurationapi "api/configuration"
 	"commons/errors"
 	"commons/logger"
 	"commons/url"
@@ -74,7 +74,8 @@ func (Executor) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	case strings.Contains(reqUrl, url.Unregister()):
 		healthApiExecutor.Handle(w, req)
 
-	case strings.Contains(reqUrl, url.Apps()):
+	case strings.Contains(reqUrl, url.Management()) &&
+		strings.Contains(reqUrl, url.Apps()):
 		deploymentApiExecutor.Handle(w, req)
 
 	case strings.Contains(reqUrl, url.Resource()):

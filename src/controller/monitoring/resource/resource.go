@@ -19,15 +19,23 @@ package resource
 import (
 	"commons/errors"
 	"commons/logger"
+	"controller/deployment/dockercontroller"
+	"db/mongo/service"
+	"encoding/json"
 	"github.com/shirou/gopsutil/cpu"
 	"github.com/shirou/gopsutil/disk"
 	"github.com/shirou/gopsutil/mem"
 	"github.com/shirou/gopsutil/net"
+	"gopkg.in/yaml.v2"
+	"io/ioutil"
+	"os"
 	"strconv"
 	"time"
 )
 
 const (
+	COMPOSE_FILE  = "docker-compose.yaml"
+	DESCRIPTION   = "description"
 	CPU           = "cpu"
 	MEM           = "mem"
 	DISK          = "disk"
@@ -42,10 +50,12 @@ const (
 	USED          = "used"
 	USEDPERCENT   = "usedpercent"
 	PATH          = "path"
+	SERVICES      = "services"
 )
 
 type Command interface {
-	GetResourceInfo() (map[string]interface{}, error)
+	GetHostResourceInfo() (map[string]interface{}, error)
+	GetAppResourceInfo(appId string) (map[string]interface{}, error)
 }
 
 type networkTraffic struct {
@@ -73,9 +83,39 @@ type diskUsage struct {
 
 type resExecutorImpl struct{}
 
+var dockerExecutor dockercontroller.Command
+var dbExecutor service.Command
 var Executor resExecutorImpl
+var fileMode = os.FileMode(0755)
 
-func (resExecutorImpl) GetResourceInfo() (map[string]interface{}, error) {
+func init() {
+	dockerExecutor = dockercontroller.Executor
+	dbExecutor = service.Executor{}
+}
+
+func (resExecutorImpl) GetAppResourceInfo(appId string) (map[string]interface{}, error) {
+	logger.Logging(logger.DEBUG, "IN")
+	defer logger.Logging(logger.DEBUG, "OUT")
+
+	err := setYamlFile(appId)
+	if err != nil {
+		logger.Logging(logger.ERROR, err.Error())
+		return nil, err
+	}
+	defer os.RemoveAll(COMPOSE_FILE)
+
+	appStats, err := dockerExecutor.GetAppStats(appId, COMPOSE_FILE)
+	if err != nil {
+		logger.Logging(logger.ERROR, err.Error())
+		return nil, err
+	}
+
+	results := make(map[string]interface{})
+	results[SERVICES] = appStats
+	return results, err
+}
+
+func (resExecutorImpl) GetHostResourceInfo() (map[string]interface{}, error) {
 	logger.Logging(logger.DEBUG, "IN")
 	defer logger.Logging(logger.DEBUG, "OUT")
 
@@ -100,13 +140,13 @@ func (resExecutorImpl) GetResourceInfo() (map[string]interface{}, error) {
 		return nil, err
 	}
 
-	resources := make(map[string]interface{})
-	resources[CPU] = cpu
-	resources[DISK] = disk
-	resources[MEM] = mem
-	resources[NETWORK] = network
+	resource := make(map[string]interface{})
+	resource[CPU] = cpu
+	resource[DISK] = disk
+	resource[MEM] = mem
+	resource[NETWORK] = network
 
-	return resources, err
+	return resource, err
 }
 
 func getCPUUsage() ([]string, error) {
@@ -215,5 +255,40 @@ func convertToDiskUsageMap(disk diskUsage) map[string]interface{} {
 		FREE:        disk.Free,
 		USED:        disk.Used,
 		USEDPERCENT: disk.UsedPercent,
+	}
+}
+
+// Set YAML file about an app on a path.
+// The path is defined as contant
+// if setting YAML is succeeded, return error as nil
+// otherwise, return error.
+func setYamlFile(appId string) error {
+	app, err := dbExecutor.GetApp(appId)
+	if err != nil {
+		return convertDBError(err, appId)
+	}
+	description := make(map[string]interface{})
+	err = json.Unmarshal([]byte(app[DESCRIPTION].(string)), &description)
+	if err != nil {
+		logger.Logging(logger.ERROR, err.Error())
+		return errors.IOError{"json unmarshal fail"}
+	}
+	yaml, err := yaml.Marshal(description)
+	if err != nil {
+		return errors.InvalidYaml{Msg: "invalid yaml syntax"}
+	}
+	err = ioutil.WriteFile(COMPOSE_FILE, yaml, fileMode)
+	if err != nil {
+		return errors.IOError{Msg: "file io fail"}
+	}
+	return nil
+}
+
+func convertDBError(err error, appId string) error {
+	switch err.(type) {
+	case errors.NotFound:
+		return errors.InvalidAppId{Msg: "failed to find app id : " + appId}
+	default:
+		return errors.Unknown{Msg: "db operation fail"}
 	}
 }
