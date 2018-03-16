@@ -189,13 +189,20 @@ func TestCalled_InsertComposeFile_WithValidDescription_ExpectSuccess(t *testing.
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
+	query := bson.M{"_id": validID}
+
 	connectionMockObj := mocks.NewMockConnection(mockCtrl)
 	sessionMockObj := mocks.NewMockSession(mockCtrl)
 	dbMockObj := mocks.NewMockDatabase(mockCtrl)
 	collectionMockObj := mocks.NewMockCollection(mockCtrl)
+	queryMockObj := mocks.NewMockQuery(mockCtrl)
 
 	gomock.InOrder(
 		connectionMockObj.EXPECT().Dial(valid_URL).Return(sessionMockObj, nil),
+		sessionMockObj.EXPECT().DB(dbName).Return(dbMockObj),
+		dbMockObj.EXPECT().C(collectionName).Return(collectionMockObj),
+		collectionMockObj.EXPECT().Find(query).Return(queryMockObj),
+		queryMockObj.EXPECT().One(gomock.Any()).Return(mgo.ErrNotFound),
 		sessionMockObj.EXPECT().DB(dbName).Return(dbMockObj),
 		dbMockObj.EXPECT().C(collectionName).Return(collectionMockObj),
 		collectionMockObj.EXPECT().Insert(gomock.Any()).Return(nil),
