@@ -429,14 +429,20 @@ func (depExecutorImpl) UpdateApp(appId string, query map[string]interface{}) err
 		return convertDBError(err, appId)
 	}
 
+	imageList, err := getImageNames([]byte(app[DESCRIPTION].(string)))
+	if err != nil {
+		logger.Logging(logger.DEBUG, err.Error())
+		return err
+	}
+
 	repoDigests := make(map[string]string)
-	for _, image := range app[IMAGES].([]map[string]interface{}) {
-		repoDigest, err := dockerExecutor.GetImageDigestByName(image[NAME].(string))
+	for _, image := range imageList {
+		repoDigest, err := dockerExecutor.GetImageDigestByName(image)
 		if err != nil {
 			logger.Logging(logger.DEBUG, err.Error())
 			return err
 		}
-		repoDigests[image[NAME].(string)] = repoDigest
+		repoDigests[image] = repoDigest
 	}
 
 	if query == nil {
@@ -694,32 +700,6 @@ func updateYamlFile(appId string, orginDescription string, service string, newIm
 	return updatedDescription, err
 }
 
-// Get image names from an JSON file.
-// If getting image names is succeeded, return image names
-// otherwise, return error.
-func getImageNames(source []byte) ([]string, error) {
-	imageNames := make([]string, 0)
-	description := make(map[string]interface{})
-
-	err := json.Unmarshal(source, &description)
-	if err != nil {
-		return nil, errors.IOError{Msg: "json unmarshal fail"}
-	}
-
-	if len(description[SERVICES].(map[string]interface{})) == 0 || description[SERVICES] == nil {
-		return nil, errors.Unknown{Msg: "can't find application info"}
-	}
-
-	for _, service_info := range description[SERVICES].(map[string]interface{}) {
-		if service_info.(map[string]interface{})[IMAGE] == nil {
-			return nil, errors.Unknown{Msg: "can't find service info"}
-		}
-		imageNames = append(imageNames, service_info.(map[string]interface{})[IMAGE].(string))
-	}
-
-	return imageNames, nil
-}
-
 // Get service state by service name.
 // First of all, get container name using docker-compose ps <service name>
 // And then, get service config from using docker inspect <container name>
@@ -889,6 +869,26 @@ func getServiceName(repository string, desc []byte) (string, error) {
 	}
 
 	return "", errors.Unknown{Msg: "can't find matched service"}
+}
+
+// Get an image name list shown in app[DESCRIPTION]
+// If getting an image name list is succeeded, return an image name list.
+// otherwise, return error.
+func getImageNames(desc []byte) ([]string, error) {
+	description := make(map[string]interface{})
+	err := json.Unmarshal(desc, &description)
+	if err != nil {
+		return nil, errors.IOError{Msg: "json unmarshal fail"}
+	}
+	if description[SERVICES] == nil {
+		return nil, errors.Unknown{Msg: "No service in YAML description"}
+	}
+
+	imageList := make([]string, 0)
+	for _, serviceInfo := range description[SERVICES].(map[string]interface{}) {
+		imageList = append(imageList, serviceInfo.(map[string]interface{})[IMAGE].(string))
+	}
+	return imageList, nil
 }
 
 func updateAppEvent(appId string) error {
