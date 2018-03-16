@@ -17,9 +17,155 @@
 package resource
 
 import (
+	"commons/errors"
+	dockermocks "controller/deployment/dockercontroller/mocks"
+	dbmocks "db/mongo/service/mocks"
 	"github.com/golang/mock/gomock"
 	"testing"
 )
+
+const (
+	appId                     = "000000000000000000000000"
+	oldTag                    = "1.0"
+	repositoryWithPortImage = "test_url:5000/test"
+	descriptionYaml           = "services:\n  " + testService + ":\n    image: " + repositoryWithPortImage + ":" + oldTag + "\nversion: \"2\"\n"
+	originDescriptionJson    = "{\"services\":{\"" + testService + "\":{\"image\":\"" + repositoryWithPortImage + ":" + oldTag + "\"}},\"version\":\"2\"}"
+	servicePort               = 1234
+	serviceStatus             = "running"
+	exitCodeValue            = "0"
+	testNumStr               = "0"
+	testNum                   = 0
+	testService               = "test_service"
+	testContainerId          = "test_container_id"
+	testContainerName        = "test_container_name"
+	runningState              = "running"
+)
+
+var (
+	service1 = map[string]interface{}{
+		"blockinput":    testNumStr,
+		"blockoutput":   testNumStr,
+		"cid":           testContainerId,
+		"cname":         testContainerName,
+		"cpu":           testNumStr,
+		"mem":           testNumStr,
+		"memlimit":      testNumStr,
+		"memusage":      testNumStr,
+		"networkinput":  testNumStr,
+		"networkoutput": testNumStr,
+		"pids":          testNum,
+	}
+
+	service2 = map[string]interface{}{
+		"blockinput":    testNumStr,
+		"blockoutput":   testNumStr,
+		"cid":           testContainerId,
+		"cname":         testContainerName,
+		"cpu":           testNumStr,
+		"mem":           testNumStr,
+		"memlimit":      testNumStr,
+		"memusage":      testNumStr,
+		"networkinput":  testNumStr,
+		"networkoutput": testNumStr,
+		"pids":          testNum,
+	}
+
+	serviceList = []map[string]interface{}{
+		service1,
+		service2,
+	}
+
+	dbGetAppObj = map[string]interface{}{
+		"id":          appId,
+		"state":       runningState,
+		"description": originDescriptionJson,
+		"images": []map[string]interface{}{
+			{
+				"name": repositoryWithPortImage,
+				"changes": map[string]interface{}{
+					"tag":   oldTag,
+					"state": "update",
+				},
+			},
+		},
+	}
+
+	UnknownError = errors.Unknown{}
+)
+
+func TestGetAppResourceInfo_ExpectSuccess(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	dbExecutorMockObj := dbmocks.NewMockCommand(ctrl)
+	dockerExecutorMockObj := dockermocks.NewMockCommand(ctrl)
+
+	gomock.InOrder(
+		dbExecutorMockObj.EXPECT().GetApp(appId).Return(dbGetAppObj, nil),
+		dockerExecutorMockObj.EXPECT().GetAppStats(appId, COMPOSE_FILE).Return(serviceList, nil),
+	)
+
+	// pass mockObj to a real object.
+	dockerExecutor = dockerExecutorMockObj
+	dbExecutor = dbExecutorMockObj
+
+	result, err := Executor.GetAppResourceInfo(appId)
+
+	if err != nil {
+		t.Errorf("Unexpected err: %s", err.Error())
+	}
+
+	if _, exist := result[SERVICES]; !exist {
+		t.Errorf("Unexpected err: " + SERVICES + " key does not exist")
+	}
+}
+
+func TestGetAppResourceInfoWhenGetAppFailed_ExpectReturnError(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	dbExecutorMockObj := dbmocks.NewMockCommand(ctrl)
+
+	gomock.InOrder(
+		dbExecutorMockObj.EXPECT().GetApp(appId).Return(nil, UnknownError),
+	)
+
+	// pass mockObj to a real object.
+	dbExecutor = dbExecutorMockObj
+
+	_, err := Executor.GetAppResourceInfo(appId)
+
+	switch err.(type) {
+	default:
+		t.Errorf("Expected err: UnknownError, actual err: %s", err.Error())
+	case errors.Unknown:
+	}
+}
+
+func TestGetAppResourceInfoWhenGetAppStatsFailed_ExpectReturnError(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	dbExecutorMockObj := dbmocks.NewMockCommand(ctrl)
+	dockerExecutorMockObj := dockermocks.NewMockCommand(ctrl)
+
+	gomock.InOrder(
+		dbExecutorMockObj.EXPECT().GetApp(appId).Return(dbGetAppObj, nil),
+		dockerExecutorMockObj.EXPECT().GetAppStats(appId, COMPOSE_FILE).Return(nil, UnknownError),
+	)
+
+	// pass mockObj to a real object.
+	dbExecutor = dbExecutorMockObj
+	dockerExecutor = dockerExecutorMockObj
+
+	_, err := Executor.GetAppResourceInfo(appId)
+
+	switch err.(type) {
+	default:
+		t.Errorf("Expected err: UnknownError, actual err: %s", err.Error())
+	case errors.Unknown:
+	}
+}
 
 func TestGetHostResourceInfo_ExpectSuccess(t *testing.T) {
 	ctrl := gomock.NewController(t)

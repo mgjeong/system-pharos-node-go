@@ -17,12 +17,12 @@
 package api
 
 import (
+	"encoding/json"
 	"github.com/golang/mock/gomock"
 	"net/http"
-	"encoding/json"
 	"net/http/httptest"
-	"testing"
 	"strings"
+	"testing"
 
 	deploymentapi "api/deployment/mocks"
 	healthapi "api/health/mocks"
@@ -114,19 +114,27 @@ func TestServeHTTPsendDeploymentApi(t *testing.T) {
 	}
 }
 
-func TestServeHTTPCallsendResourceApi(t *testing.T) {
+func TestServeHTTPsendResourceApi(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
 	resourceApiExecutorMockObj := resourceapi.NewMockCommand(ctrl)
 
-	w := httptest.NewRecorder()
-	req, _ := http.NewRequest("GET", "/api/v1/monitoring/resource", nil)
+	urlList := make(map[string][]string)
+	urlList["/api/v1/monitoring/resource"] = []string{GET}
+	urlList["/api/v1/monitoring/apps/"+appId1+"/resource"] = []string{GET}
 
-	gomock.InOrder(
-		resourceApiExecutorMockObj.EXPECT().Handle(w, req),
-	)
+	for key, vals := range urlList {
+		for _, method := range vals {
+			gomock.InOrder(
+				resourceApiExecutorMockObj.EXPECT().Handle(gomock.Any(), gomock.Any()),
+			)
 
-	resourceApiExecutor = resourceApiExecutorMockObj
-	NodeApis.ServeHTTP(w, req)
+			w := httptest.NewRecorder()
+			req, _ := http.NewRequest(method, key, nil)
+
+			resourceApiExecutor = resourceApiExecutorMockObj
+			NodeApis.ServeHTTP(w, req)
+		}
+	}
 }

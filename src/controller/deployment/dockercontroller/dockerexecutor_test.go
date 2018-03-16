@@ -184,6 +184,19 @@ func TestGetImageDigestByName(t *testing.T) {
 	})
 }
 
+func TestGetAppStats(t *testing.T) {
+	tearDown := setUp(t)
+	defer tearDown(t)
+
+	t.Run("ReturnErrorWhenGetComposeInstanceFailed", func(t *testing.T) {
+		fakeGetComposeInstanceImpl = func() (project.APIProject, error) {
+			return nil, origineErr.New("")
+		}
+		_, err := Executor.GetAppStats("", "")
+		checkError(t, err)
+	})
+}
+
 func TestGetContainerConfigByName(t *testing.T) {
 	tearDown := setUp(t)
 	defer tearDown(t)
@@ -277,6 +290,22 @@ func runisContainedName(t *testing.T, source []string, input string, expected bo
 	}
 }
 
+func TestCalcNetworkIO(t *testing.T) {
+	var network map[string]types.NetworkStats = map[string]types.NetworkStats{
+		"one": types.NetworkStats{
+			RxBytes: 1,
+			TxBytes: 2,
+		},
+		"two": types.NetworkStats{
+			RxBytes: 10,
+			TxBytes: 11,
+		},
+	}
+	rx, tx := calcNetworkIO(network)
+	if rx != 11.0 || tx != 13.0 {
+		t.Errorf("Expected rx : 11, tx : 13, Actual rx : %f, tx : %f", rx, tx)
+	}
+}
 func TestIsContainedName(t *testing.T) {
 	type testList struct {
 		testType string
@@ -293,6 +322,66 @@ func TestIsContainedName(t *testing.T) {
 			runisContainedName(t, source, input, test.expect)
 		})
 	}
+}
+
+func TestConvertToHumanReadableBinaryUnit(t *testing.T) {
+	t.Run("ConvertToHumanReadableBinrayUnit_ReturnBSuccessful", func(t *testing.T) {
+		res := convertToHumanReadableBinaryUnit(1023.0)
+		if res != "1023.000B" {
+			t.Errorf("Expected result : 1023B, Actual Result : %s", res)
+		}
+	})
+
+	t.Run("ConvertToHumanReadableBinaryUnit_ReturnKiBSuccessful", func(t *testing.T) {
+		res := convertToHumanReadableBinaryUnit(2.0*1024.0)
+		if res != "2.000KiB" {
+			t.Errorf("Expected result : 2.000KiB, Actual Result : %s", res)
+		}
+	})
+
+	t.Run("ConvertToHumanReadableBinrayUnit_ReturnMiBSuccessful", func(t *testing.T) {
+		res := convertToHumanReadableBinaryUnit(2.0*1024.0*1024.0)
+		if res != "2.000MiB" {
+			t.Errorf("Expected result : 2.000MiB, Actual Result : %s", res)
+		}
+	})
+
+	t.Run("ConvertToHumanReadableBinaryUnit_ReturnGiBSuccessful", func(t *testing.T) {
+		res := convertToHumanReadableBinaryUnit(2.0*1024.0*1024.0*1024.0)
+		if res != "2.000GiB" {
+			t.Errorf("Expected result : 2.000GiB, Actual Result : %s", res)
+		}
+	})
+}
+
+func TestConvertToHumanReadableUnit(t *testing.T) {
+	t.Run("ConvertToHumanReadableUnit_ReturnBSuccessful", func(t *testing.T) {
+		res := convertToHumanReadableUnit(99.0)
+		if res != "99.000B" {
+			t.Errorf("Expected result : 99.000B, Actual Result : %s", res)
+		}
+	})
+
+	t.Run("ConvertToHumanReadableUnit_ReturnKBSuccessful", func(t *testing.T) {
+		res := convertToHumanReadableUnit(2.0*1000.0)
+		if res != "2.000KB" {
+			t.Errorf("Expected result : 2.000KB, Actual Result : %s", res)
+		}
+	})
+
+	t.Run("ConvertToHumanReadableUnit_ReturnMBSuccessful", func(t *testing.T) {
+		res := convertToHumanReadableUnit(2.0*1000.0*1000.0)
+		if res != "2.000MB" {
+			t.Errorf("Expected result : 2.000MB, Actual Result : %s", res)
+		}
+	})
+
+	t.Run("ConvertToHumanReadableUnit_ReturnGBSuccessful", func(t *testing.T) {
+		res := convertToHumanReadableUnit(2.0*1000.0*1000.0*1000.0)
+		if res != "2.000GB" {
+			t.Errorf("Expected result : 2.000GB, Actual Result : %s", res)
+		}
+	})
 }
 
 func checkError(t *testing.T, err error) {

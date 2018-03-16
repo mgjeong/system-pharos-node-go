@@ -28,12 +28,12 @@ import (
 
 var (
 	invalidOperationList = map[string][]string{
-		"/api/v1/monitoring/resource": []string{POST, PUT, DELETE},
+		"/api/v1/monitoring/apps/appId/resource": []string{POST, PUT, DELETE},
+		"/api/v1/monitoring/resource":            []string{POST, PUT, DELETE},
 	}
-	testMap = map[string]interface{}{
-		"cpu":  "test",
-		"mem":  "test",
-		"disk": "test",
+	testAppId = "testAppId"
+	testMap   = map[string]interface{}{
+		"test": "test",
 	}
 	testList = []testObj{
 		{"InvalidYamlError", errors.InvalidYaml{}, http.StatusBadRequest},
@@ -80,7 +80,7 @@ func TestResourceApiInvalidOperation(t *testing.T) {
 	}
 }
 
-func TestResourceApi_ExpectSuccess(t *testing.T) {
+func TestHostResourceApi_ExpectSuccess(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -102,7 +102,7 @@ func TestResourceApi_ExpectSuccess(t *testing.T) {
 	}
 }
 
-func TestResourceApiWhenControllerFailed_ExpectReturnError(t *testing.T) {
+func TestHostResourceApiWhenControllerFailed_ExpectReturnError(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -114,8 +114,53 @@ func TestResourceApiWhenControllerFailed_ExpectReturnError(t *testing.T) {
 		)
 
 		w := httptest.NewRecorder()
-		print(urls.Base()+urls.Monitoring()+urls.Resource())
 		req, _ := http.NewRequest(GET, urls.Base()+urls.Monitoring()+urls.Resource(), nil)
+
+		resourceExecutor = resourceExecutorMockObj
+
+		resourceApiExecutor.Handle(w, req)
+
+		if w.Code != test.expectCode {
+			t.Errorf("Unexpected error code : %d\n", w.Code)
+		}
+	}
+}
+
+func TestAppResourceApi_ExpectSuccess(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	resourceExecutorMockObj := resourcemocks.NewMockCommand(ctrl)
+
+	gomock.InOrder(
+		resourceExecutorMockObj.EXPECT().GetAppResourceInfo(testAppId).Return(testMap, nil),
+	)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest(GET, urls.Base()+urls.Monitoring()+urls.Apps()+"/"+testAppId+urls.Resource(), nil)
+
+	resourceExecutor = resourceExecutorMockObj
+
+	resourceApiExecutor.Handle(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("Unexpected error code : %d", w.Code)
+	}
+}
+
+func TestAppResourceApiWhenControllerFailed_ExpectReturnError(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	resourceExecutorMockObj := resourcemocks.NewMockCommand(ctrl)
+
+	for _, test := range testList {
+		gomock.InOrder(
+			resourceExecutorMockObj.EXPECT().GetAppResourceInfo(testAppId).Return(nil, test.err),
+		)
+
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest(GET, urls.Base()+urls.Monitoring()+urls.Apps()+"/"+testAppId+urls.Resource(), nil)
 
 		resourceExecutor = resourceExecutorMockObj
 
