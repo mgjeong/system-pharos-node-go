@@ -1695,18 +1695,6 @@ func TestExtractQueryInfoWithRepoWithoutPortAndNoTag_ExpectSuccess(t *testing.T)
 	}
 }
 
-func TestExtractQueryInfoWithInvalidRepository_ExpectReturnError(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	INVALID_REPOSITORY := "docker:abcd:efsd:"
-
-	tagExist, repo, tag, err := extractQueryInfo(INVALID_REPOSITORY)
-	if err == nil {
-		t.Errorf("Expected err: %s, actual err: %t %s %s %s", "invalid repository", tagExist, repo, tag, "nil")
-	}
-}
-
 func TestGetServiceName_ExpectSuccess(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()

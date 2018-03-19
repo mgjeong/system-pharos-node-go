@@ -818,24 +818,27 @@ func parseEventInfo(eventInfo map[string]interface{}) (map[string]interface{}, e
 }
 
 func extractQueryInfo(imageName string) (bool, string, string, error) {
-	imageInfo := strings.Split(imageName, "/")
+	words := strings.Split(imageName, "/")
+	imageNameWithoutRepo := strings.Join(words[:len(words)-1], "/")
+	repo := strings.Split(words[len(words)-1], ":")
 
-	if len(imageInfo) == 2 {
-		repoInfo := strings.Split(imageInfo[1], ":")
-		if len(repoInfo) == 2 { // ex) docker:5000/test:docker,
-			return true, imageInfo[0] + "/" + repoInfo[0], repoInfo[1], nil
-		} else if len(repoInfo) == 1 { // ex) docker:5000/test
-			return false, imageInfo[0] + "/" + repoInfo[0], "", nil
-		}
-	} else if len(imageInfo) == 1 {
-		repoInfo := strings.Split(imageInfo[0], ":")
-		if len(repoInfo) == 2 { // ex) test:docker
-			return true, repoInfo[0], repoInfo[1], nil
-		} else if len(repoInfo) == 1 { // ex) test
-			return false, repoInfo[0], "", nil
+	imageNameWithoutTag := imageNameWithoutRepo
+	if len(words) > 1 {
+		imageNameWithoutTag += "/"
+	}
+	imageNameWithoutTag += repo[0]
+
+	tagInfo := strings.Replace(imageName, imageNameWithoutTag, "", -1)
+	isTag := false
+	if len(tagInfo) != 0 {
+		isTag = true
+		tagInfo = strings.Split(tagInfo, ":")[1]
+		if len(tagInfo) == 0 {
+			return false, "", "", errors.Unknown{Msg: "invalid repogitory"}
 		}
 	}
-	return false, "", "", errors.Unknown{Msg: "invalid repogitory"}
+
+	return isTag, imageNameWithoutTag, tagInfo, nil
 }
 
 // Get name of service which use given imageName.
