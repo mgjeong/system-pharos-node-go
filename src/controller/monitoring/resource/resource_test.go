@@ -25,20 +25,20 @@ import (
 )
 
 const (
-	appId                     = "000000000000000000000000"
-	oldTag                    = "1.0"
+	appId                   = "000000000000000000000000"
+	oldTag                  = "1.0"
 	repositoryWithPortImage = "test_url:5000/test"
-	descriptionYaml           = "services:\n  " + testService + ":\n    image: " + repositoryWithPortImage + ":" + oldTag + "\nversion: \"2\"\n"
-	originDescriptionJson    = "{\"services\":{\"" + testService + "\":{\"image\":\"" + repositoryWithPortImage + ":" + oldTag + "\"}},\"version\":\"2\"}"
-	servicePort               = 1234
-	serviceStatus             = "running"
-	exitCodeValue            = "0"
-	testNumStr               = "0"
-	testNum                   = 0
-	testService               = "test_service"
-	testContainerId          = "test_container_id"
-	testContainerName        = "test_container_name"
-	runningState              = "running"
+	descriptionYaml         = "services:\n  " + testService + ":\n    image: " + repositoryWithPortImage + ":" + oldTag + "\nversion: \"2\"\n"
+	originDescriptionJson   = "{\"services\":{\"" + testService + "\":{\"image\":\"" + repositoryWithPortImage + ":" + oldTag + "\"}},\"version\":\"2\"}"
+	servicePort             = 1234
+	serviceStatus           = "running"
+	exitCodeValue           = "0"
+	testNumStr              = "0"
+	testNum                 = 0
+	testService             = "test_service"
+	testContainerId         = "test_container_id"
+	testContainerName       = "test_container_name"
+	runningState            = "running"
 )
 
 var (

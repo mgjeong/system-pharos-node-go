@@ -29,7 +29,7 @@ type Command interface {
 	ExecuteCommand(command string, args ...string) (string, error)
 }
 
-type shellExecutorImpl struct {}
+type shellExecutorImpl struct{}
 
 var Executor shellExecutorImpl
 
@@ -94,7 +94,7 @@ func (shellExecutorImpl) ExecuteCommand(command string, args ...string) (string,
 		return ret, errors.AlreadyUsedName{ret}
 	case isInvalidContainerName(&ret):
 		return ret, errors.InvalidContainerName{ret}
-	
+
 	default:
 		return ret, errors.Unknown{ret}
 	}
@@ -133,6 +133,7 @@ func isNotFoundCPUInfoFile(msg *string) bool {
 func isNotFoundMemInfoFile(msg *string) bool {
 	return strings.Contains(*msg, notFoundMemInfoFile)
 }
+
 // Check output message for not found yaml file.
 // if output message has string such as "not found yaml file", return true
 // otherwise, return false.
