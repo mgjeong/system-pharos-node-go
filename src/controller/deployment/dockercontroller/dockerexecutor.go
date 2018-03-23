@@ -85,26 +85,24 @@ type dockerExecutorImpl struct{}
 
 var client *docker.Client
 
-type typeGetImageList func(*docker.Client, context.Context, types.ImageListOptions) ([]types.ImageSummary, error)
-type typeGetImagePull func(*docker.Client, context.Context, string, types.ImagePullOptions) (io.ReadCloser, error)
-type typeGetImageTag func(*docker.Client, context.Context, string, string) error
-type typeGetContainerList func(*docker.Client, context.Context, types.ContainerListOptions) ([]types.Container, error)
-type typeGetContainerInspect func(*docker.Client, context.Context, string) (types.ContainerJSON, error)
-type typeGetContainerStats func(*docker.Client, context.Context, string, bool) (types.ContainerStats, error)
-
-var getImageList typeGetImageList
-var getImagePull typeGetImagePull
-var getImageTag typeGetImageTag
-var getContainerList typeGetContainerList
-var getContainerInspect typeGetContainerInspect
-var getContainerStats typeGetContainerStats
-
-type createType func(*project.APIProject, context.Context, options.Create, ...string) error
-
+var getImageList func(*docker.Client, context.Context, types.ImageListOptions) ([]types.ImageSummary, error)
+var getImagePull func(*docker.Client, context.Context, string, types.ImagePullOptions) (io.ReadCloser, error)
+var getImageTag func(*docker.Client, context.Context, string, string) error
+var getContainerList func(*docker.Client, context.Context, types.ContainerListOptions) ([]types.Container, error)
+var getContainerInspect func(*docker.Client, context.Context, string) (types.ContainerJSON, error)
+var getContainerStats func(*docker.Client, context.Context, string, bool) (types.ContainerStats, error)
+var getPs func(instance project.APIProject, ctx context.Context, params ...string) (project.InfoSet, error)
 var getComposeInstance func(string, string) (project.APIProject, error)
-var create createType
+//type createType func(*project.APIProject, context.Context, options.Create, ...string) error
+
+
+//var create createType
 
 var evts map[string]chan events.ContainerEvent
+
+func dockerPs(instance project.APIProject, ctx context.Context, params ...string) (project.InfoSet, error) {
+	return instance.Ps(ctx, params...)
+}
 
 func init() {
 	evts = make(map[string]chan events.ContainerEvent, 0)
@@ -118,6 +116,7 @@ func init() {
 	getImagePull = (*docker.Client).ImagePull
 	getImageTag = (*docker.Client).ImageTag
 	getContainerStats = (*docker.Client).ContainerStats
+	getPs = dockerPs
 }
 
 func (dockerExecutorImpl) GetAppStats(id, path string) ([]map[string]interface{}, error) {
@@ -129,7 +128,7 @@ func (dockerExecutorImpl) GetAppStats(id, path string) ([]map[string]interface{}
 		return nil, err
 	}
 
-	appContainers, err := compose.Ps(context.Background())
+	appContainers, err := getPs(compose, context.Background())
 	if err != nil {
 		logger.Logging(logger.ERROR, "fail to execute dockercompose ps")
 		return nil, errors.Unknown{Msg: "fail to execute dockercompose ps"}
@@ -154,7 +153,6 @@ func (dockerExecutorImpl) GetAppStats(id, path string) ([]map[string]interface{}
 				logger.Logging(logger.ERROR, err.Error())
 				return nil, errors.Unknown{Msg: "fail to get ContainerStats from docker engine"}
 			}
-			defer cStats.Body.Close()
 
 			decoder := json.NewDecoder(cStats.Body)
 
@@ -164,7 +162,6 @@ func (dockerExecutorImpl) GetAppStats(id, path string) ([]map[string]interface{}
 				logger.Logging(logger.ERROR)
 				return nil, errors.Unknown{Msg: "fail to decode types.StatsJSON"}
 			}
-
 			cpuPercent := calcCPUPercent(statsJSON)
 			memPercent := 0.0
 			memUsage := float64(statsJSON.MemoryStats.Usage)
@@ -364,7 +361,7 @@ func (dockerExecutorImpl) Ps(id, path string, args ...string) ([]map[string]stri
 	if err != nil {
 		return nil, err
 	}
-	infos, retErr := compose.Ps(context.Background(), args...)
+	infos, retErr := getPs(compose, context.Background(), args...)
 	retMap := make([]map[string]string, len(infos))
 
 	for idx, info := range infos {
@@ -504,6 +501,7 @@ func isContainedStringInList(list []string, name string) bool {
 
 func getComposeInstanceImpl(id, path string) (project.APIProject, error) {
 	return dockercompose.NewProject(&ctx.Context{
+
 		Context: project.Context{
 			ComposeFiles: []string{path},
 			ProjectName:  id,
@@ -536,7 +534,6 @@ func calcBlockIO(blockio types.BlkioStats) (blockRead uint64, blockWrite uint64)
 
 func calcNetworkIO(network map[string]types.NetworkStats) (float64, float64) {
 	var rx, tx float64
-
 	for _, v := range network {
 		rx += float64(v.RxBytes)
 		tx += float64(v.TxBytes)

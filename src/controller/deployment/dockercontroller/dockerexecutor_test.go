@@ -17,18 +17,19 @@
 package dockercontroller
 
 import (
+	"bytes"
 	"commons/errors"
-
-	"golang.org/x/net/context"
-
 	"docker.io/go-docker"
 	"docker.io/go-docker/api/types"
 	"docker.io/go-docker/api/types/container"
-
-	"github.com/docker/libcompose/project"
-
+	"encoding/json"
 	origineErr "errors"
+	"github.com/docker/libcompose/project"
+	"golang.org/x/net/context"
+	"gopkg.in/yaml.v2"
 	"io"
+	"io/ioutil"
+	"os"
 	"strconv"
 	"strings"
 	"testing"
@@ -38,12 +39,14 @@ type tearDown func(t *testing.T)
 
 func setUp(t *testing.T) tearDown {
 	//client = nil
+	getPs = fakeGetPsFunc
 	getComposeInstance = fakeGetComposeInstance
 	getImageList = fakeImageList
 	getContainerList = fakeContainerList
 	getContainerInspect = fakeContainerExecInspect
 	getImagePull = fakeImagePull
 	getImageTag = fakeImageTag
+	getContainerStats = fakeContainerStats
 
 	return func(t *testing.T) {
 		client, _ = docker.NewEnvClient()
@@ -53,7 +56,10 @@ func setUp(t *testing.T) tearDown {
 		getContainerInspect = (*docker.Client).ContainerInspect
 		getImagePull = (*docker.Client).ImagePull
 		getImageTag = (*docker.Client).ImageTag
+		getContainerStats = (*docker.Client).ContainerStats
+		getPs = dockerPs
 	}
+
 }
 
 var fakeGetComposeInstanceImpl func() (project.APIProject, error)
@@ -62,6 +68,8 @@ var fakeRunContainerList func() ([]types.Container, error)
 var fakeRunContaienrInspect func() (types.ContainerJSON, error)
 var fakeRunImagePull func() (io.ReadCloser, error)
 var fakeRunImageTag func() error
+var fakeRunContainerStats func() (types.ContainerStats, error)
+var fakeRunGetPsFunc func() (project.InfoSet, error)
 
 func fakeImagePull(*docker.Client, context.Context, string, types.ImagePullOptions) (io.ReadCloser, error) {
 	return fakeRunImagePull()
@@ -85,6 +93,14 @@ func fakeContainerList(*docker.Client, context.Context, types.ContainerListOptio
 
 func fakeContainerExecInspect(*docker.Client, context.Context, string) (types.ContainerJSON, error) {
 	return fakeRunContaienrInspect()
+}
+
+func fakeContainerStats(*docker.Client, context.Context, string, bool) (types.ContainerStats, error) {
+	return fakeRunContainerStats()
+}
+
+func fakeGetPsFunc(instance project.APIProject, ctx context.Context, params ...string) (project.InfoSet, error) {
+	return fakeRunGetPsFunc()
 }
 
 func TestGetImageIDByRepoDigest(t *testing.T) {
@@ -188,13 +204,127 @@ func TestGetAppStats(t *testing.T) {
 	tearDown := setUp(t)
 	defer tearDown(t)
 
-	t.Run("ReturnErrorWhenGetComposeInstanceFailed", func(t *testing.T) {
-		fakeGetComposeInstanceImpl = func() (project.APIProject, error) {
-			return nil, origineErr.New("")
+	testFileName := "test"
+	description := make(map[string]interface{})
+	description_str := `"services:\n  my-test:\n    image: google/cadvisor:latest\nversion: \'2\'\n"`
+	json.Unmarshal([]byte(description_str), &description)
+	yaml, _ := yaml.Marshal(description)
+	ioutil.WriteFile(testFileName, yaml, os.FileMode(0755))
+
+	t.Run("GetContainerStats_ExpectReturnError", func(t *testing.T) {
+		getComposeInstance = getComposeInstanceImpl
+		fakeRunGetPsFunc = func() (project.InfoSet, error) {
+			var infoset project.InfoSet
+
+			testInfoSet := `[{"Command":"/usr/bin/cadvisor -logtostderr","Id":"9081b5c76879096799265c62848e6ea798d107c689632229cfa63d4110849a4e","Name":"2277a03208c65ce497de317bd19015fd2a8fba15_one_1","Ports":"8080/tcp","State":"Up 2 hours"},{"Command":"/usr/bin/cadvisor","Id":"e176ed709b89322909d1eb4771cb8548d37dcf5932dde4bc4240706c1f350376","Name":"2277a03208c65ce497de317bd19015fd2a8fba15_two_1","Ports":"8080/tcp","State":"Up 2 hours"}]`
+			err := json.Unmarshal([]byte(testInfoSet), &infoset)
+			if err != nil {
+				return nil, err
+			}
+			return infoset, nil
 		}
-		_, err := Executor.GetAppStats("", "")
-		checkError(t, err)
+
+		fakeRunContainerList = func() ([]types.Container, error) {
+			var containers []types.Container
+
+			testContainers := `[{"Id":"71a3a3c09149e8081c352bba7b62119bd06650f0e8d88ab24b5dd3cf922bd76a","Names":["/2277a03208c65ce497de317bd19015fd2a8fba15_two_1"],"Image":"google/cadvisor:0.1.0","ImageID":"sha256:88381b5edb12821b9098349171fbf885cb3a7de5d9045646a2ea258af28785e2","Command":"/usr/bin/cadvisor","Created":1521533754,"Ports":[{"PrivatePort":8080,"Type":"tcp"}],"Labels":{"com.docker.compose.config-hash":"a84a152bfaae6ed168b8dfc1d1ebaa82ba68ac5e","com.docker.compose.container-number":"1","com.docker.compose.oneoff":"False","com.docker.compose.project":"2277a03208c65ce497de317bd19015fd2a8fba15","com.docker.compose.service":"two","com.docker.compose.version":"1.5.0"},"State":"running","Status":"Up 13 minutes","HostConfig":{"NetworkMode":"2277a03208c65ce497de317bd19015fd2a8fba15_default"},"NetworkSettings":{"Networks":{"2277a03208c65ce497de317bd19015fd2a8fba15_default":{"IPAMConfig":null,"Links":null,"Aliases":null,"NetworkID":"60f931661fdf4fc75fcb2f3e94938693f1d81f5f65f121e5db58b96bde517bb3","EndpointID":"eddd972ce07853ab14ea11ee5bc92abae14e8130ddfd51d8233f5484b96d54b8","Gateway":"172.28.0.1","IPAddress":"172.28.0.3","IPPrefixLen":16,"IPv6Gateway":"","GlobalIPv6Address":"","GlobalIPv6PrefixLen":0,"MacAddress":"02:42:ac:1c:00:03","DriverOpts":null}}},"Mounts":[]},{"Id":"ab7abf724ed2251ecd9bf62eda091b4781907ce9cbdcf4c5bc39a9849138ab41","Names":["/2277a03208c65ce497de317bd19015fd2a8fba15_one_1"],"Image":"google/cadvisor:latest","ImageID":"sha256:75f88e3ec333cbb410297e4f40297ac615e076b4a50aeeae49f287093ff01ab1","Command":"/usr/bin/cadvisor -logtostderr","Created":1521533754,"Ports":[{"PrivatePort":8080,"Type":"tcp"}],"Labels":{"com.docker.compose.config-hash":"1e76922e07f43ff504ca62fd539be44b52cb204f","com.docker.compose.container-number":"1","com.docker.compose.oneoff":"False","com.docker.compose.project":"2277a03208c65ce497de317bd19015fd2a8fba15","com.docker.compose.service":"one","com.docker.compose.version":"1.5.0"},"State":"running","Status":"Up 13 minutes","HostConfig":{"NetworkMode":"2277a03208c65ce497de317bd19015fd2a8fba15_default"},"NetworkSettings":{"Networks":{"2277a03208c65ce497de317bd19015fd2a8fba15_default":{"IPAMConfig":null,"Links":null,"Aliases":null,"NetworkID":"60f931661fdf4fc75fcb2f3e94938693f1d81f5f65f121e5db58b96bde517bb3","EndpointID":"ae13a3fa33695c630057bc8d3f8fda15066fec8fce0ff006cd1b7f2da8c37ccb","Gateway":"172.28.0.1","IPAddress":"172.28.0.2","IPPrefixLen":16,"IPv6Gateway":"","GlobalIPv6Address":"","GlobalIPv6PrefixLen":0,"MacAddress":"02:42:ac:1c:00:02","DriverOpts":null}}},"Mounts":[]}]`
+			err := json.Unmarshal([]byte(testContainers), &containers)
+			if err != nil {
+				return nil, err
+			}
+			return containers, nil
+		}
+
+		fakeRunContainerStats = func() (types.ContainerStats, error) {
+			var stats types.ContainerStats
+			stats.Body = nil
+			return stats, errors.Unknown{}
+		}
+
+		_, err := Executor.GetAppStats("test", testFileName)
+		switch err.(type) {
+		default:
+			t.Errorf("Expected err: UnknownError, actual err: %s", err.Error())
+		case errors.Unknown:
+		}
 	})
+
+	t.Run("GetContainerListError_ExpectReturnError", func(t *testing.T) {
+		getComposeInstance = getComposeInstanceImpl
+		fakeRunGetPsFunc = func() (project.InfoSet, error) {
+			var infoset project.InfoSet
+
+			testInfoSet := `[{"Command":"/usr/bin/cadvisor -logtostderr","Id":"9081b5c76879096799265c62848e6ea798d107c689632229cfa63d4110849a4e","Name":"2277a03208c65ce497de317bd19015fd2a8fba15_one_1","Ports":"8080/tcp","State":"Up 2 hours"},{"Command":"/usr/bin/cadvisor","Id":"e176ed709b89322909d1eb4771cb8548d37dcf5932dde4bc4240706c1f350376","Name":"2277a03208c65ce497de317bd19015fd2a8fba15_two_1","Ports":"8080/tcp","State":"Up 2 hours"}]`
+			err := json.Unmarshal([]byte(testInfoSet), &infoset)
+			if err != nil {
+				return nil, err
+			}
+			return infoset, nil
+		}
+
+		fakeRunContainerList = func() ([]types.Container, error) {
+			return nil, errors.Unknown{}
+		}
+		_, err := Executor.GetAppStats("test", testFileName)
+		switch err.(type) {
+		default:
+			t.Errorf("Expected err: UnknownError, actual err: %s", err.Error())
+		case errors.Unknown:
+		}
+	})
+
+	t.Run("PsError_ExpectReturnError", func(t *testing.T) {
+		getComposeInstance = getComposeInstanceImpl
+		fakeRunGetPsFunc = func() (project.InfoSet, error) {
+			return nil, errors.Unknown{}
+		}
+
+		_, err := Executor.GetAppStats("test", testFileName)
+		switch err.(type) {
+		default:
+			t.Errorf("Expected err: UnknownError, actual err: %s", err.Error())
+		case errors.Unknown:
+		}
+	})
+
+	t.Run("Success", func(t *testing.T) {
+		getComposeInstance = getComposeInstanceImpl
+		fakeRunGetPsFunc = func() (project.InfoSet, error) {
+			var infoset project.InfoSet
+
+			testInfoSet := `[{"Command":"/usr/bin/cadvisor -logtostderr","Id":"9081b5c76879096799265c62848e6ea798d107c689632229cfa63d4110849a4e","Name":"2277a03208c65ce497de317bd19015fd2a8fba15_one_1","Ports":"8080/tcp","State":"Up 2 hours"},{"Command":"/usr/bin/cadvisor","Id":"e176ed709b89322909d1eb4771cb8548d37dcf5932dde4bc4240706c1f350376","Name":"2277a03208c65ce497de317bd19015fd2a8fba15_two_1","Ports":"8080/tcp","State":"Up 2 hours"}]`
+			err := json.Unmarshal([]byte(testInfoSet), &infoset)
+			if err != nil {
+				return nil, err
+			}
+			return infoset, nil
+		}
+
+		fakeRunContainerList = func() ([]types.Container, error) {
+			var containers []types.Container
+
+			testContainers := `[{"Id":"71a3a3c09149e8081c352bba7b62119bd06650f0e8d88ab24b5dd3cf922bd76a","Names":["/2277a03208c65ce497de317bd19015fd2a8fba15_two_1"],"Image":"google/cadvisor:0.1.0","ImageID":"sha256:88381b5edb12821b9098349171fbf885cb3a7de5d9045646a2ea258af28785e2","Command":"/usr/bin/cadvisor","Created":1521533754,"Ports":[{"PrivatePort":8080,"Type":"tcp"}],"Labels":{"com.docker.compose.config-hash":"a84a152bfaae6ed168b8dfc1d1ebaa82ba68ac5e","com.docker.compose.container-number":"1","com.docker.compose.oneoff":"False","com.docker.compose.project":"2277a03208c65ce497de317bd19015fd2a8fba15","com.docker.compose.service":"two","com.docker.compose.version":"1.5.0"},"State":"running","Status":"Up 13 minutes","HostConfig":{"NetworkMode":"2277a03208c65ce497de317bd19015fd2a8fba15_default"},"NetworkSettings":{"Networks":{"2277a03208c65ce497de317bd19015fd2a8fba15_default":{"IPAMConfig":null,"Links":null,"Aliases":null,"NetworkID":"60f931661fdf4fc75fcb2f3e94938693f1d81f5f65f121e5db58b96bde517bb3","EndpointID":"eddd972ce07853ab14ea11ee5bc92abae14e8130ddfd51d8233f5484b96d54b8","Gateway":"172.28.0.1","IPAddress":"172.28.0.3","IPPrefixLen":16,"IPv6Gateway":"","GlobalIPv6Address":"","GlobalIPv6PrefixLen":0,"MacAddress":"02:42:ac:1c:00:03","DriverOpts":null}}},"Mounts":[]},{"Id":"ab7abf724ed2251ecd9bf62eda091b4781907ce9cbdcf4c5bc39a9849138ab41","Names":["/2277a03208c65ce497de317bd19015fd2a8fba15_one_1"],"Image":"google/cadvisor:latest","ImageID":"sha256:75f88e3ec333cbb410297e4f40297ac615e076b4a50aeeae49f287093ff01ab1","Command":"/usr/bin/cadvisor -logtostderr","Created":1521533754,"Ports":[{"PrivatePort":8080,"Type":"tcp"}],"Labels":{"com.docker.compose.config-hash":"1e76922e07f43ff504ca62fd539be44b52cb204f","com.docker.compose.container-number":"1","com.docker.compose.oneoff":"False","com.docker.compose.project":"2277a03208c65ce497de317bd19015fd2a8fba15","com.docker.compose.service":"one","com.docker.compose.version":"1.5.0"},"State":"running","Status":"Up 13 minutes","HostConfig":{"NetworkMode":"2277a03208c65ce497de317bd19015fd2a8fba15_default"},"NetworkSettings":{"Networks":{"2277a03208c65ce497de317bd19015fd2a8fba15_default":{"IPAMConfig":null,"Links":null,"Aliases":null,"NetworkID":"60f931661fdf4fc75fcb2f3e94938693f1d81f5f65f121e5db58b96bde517bb3","EndpointID":"ae13a3fa33695c630057bc8d3f8fda15066fec8fce0ff006cd1b7f2da8c37ccb","Gateway":"172.28.0.1","IPAddress":"172.28.0.2","IPPrefixLen":16,"IPv6Gateway":"","GlobalIPv6Address":"","GlobalIPv6PrefixLen":0,"MacAddress":"02:42:ac:1c:00:02","DriverOpts":null}}},"Mounts":[]}]`
+			err := json.Unmarshal([]byte(testContainers), &containers)
+			if err != nil {
+				return nil, err
+			}
+			return containers, nil
+		}
+
+		fakeRunContainerStats = func() (types.ContainerStats, error) {
+			var stats types.ContainerStats
+
+			testStats := `{"read":"2018-03-20T09:00:45.108700589Z","preread":"2018-03-20T09:00:44.108937037Z","pids_stats":{"current":9},"blkio_stats":{"io_service_bytes_recursive":[{"major":8,"minor":16,"op":"Read","value":8572928},{"major":8,"minor":16,"op":"Write","value":0},{"major":8,"minor":16,"op":"Sync","value":8572928},{"major":8,"minor":16,"op":"Async","value":0},{"major":8,"minor":16,"op":"Total","value":8572928},{"major":8,"minor":16,"op":"Read","value":8572928},{"major":8,"minor":16,"op":"Write","value":0},{"major":8,"minor":16,"op":"Sync","value":8572928},{"major":8,"minor":16,"op":"Async","value":0},{"major":8,"minor":16,"op":"Total","value":8572928}],"io_serviced_recursive":[{"major":8,"minor":16,"op":"Read","value":343},{"major":8,"minor":16,"op":"Write","value":0},{"major":8,"minor":16,"op":"Sync","value":343},{"major":8,"minor":16,"op":"Async","value":0},{"major":8,"minor":16,"op":"Total","value":343},{"major":8,"minor":16,"op":"Read","value":343},{"major":8,"minor":16,"op":"Write","value":0},{"major":8,"minor":16,"op":"Sync","value":343},{"major":8,"minor":16,"op":"Async","value":0},{"major":8,"minor":16,"op":"Total","value":343}],"io_queue_recursive":[{"major":8,"minor":16,"op":"Read","value":0},{"major":8,"minor":16,"op":"Write","value":0},{"major":8,"minor":16,"op":"Sync","value":0},{"major":8,"minor":16,"op":"Async","value":0},{"major":8,"minor":16,"op":"Total","value":0}],"io_service_time_recursive":[{"major":8,"minor":16,"op":"Read","value":115378760},{"major":8,"minor":16,"op":"Write","value":0},{"major":8,"minor":16,"op":"Sync","value":115378760},{"major":8,"minor":16,"op":"Async","value":0},{"major":8,"minor":16,"op":"Total","value":115378760}],"io_wait_time_recursive":[{"major":8,"minor":16,"op":"Read","value":28990215},{"major":8,"minor":16,"op":"Write","value":0},{"major":8,"minor":16,"op":"Sync","value":28990215},{"major":8,"minor":16,"op":"Async","value":0},{"major":8,"minor":16,"op":"Total","value":28990215}],"io_merged_recursive":[{"major":8,"minor":16,"op":"Read","value":0},{"major":8,"minor":16,"op":"Write","value":0},{"major":8,"minor":16,"op":"Sync","value":0},{"major":8,"minor":16,"op":"Async","value":0},{"major":8,"minor":16,"op":"Total","value":0}],"io_time_recursive":[{"major":8,"minor":16,"op":"","value":536060268}],"sectors_recursive":[{"major":8,"minor":16,"op":"","value":16744}]},"num_procs":0,"storage_stats":{},"cpu_stats":{"cpu_usage":{"total_usage":38900043200,"percpu_usage":[4969423189,4858004428,5210404191,4895648649,4474746326,4750894971,5001950610,4738970836],"usage_in_kernelmode":9640000000,"usage_in_usermode":21130000000},"system_cpu_usage":4893544710000000,"online_cpus":8,"throttling_data":{"periods":0,"throttled_periods":0,"throttled_time":0}},"precpu_stats":{"cpu_usage":{"total_usage":38890053594,"percpu_usage":[4969371267,4857320495,5210176736,4895157812,4471815759,4750602150,5001950610,4733658765],"usage_in_kernelmode":9640000000,"usage_in_usermode":21120000000},"system_cpu_usage":4893536750000000,"online_cpus":8,"throttling_data":{"periods":0,"throttled_periods":0,"throttled_time":0}},"memory_stats":{"usage":15187968,"max_usage":16859136,"stats":{"active_anon":1449984,"active_file":6008832,"cache":8282112,"dirty":0,"hierarchical_memory_limit":9223372036854771712,"hierarchical_memsw_limit":0,"inactive_anon":1642496,"inactive_file":2273280,"mapped_file":2564096,"pgfault":1740657,"pgmajfault":139,"pgpgin":667951,"pgpgout":665168,"rss":3117056,"rss_huge":0,"total_active_anon":1449984,"total_active_file":6008832,"total_cache":8282112,"total_dirty":0,"total_inactive_anon":1642496,"total_inactive_file":2273280,"total_mapped_file":2564096,"total_pgfault":1740657,"total_pgmajfault":139,"total_pgpgin":667951,"total_pgpgout":665168,"total_rss":3117056,"total_rss_huge":0,"total_unevictable":0,"total_writeback":0,"unevictable":0,"writeback":0},"limit":8317444096},"name":"/2277a03208c65ce497de317bd19015fd2a8fba15_two_1","id":"71a3a3c09149e8081c352bba7b62119bd06650f0e8d88ab24b5dd3cf922bd76a","networks":{"eth0":{"rx_bytes":93156,"rx_packets":739,"rx_errors":0,"rx_dropped":0,"tx_bytes":0,"tx_packets":0,"tx_errors":0,"tx_dropped":0}}}`
+			stats.Body = ioutil.NopCloser(bytes.NewReader([]byte(testStats)))
+			return stats, nil
+		}
+
+		_, err := Executor.GetAppStats("test", testFileName)
+		if err != nil {
+			t.Error("Expected nil error but error occured")
+		}
+	})
+	os.Remove(testFileName)
 }
 
 func TestGetContainerConfigByName(t *testing.T) {
@@ -333,21 +463,21 @@ func TestConvertToHumanReadableBinaryUnit(t *testing.T) {
 	})
 
 	t.Run("ConvertToHumanReadableBinaryUnit_ReturnKiBSuccessful", func(t *testing.T) {
-		res := convertToHumanReadableBinaryUnit(2.0*1024.0)
+		res := convertToHumanReadableBinaryUnit(2.0 * 1024.0)
 		if res != "2.000KiB" {
 			t.Errorf("Expected result : 2.000KiB, Actual Result : %s", res)
 		}
 	})
 
 	t.Run("ConvertToHumanReadableBinrayUnit_ReturnMiBSuccessful", func(t *testing.T) {
-		res := convertToHumanReadableBinaryUnit(2.0*1024.0*1024.0)
+		res := convertToHumanReadableBinaryUnit(2.0 * 1024.0 * 1024.0)
 		if res != "2.000MiB" {
 			t.Errorf("Expected result : 2.000MiB, Actual Result : %s", res)
 		}
 	})
 
 	t.Run("ConvertToHumanReadableBinaryUnit_ReturnGiBSuccessful", func(t *testing.T) {
-		res := convertToHumanReadableBinaryUnit(2.0*1024.0*1024.0*1024.0)
+		res := convertToHumanReadableBinaryUnit(2.0 * 1024.0 * 1024.0 * 1024.0)
 		if res != "2.000GiB" {
 			t.Errorf("Expected result : 2.000GiB, Actual Result : %s", res)
 		}
@@ -363,21 +493,21 @@ func TestConvertToHumanReadableUnit(t *testing.T) {
 	})
 
 	t.Run("ConvertToHumanReadableUnit_ReturnKBSuccessful", func(t *testing.T) {
-		res := convertToHumanReadableUnit(2.0*1000.0)
+		res := convertToHumanReadableUnit(2.0 * 1000.0)
 		if res != "2.000KB" {
 			t.Errorf("Expected result : 2.000KB, Actual Result : %s", res)
 		}
 	})
 
 	t.Run("ConvertToHumanReadableUnit_ReturnMBSuccessful", func(t *testing.T) {
-		res := convertToHumanReadableUnit(2.0*1000.0*1000.0)
+		res := convertToHumanReadableUnit(2.0 * 1000.0 * 1000.0)
 		if res != "2.000MB" {
 			t.Errorf("Expected result : 2.000MB, Actual Result : %s", res)
 		}
 	})
 
 	t.Run("ConvertToHumanReadableUnit_ReturnGBSuccessful", func(t *testing.T) {
-		res := convertToHumanReadableUnit(2.0*1000.0*1000.0*1000.0)
+		res := convertToHumanReadableUnit(2.0 * 1000.0 * 1000.0 * 1000.0)
 		if res != "2.000GB" {
 			t.Errorf("Expected result : 2.000GB, Actual Result : %s", res)
 		}
