@@ -21,7 +21,7 @@
 package mocks
 
 import (
-    . "db/mongo/wrapper"
+	. "db/mongo/wrapper"
 	gomock "github.com/golang/mock/gomock"
 	reflect "reflect"
 )
