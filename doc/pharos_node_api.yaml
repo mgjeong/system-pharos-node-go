@@ -31,8 +31,7 @@ paths:
       tags:
         - InfoCollecting
       description: >-
-        Returns device information (os, processor model name,
-        cpu/memory/disk usage).
+        Returns device information (cpu/memory/disk/network usage).
       consumes:
         - application/json
       produces:
