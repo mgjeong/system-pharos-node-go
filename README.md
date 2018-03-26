@@ -12,7 +12,7 @@ This is intented to be installed in each of Edge devices, which communicates wit
   - [How to install](https://golang.org/dl/)
 - Rasberry Pi3 (Optional)
   - [How to install RPi OS (Raspbian)](https://www.raspberrypi.org/documentation/installation/installing-images/)
-  - [How to configure network settins on your RPi3 - Useful link](https://kr.mathworks.com/help/supportpkg/raspberrypi/ug/getting-the-raspberry_pi-ip-address.html?requestedDomain=true)
+  - [How to configure network settings on your RPi3 - Useful link](https://kr.mathworks.com/help/supportpkg/raspberrypi/ug/getting-the-raspberry_pi-ip-address.html?requestedDomain=true)
   - [How to install Docker to RPi3 (CPU arch: Armhf)](https://docs.docker.com/install/linux/docker-ce/debian/#prerequisites)
   - [How to access insecure registry for Docker image](https://docs.docker.com/registry/insecure/#deploy-a-plain-http-registry)
 
