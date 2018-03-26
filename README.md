@@ -5,11 +5,16 @@ This is intented to be installed in each of Edge devices, which communicates wit
 
 ## Prerequisites ##
 - docker-ce
-    - Version: 17.09
-    - [How to install](https://docs.docker.com/engine/installation/linux/docker-ce/ubuntu/)
+  - Version: 17.09
+  - [How to install](https://docs.docker.com/engine/installation/linux/docker-ce/ubuntu/)
 - go compiler
-    - Version: 1.8 or above
-    - [How to install](https://golang.org/dl/)
+  - Version: 1.8 or above
+  - [How to install](https://golang.org/dl/)
+- Rasberry Pi3 (Optional)
+  - [How to install RPi OS (Raspbian)](https://www.raspberrypi.org/documentation/installation/installing-images/)
+  - [How to configure network settings on your RPi3 - Useful link](https://kr.mathworks.com/help/supportpkg/raspberrypi/ug/getting-the-raspberry_pi-ip-address.html?requestedDomain=true)
+  - [How to install Docker to RPi3 (CPU arch: Armhf)](https://docs.docker.com/install/linux/docker-ce/debian/#prerequisites)
+  - [How to access insecure registry for Docker image](https://docs.docker.com/registry/insecure/#deploy-a-plain-http-registry)
 
 ## How to build ##
 This provides how to build sources codes to an excutable binary and dockerize it to create a Docker image.
