@@ -56,6 +56,20 @@ func TestReboot_ExpectSuccess(t *testing.T) {
 	}
 }
 
+func TestRebootWithNoSystemContainerIP_ExpectReturnError(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	systemContainerIP = ""
+	err := deviceExecutor.Reboot()
+
+	switch err.(type) {
+	default:
+		t.Errorf("Expected err: NotFound, actual err: %s", err.Error())
+	case errors.NotFound:
+	}
+}
+
 func TestRebootWhenSendHttpRequestFailed_ExpectSuccess(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -65,7 +79,7 @@ func TestRebootWhenSendHttpRequestFailed_ExpectSuccess(t *testing.T) {
 	url := "http://" + testSCIP + "/api/v1/management/device/reboot"
 
 	gomock.InOrder(
-		msgMockObj.EXPECT().SendHttpRequest(POST, url, gomock.Any()).Return(500, testResponse, errors.Unknown{}),
+		msgMockObj.EXPECT().SendHttpRequest(POST, url, gomock.Any()).Return(500, "", errors.Unknown{}),
 	)
 
 	httpExecutor = msgMockObj
@@ -102,6 +116,20 @@ func TestRestore_ExpectSuccess(t *testing.T) {
 	}
 }
 
+func TestRestoreWithNoSystemContainerIP_ExpectReturnError(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	systemContainerIP = ""
+	err := deviceExecutor.Restore()
+
+	switch err.(type) {
+	default:
+		t.Errorf("Expected err: NotFound, actual err: %s", err.Error())
+	case errors.NotFound:
+	}
+}
+
 func TestRestoreWhenSendHttpRequestFailed_ExpectReturnError(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -111,7 +139,7 @@ func TestRestoreWhenSendHttpRequestFailed_ExpectReturnError(t *testing.T) {
 	url := "http://" + testSCIP + "/api/v1/management/device/restore"
 
 	gomock.InOrder(
-		msgMockObj.EXPECT().SendHttpRequest(POST, url, gomock.Any()).Return(500, testResponse, errors.Unknown{}),
+		msgMockObj.EXPECT().SendHttpRequest(POST, url, gomock.Any()).Return(500, "", errors.Unknown{}),
 	)
 
 	httpExecutor = msgMockObj

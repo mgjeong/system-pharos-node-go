@@ -18,6 +18,7 @@ package device
 
 import (
 	"bytes"
+	"commons/errors"
 	"commons/logger"
 	"commons/url"
 	"messenger"
@@ -25,11 +26,11 @@ import (
 )
 
 const (
-	GET      = "GET"
-	DELETE   = "DELETE"
-	POST     = "POST"
-	PUT      = "PUT"
-	HTTP_TAG = "http://"
+	GET               = "GET"
+	DELETE            = "DELETE"
+	POST              = "POST"
+	PUT               = "PUT"
+	HTTP_TAG          = "http://"
 	SYSTEMCONTAINER = "SYSTEMCONTAINER"
 )
 
@@ -52,6 +53,11 @@ func (Executor) Restore() error {
 	logger.Logging(logger.DEBUG, "IN")
 	defer logger.Logging(logger.DEBUG, "OUT")
 
+	if len(systemContainerIP) == 0 {
+		logger.Logging(logger.ERROR, "sysetm container ip is not found")
+		return errors.NotFound{"system container ip"}
+	}
+
 	url := makeSCRequestUrl(url.Restore())
 	_, _, err := httpExecutor.SendHttpRequest(POST, url)
 	if err != nil {
@@ -63,6 +69,11 @@ func (Executor) Restore() error {
 func (Executor) Reboot() error {
 	logger.Logging(logger.DEBUG, "IN")
 	defer logger.Logging(logger.DEBUG, "OUT")
+
+	if len(systemContainerIP) == 0 {
+		logger.Logging(logger.ERROR, "system container ip is not found")
+		return errors.NotFound{"system container ip"}
+	}
 
 	url := makeSCRequestUrl(url.Reboot())
 	_, _, err := httpExecutor.SendHttpRequest(POST, url)
