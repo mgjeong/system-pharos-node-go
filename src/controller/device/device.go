@@ -26,11 +26,11 @@ import (
 )
 
 const (
-	GET               = "GET"
-	DELETE            = "DELETE"
-	POST              = "POST"
-	PUT               = "PUT"
-	HTTP_TAG          = "http://"
+	GET             = "GET"
+	DELETE          = "DELETE"
+	POST            = "POST"
+	PUT             = "PUT"
+	HTTP_TAG        = "http://"
 	SYSTEMCONTAINER = "SYSTEMCONTAINER"
 )
 
