@@ -14,7 +14,6 @@
  * limitations under the License.
  *
  *******************************************************************************/
-
 // Package api provides web server for pharos-node
 // and also provides functionality of request processing and response making.
 package api
@@ -23,6 +22,7 @@ import (
 	"api/common"
 	configurationapi "api/configuration"
 	deploymentapi "api/deployment"
+	deviceapi "api/device"
 	healthapi "api/health"
 	resourceapi "api/monitoring/resource"
 	"commons/errors"
@@ -37,22 +37,24 @@ import (
 func RunNodeWebServer(addr string, port int) {
 	logger.Logging(logger.DEBUG, "Start Pharos Node Web Server")
 	logger.Logging(logger.DEBUG, "Listening "+addr+":"+strconv.Itoa(port))
-	http.ListenAndServe(addr+":"+strconv.Itoa(port), &NodeApis)
+	http.ListenAndServe(addr+":"+strconv.Itoa(port), &NodeAPIs)
 }
 
-var deploymentApiExecutor deploymentapi.Command
-var healthApiExecutor healthapi.Command
-var resourceApiExecutor resourceapi.Command
-var configurationApiExecutor configurationapi.Command
-var NodeApis Executor
+var deploymentAPIExecutor deploymentapi.Command
+var healthAPIExecutor healthapi.Command
+var resourceAPIExecutor resourceapi.Command
+var configurationAPIExecutor configurationapi.Command
+var deviceAPIExecutor deviceapi.Command
+var NodeAPIs Executor
 
 type Executor struct{}
 
 func init() {
-	deploymentApiExecutor = deploymentapi.Executor{}
-	healthApiExecutor = healthapi.Executor{}
-	resourceApiExecutor = resourceapi.Executor{}
-	configurationApiExecutor = configurationapi.Executor{}
+	deploymentAPIExecutor = deploymentapi.Executor{}
+	healthAPIExecutor = healthapi.Executor{}
+	resourceAPIExecutor = resourceapi.Executor{}
+	configurationAPIExecutor = configurationapi.Executor{}
+	deviceAPIExecutor = deviceapi.Executor{}
 }
 
 // Implements of http serve interface.
@@ -72,16 +74,19 @@ func (Executor) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		common.MakeErrorResponse(w, errors.NotFoundURL{reqUrl})
 
 	case strings.Contains(reqUrl, url.Unregister()):
-		healthApiExecutor.Handle(w, req)
+		healthAPIExecutor.Handle(w, req)
 
 	case strings.Contains(reqUrl, url.Management()) &&
 		strings.Contains(reqUrl, url.Apps()):
-		deploymentApiExecutor.Handle(w, req)
+		deploymentAPIExecutor.Handle(w, req)
 
 	case strings.Contains(reqUrl, url.Resource()):
-		resourceApiExecutor.Handle(w, req)
+		resourceAPIExecutor.Handle(w, req)
 
 	case strings.Contains(reqUrl, url.Configuration()):
-		configurationApiExecutor.Handle(w, req)
+		configurationAPIExecutor.Handle(w, req)
+
+	case strings.Contains(reqUrl, url.Device()):
+		deviceAPIExecutor.Handle(w, req)
 	}
 }

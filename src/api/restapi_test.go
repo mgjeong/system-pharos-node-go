@@ -27,6 +27,7 @@ import (
 	deploymentapi "api/deployment/mocks"
 	healthapi "api/health/mocks"
 	resourceapi "api/monitoring/resource/mocks"
+	deviceapi "api/device/mocks"
 )
 
 const (
@@ -53,7 +54,7 @@ func TestInvalidUrlList(t *testing.T) {
 			w := httptest.NewRecorder()
 			req, _ := http.NewRequest(method, key, nil)
 
-			NodeApis.ServeHTTP(w, req)
+			NodeAPIs.ServeHTTP(w, req)
 
 			msg := make(map[string]interface{})
 			err := json.Unmarshal(w.Body.Bytes(), &msg)
@@ -68,28 +69,28 @@ func TestInvalidUrlList(t *testing.T) {
 	}
 }
 
-func TestServeHTTPsendUnregisterApi(t *testing.T) {
+func TestServeHTTPsendUnregisterAPI(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	healthApiExecutorMockObj := healthapi.NewMockCommand(ctrl)
+	healthAPIExecutorMockObj := healthapi.NewMockCommand(ctrl)
 
 	gomock.InOrder(
-		healthApiExecutorMockObj.EXPECT().Handle(gomock.Any(), gomock.Any()),
+		healthAPIExecutorMockObj.EXPECT().Handle(gomock.Any(), gomock.Any()),
 	)
 
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest("GET", "/api/v1/management/unregister", nil)
 
-	healthApiExecutor = healthApiExecutorMockObj
-	NodeApis.ServeHTTP(w, req)
+	healthAPIExecutor = healthAPIExecutorMockObj
+	NodeAPIs.ServeHTTP(w, req)
 }
 
-func TestServeHTTPsendDeploymentApi(t *testing.T) {
+func TestServeHTTPsendDeploymentAPI(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	deploymentApiExecutorMockObj := deploymentapi.NewMockCommand(ctrl)
+	deploymentAPIExecutorMockObj := deploymentapi.NewMockCommand(ctrl)
 
 	urlList := make(map[string][]string)
 	urlList["/api/v1/management/apps"] = []string{GET}
@@ -102,23 +103,23 @@ func TestServeHTTPsendDeploymentApi(t *testing.T) {
 	for key, vals := range urlList {
 		for _, method := range vals {
 			gomock.InOrder(
-				deploymentApiExecutorMockObj.EXPECT().Handle(gomock.Any(), gomock.Any()),
+				deploymentAPIExecutorMockObj.EXPECT().Handle(gomock.Any(), gomock.Any()),
 			)
 
 			w := httptest.NewRecorder()
 			req, _ := http.NewRequest(method, key, nil)
 
-			deploymentApiExecutor = deploymentApiExecutorMockObj
-			NodeApis.ServeHTTP(w, req)
+			deploymentAPIExecutor = deploymentAPIExecutorMockObj
+			NodeAPIs.ServeHTTP(w, req)
 		}
 	}
 }
 
-func TestServeHTTPsendResourceApi(t *testing.T) {
+func TestServeHTTPsendResourceAPI(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	resourceApiExecutorMockObj := resourceapi.NewMockCommand(ctrl)
+	resourceAPIExecutorMockObj := resourceapi.NewMockCommand(ctrl)
 
 	urlList := make(map[string][]string)
 	urlList["/api/v1/monitoring/resource"] = []string{GET}
@@ -127,14 +128,39 @@ func TestServeHTTPsendResourceApi(t *testing.T) {
 	for key, vals := range urlList {
 		for _, method := range vals {
 			gomock.InOrder(
-				resourceApiExecutorMockObj.EXPECT().Handle(gomock.Any(), gomock.Any()),
+				resourceAPIExecutorMockObj.EXPECT().Handle(gomock.Any(), gomock.Any()),
 			)
 
 			w := httptest.NewRecorder()
 			req, _ := http.NewRequest(method, key, nil)
 
-			resourceApiExecutor = resourceApiExecutorMockObj
-			NodeApis.ServeHTTP(w, req)
+			resourceAPIExecutor = resourceAPIExecutorMockObj
+			NodeAPIs.ServeHTTP(w, req)
+		}
+	}
+}
+
+func TestServeHTTPsendDeviceAPI(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	deviceAPIExecutorMockObj := deviceapi.NewMockCommand(ctrl)
+
+	urlList := make(map[string][]string)
+	urlList["/api/v1/management/device/reboot"] = []string{POST}
+	urlList["/api/v1/management/device/restore"] = []string{POST}
+
+	for key, vals := range urlList {
+		for _, method := range vals {
+			gomock.InOrder(
+				deviceAPIExecutorMockObj.EXPECT().Handle(gomock.Any(), gomock.Any()),
+			)
+
+			w := httptest.NewRecorder()
+			req, _ := http.NewRequest(method, key, nil)
+
+			deviceAPIExecutor = deviceAPIExecutorMockObj
+			NodeAPIs.ServeHTTP(w, req)
 		}
 	}
 }

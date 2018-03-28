@@ -14,12 +14,12 @@
  * limitations under the License.
  *
  *******************************************************************************/
-package resource
+package device
 
 import (
 	"commons/errors"
 	urls "commons/url"
-	resourcemocks "controller/monitoring/resource/mocks"
+	devicemocks "controller/device/mocks"
 	"github.com/golang/mock/gomock"
 	"net/http"
 	"net/http/httptest"
@@ -28,11 +28,10 @@ import (
 
 var (
 	invalidOperationList = map[string][]string{
-		"/api/v1/monitoring/apps/appId/resource": []string{POST, PUT, DELETE},
-		"/api/v1/monitoring/resource":            []string{POST, PUT, DELETE},
+		"/api/v1/management/device/reboot":  []string{GET, PUT, DELETE},
+		"/api/v1/management/device/restore": []string{GET, PUT, DELETE},
 	}
-	testAppId = "testAppId"
-	testMap   = map[string]interface{}{
+	testMap = map[string]interface{}{
 		"test": "test",
 	}
 	testList = []testObj{
@@ -56,13 +55,13 @@ type testObj struct {
 	expectCode int
 }
 
-var resourceAPIExecutor Command
+var deviceAPIExecutor Command
 
 func init() {
-	resourceAPIExecutor = Executor{}
+	deviceAPIExecutor = Executor{}
 }
 
-func TestResourceAPIInvalidOperation(t *testing.T) {
+func TestDeviceAPIInvalidOperation(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -71,7 +70,7 @@ func TestResourceAPIInvalidOperation(t *testing.T) {
 			w := httptest.NewRecorder()
 			req, _ := http.NewRequest(method, api, nil)
 
-			resourceAPIExecutor.Handle(w, req)
+			deviceAPIExecutor.Handle(w, req)
 
 			if w.Code != http.StatusMethodNotAllowed {
 				t.Errorf("Expected error : %d, Actual Error : %d", http.StatusMethodNotAllowed, w.Code)
@@ -80,45 +79,45 @@ func TestResourceAPIInvalidOperation(t *testing.T) {
 	}
 }
 
-func TestHostResourceAPI_ExpectSuccess(t *testing.T) {
+func TestRebootAPI_ExpectSuccess(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	resourceExecutorMockObj := resourcemocks.NewMockCommand(ctrl)
+	deviceExecutorMockObj := devicemocks.NewMockCommand(ctrl)
 
 	gomock.InOrder(
-		resourceExecutorMockObj.EXPECT().GetHostResourceInfo().Return(testMap, nil),
+		deviceExecutorMockObj.EXPECT().Reboot().Return(nil),
 	)
 
 	w := httptest.NewRecorder()
-	req, _ := http.NewRequest(GET, urls.Base()+urls.Monitoring()+urls.Resource(), nil)
+	req, _ := http.NewRequest(POST, urls.Base()+urls.Management()+urls.Device()+urls.Reboot(), nil)
 
-	resourceExecutor = resourceExecutorMockObj
+	deviceExecutor = deviceExecutorMockObj
 
-	resourceAPIExecutor.Handle(w, req)
+	deviceAPIExecutor.Handle(w, req)
 
 	if w.Code != http.StatusOK {
 		t.Errorf("Unexpected error code : %d", w.Code)
 	}
 }
 
-func TestHostResourceAPIWhenControllerFailed_ExpectReturnError(t *testing.T) {
+func TestRebootAPIWhenControllerFailed_ExpectReturnError(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	resourceExecutorMockObj := resourcemocks.NewMockCommand(ctrl)
+	deviceExecutorMockObj := devicemocks.NewMockCommand(ctrl)
 
 	for _, test := range testList {
 		gomock.InOrder(
-			resourceExecutorMockObj.EXPECT().GetHostResourceInfo().Return(nil, test.err),
+			deviceExecutorMockObj.EXPECT().Reboot().Return(test.err),
 		)
 
 		w := httptest.NewRecorder()
-		req, _ := http.NewRequest(GET, urls.Base()+urls.Monitoring()+urls.Resource(), nil)
+		req, _ := http.NewRequest(POST, urls.Base()+urls.Management()+urls.Device()+urls.Reboot(), nil)
 
-		resourceExecutor = resourceExecutorMockObj
+		deviceExecutor = deviceExecutorMockObj
 
-		resourceAPIExecutor.Handle(w, req)
+		deviceAPIExecutor.Handle(w, req)
 
 		if w.Code != test.expectCode {
 			t.Errorf("Unexpected error code : %d\n", w.Code)
@@ -126,45 +125,45 @@ func TestHostResourceAPIWhenControllerFailed_ExpectReturnError(t *testing.T) {
 	}
 }
 
-func TestAppResourceAPI_ExpectSuccess(t *testing.T) {
+func TestRestoreAPI_ExpectSuccess(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	resourceExecutorMockObj := resourcemocks.NewMockCommand(ctrl)
+	deviceExecutorMockObj := devicemocks.NewMockCommand(ctrl)
 
 	gomock.InOrder(
-		resourceExecutorMockObj.EXPECT().GetAppResourceInfo(testAppId).Return(testMap, nil),
+		deviceExecutorMockObj.EXPECT().Restore().Return(nil),
 	)
 
 	w := httptest.NewRecorder()
-	req, _ := http.NewRequest(GET, urls.Base()+urls.Monitoring()+urls.Apps()+"/"+testAppId+urls.Resource(), nil)
+	req, _ := http.NewRequest(POST, urls.Base()+urls.Management()+urls.Device()+urls.Restore(), nil)
 
-	resourceExecutor = resourceExecutorMockObj
+	deviceExecutor = deviceExecutorMockObj
 
-	resourceAPIExecutor.Handle(w, req)
+	deviceAPIExecutor.Handle(w, req)
 
 	if w.Code != http.StatusOK {
 		t.Errorf("Unexpected error code : %d", w.Code)
 	}
 }
 
-func TestAppResourceAPIWhenControllerFailed_ExpectReturnError(t *testing.T) {
+func TestRestoreAPIWhenControllerFailed_ExpectReturnError(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	resourceExecutorMockObj := resourcemocks.NewMockCommand(ctrl)
+	deviceExecutorMockObj := devicemocks.NewMockCommand(ctrl)
 
 	for _, test := range testList {
 		gomock.InOrder(
-			resourceExecutorMockObj.EXPECT().GetAppResourceInfo(testAppId).Return(nil, test.err),
+			deviceExecutorMockObj.EXPECT().Restore().Return(test.err),
 		)
 
 		w := httptest.NewRecorder()
-		req, _ := http.NewRequest(GET, urls.Base()+urls.Monitoring()+urls.Apps()+"/"+testAppId+urls.Resource(), nil)
+		req, _ := http.NewRequest(POST, urls.Base()+urls.Management()+urls.Device()+urls.Restore(), nil)
 
-		resourceExecutor = resourceExecutorMockObj
+		deviceExecutor = deviceExecutorMockObj
 
-		resourceAPIExecutor.Handle(w, req)
+		deviceAPIExecutor.Handle(w, req)
 
 		if w.Code != test.expectCode {
 			t.Errorf("Unexpected error code : %d\n", w.Code)

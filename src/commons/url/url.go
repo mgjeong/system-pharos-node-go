@@ -57,11 +57,23 @@ func Register() string { return "/register" }
 // Returning Unregister url as string.
 func Unregister() string { return "/unregister" }
 
-//Returning Resoucres url as string.
+// Returning Resoucres url as string.
 func Resource() string { return "/resource" }
 
-//Returning Performance url as string.
+// Returning Performance url as string.
 func Performance() string { return "/performance" }
 
-//Returning Configuration url as string.
+// Returning Configuration url as string.
 func Configuration() string { return "/configuration" }
+
+// Returning Device url as string.
+func Device() string { return "/device" }
+
+// Returning Reboot url as string.
+func Reboot() string { return "/reboot" }
+
+// Returning Restore url as string.
+func Restore() string { return "/restore" }
+
+// Returning Control url as string.
+func Control() string { return "/control" }

@@ -66,13 +66,13 @@ type testObj struct {
 	expectCode int
 }
 
-var deploymentApiExecutor Command
+var deploymentAPIExecutor Command
 
 func init() {
-	deploymentApiExecutor = Executor{}
+	deploymentAPIExecutor = Executor{}
 }
 
-func TestDeploymentApiWithInvalidOperation(t *testing.T) {
+func TestDeploymentAPIWithInvalidOperation(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -81,7 +81,7 @@ func TestDeploymentApiWithInvalidOperation(t *testing.T) {
 			w := httptest.NewRecorder()
 			req, _ := http.NewRequest(method, api, nil)
 
-			deploymentApiExecutor.Handle(w, req)
+			deploymentAPIExecutor.Handle(w, req)
 
 			if w.Code != http.StatusMethodNotAllowed {
 				t.Errorf("Expected error : %d, Actual Error : %d", http.StatusMethodNotAllowed, w.Code)
@@ -90,7 +90,7 @@ func TestDeploymentApiWithInvalidOperation(t *testing.T) {
 	}
 }
 
-func TestDeployApi_ExpectSuccess(t *testing.T) {
+func TestDeployAPI_ExpectSuccess(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -112,7 +112,7 @@ func TestDeployApi_ExpectSuccess(t *testing.T) {
 
 	deploymentExecutor = deploymentExecutorMockObj
 
-	deploymentApiExecutor.Handle(w, req)
+	deploymentAPIExecutor.Handle(w, req)
 
 	if w.Header().Get("Location") != urls.Base()+urls.Management()+urls.Apps()+"/"+appId ||
 		w.Code != http.StatusOK {
@@ -120,7 +120,7 @@ func TestDeployApi_ExpectSuccess(t *testing.T) {
 	}
 }
 
-func TestDeployApiWhenControllerFailed_ExpecReturnError(t *testing.T) {
+func TestDeployAPIWhenControllerFailed_ExpecReturnError(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -140,7 +140,7 @@ func TestDeployApiWhenControllerFailed_ExpecReturnError(t *testing.T) {
 
 		deploymentExecutor = deploymentExecutorMockObj
 
-		deploymentApiExecutor.Handle(w, req)
+		deploymentAPIExecutor.Handle(w, req)
 
 		if w.Code != test.expectCode {
 			t.Errorf("Expected error code : %d, Actual error code : %d\n", test.expectCode, w.Code)
@@ -148,7 +148,7 @@ func TestDeployApiWhenControllerFailed_ExpecReturnError(t *testing.T) {
 	}
 }
 
-func TestDeployApiWithEmptyBodyStr_ExpecReturnError(t *testing.T) {
+func TestDeployAPIWithEmptyBodyStr_ExpecReturnError(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -162,14 +162,14 @@ func TestDeployApiWithEmptyBodyStr_ExpecReturnError(t *testing.T) {
 
 	deploymentExecutor = deploymentExecutorMockObj
 
-	deploymentApiExecutor.Handle(w, req)
+	deploymentAPIExecutor.Handle(w, req)
 
 	if w.Code == http.StatusOK {
 		t.Errorf("Expected return error but return http.StatusOK")
 	}
 }
 
-func TestAppsApi_ExpectSuccess(t *testing.T) {
+func TestAppsAPI_ExpectSuccess(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -187,14 +187,14 @@ func TestAppsApi_ExpectSuccess(t *testing.T) {
 
 	deploymentExecutor = deploymentExecutorMockObj
 
-	deploymentApiExecutor.Handle(w, req)
+	deploymentAPIExecutor.Handle(w, req)
 
 	if w.Code != http.StatusOK {
 		t.Errorf("Expected return OK, Actual Return : %d", w.Code)
 	}
 }
 
-func TestAppsApiWhenControllerFailed_ExpectReturnError(t *testing.T) {
+func TestAppsAPIWhenControllerFailed_ExpectReturnError(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -210,7 +210,7 @@ func TestAppsApiWhenControllerFailed_ExpectReturnError(t *testing.T) {
 
 		deploymentExecutor = deploymentExecutorMockObj
 
-		deploymentApiExecutor.Handle(w, req)
+		deploymentAPIExecutor.Handle(w, req)
 
 		if w.Code != test.expectCode {
 			t.Errorf("Expected error code : %d, Actual error code : %d\n", test.expectCode, w.Code)
@@ -218,7 +218,7 @@ func TestAppsApiWhenControllerFailed_ExpectReturnError(t *testing.T) {
 	}
 }
 
-func TestGETAppApi_ExpectSuccess(t *testing.T) {
+func TestGETAppAPI_ExpectSuccess(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -233,14 +233,14 @@ func TestGETAppApi_ExpectSuccess(t *testing.T) {
 
 	deploymentExecutor = deploymentExecutorMockObj
 
-	deploymentApiExecutor.Handle(w, req)
+	deploymentAPIExecutor.Handle(w, req)
 
 	if w.Code != http.StatusOK {
 		t.Errorf("Expected return OK, Actual Return : %d", w.Code)
 	}
 }
 
-func TestGETAppApiWhenControllerFailed_ExpectReturnError(t *testing.T) {
+func TestGETAppAPIWhenControllerFailed_ExpectReturnError(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -256,7 +256,7 @@ func TestGETAppApiWhenControllerFailed_ExpectReturnError(t *testing.T) {
 
 		deploymentExecutor = deploymentExecutorMockObj
 
-		deploymentApiExecutor.Handle(w, req)
+		deploymentAPIExecutor.Handle(w, req)
 
 		if w.Code != test.expectCode {
 			t.Errorf("Expected error code : %d, Actual error code : %d\n", test.expectCode, w.Code)
@@ -264,7 +264,7 @@ func TestGETAppApiWhenControllerFailed_ExpectReturnError(t *testing.T) {
 	}
 }
 
-func TestPOSTAppApi_ExpectSuccess(t *testing.T) {
+func TestPOSTAppAPI_ExpectSuccess(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -283,14 +283,14 @@ func TestPOSTAppApi_ExpectSuccess(t *testing.T) {
 
 	deploymentExecutor = deploymentExecutorMockObj
 
-	deploymentApiExecutor.Handle(w, req)
+	deploymentAPIExecutor.Handle(w, req)
 
 	if w.Code != http.StatusOK {
 		t.Errorf("Expected return OK, Actual Return : %d", w.Code)
 	}
 }
 
-func TestPOSTAppApiWithEmptyBody_ExpectSuccess(t *testing.T) {
+func TestPOSTAppAPIWithEmptyBody_ExpectSuccess(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -301,14 +301,14 @@ func TestPOSTAppApiWithEmptyBody_ExpectSuccess(t *testing.T) {
 
 	deploymentExecutor = deploymentExecutorMockObj
 
-	deploymentApiExecutor.Handle(w, req)
+	deploymentAPIExecutor.Handle(w, req)
 
 	if w.Code == http.StatusOK {
 		t.Errorf("Expected return error but return http.StatusOK")
 	}
 }
 
-func TestPOSTAppApiWhenControllerFailed_ExpectReturnError(t *testing.T) {
+func TestPOSTAppAPIWhenControllerFailed_ExpectReturnError(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -328,7 +328,7 @@ func TestPOSTAppApiWhenControllerFailed_ExpectReturnError(t *testing.T) {
 
 		deploymentExecutor = deploymentExecutorMockObj
 
-		deploymentApiExecutor.Handle(w, req)
+		deploymentAPIExecutor.Handle(w, req)
 
 		if w.Code != test.expectCode {
 			t.Errorf("Expected error code : %d, Actual error code : %d\n", test.expectCode, w.Code)
@@ -336,7 +336,7 @@ func TestPOSTAppApiWhenControllerFailed_ExpectReturnError(t *testing.T) {
 	}
 }
 
-func TestDELETEAppApi_ExpectSuccess(t *testing.T) {
+func TestDELETEAppAPI_ExpectSuccess(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -351,14 +351,14 @@ func TestDELETEAppApi_ExpectSuccess(t *testing.T) {
 
 	deploymentExecutor = deploymentExecutorMockObj
 
-	deploymentApiExecutor.Handle(w, req)
+	deploymentAPIExecutor.Handle(w, req)
 
 	if w.Code != http.StatusOK {
 		t.Errorf("Expected return OK, Actual Return : %d", w.Code)
 	}
 }
 
-func TestDELETEAppApiWhenControllerFailed_ExpectReturnError(t *testing.T) {
+func TestDELETEAppAPIWhenControllerFailed_ExpectReturnError(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -374,7 +374,7 @@ func TestDELETEAppApiWhenControllerFailed_ExpectReturnError(t *testing.T) {
 
 		deploymentExecutor = deploymentExecutorMockObj
 
-		deploymentApiExecutor.Handle(w, req)
+		deploymentAPIExecutor.Handle(w, req)
 
 		if w.Code != test.expectCode {
 			t.Errorf("Expected error code : %d, Actual error code : %d\n", test.expectCode, w.Code)
@@ -382,7 +382,7 @@ func TestDELETEAppApiWhenControllerFailed_ExpectReturnError(t *testing.T) {
 	}
 }
 
-func TestEventsApi_ExpectSuccess(t *testing.T) {
+func TestEventsAPI_ExpectSuccess(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -401,14 +401,14 @@ func TestEventsApi_ExpectSuccess(t *testing.T) {
 
 	deploymentExecutor = deploymentExecutorMockObj
 
-	deploymentApiExecutor.Handle(w, req)
+	deploymentAPIExecutor.Handle(w, req)
 
 	if w.Code != http.StatusOK {
 		t.Errorf("Expected return OK, Actual Return : %d", w.Code)
 	}
 }
 
-func TestEventsApiWithEmptyBodyStr_ExpecReturnError(t *testing.T) {
+func TestEventsAPIWithEmptyBodyStr_ExpecReturnError(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -422,14 +422,14 @@ func TestEventsApiWithEmptyBodyStr_ExpecReturnError(t *testing.T) {
 
 	deploymentExecutor = deploymentExecutorMockObj
 
-	deploymentApiExecutor.Handle(w, req)
+	deploymentAPIExecutor.Handle(w, req)
 
 	if w.Code == http.StatusOK {
 		t.Errorf("Expected return error but return http.StatusOK")
 	}
 }
 
-func TestStartApi_ExpectSuccess(t *testing.T) {
+func TestStartAPI_ExpectSuccess(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -444,14 +444,14 @@ func TestStartApi_ExpectSuccess(t *testing.T) {
 
 	deploymentExecutor = deploymentExecutorMockObj
 
-	deploymentApiExecutor.Handle(w, req)
+	deploymentAPIExecutor.Handle(w, req)
 
 	if w.Code != http.StatusOK {
 		t.Errorf("Expected return OK, Actual Return : %d", w.Code)
 	}
 }
 
-func TestStartApiWhenControllerFailed_ExpectReturnError(t *testing.T) {
+func TestStartAPIWhenControllerFailed_ExpectReturnError(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -467,7 +467,7 @@ func TestStartApiWhenControllerFailed_ExpectReturnError(t *testing.T) {
 
 		deploymentExecutor = deploymentExecutorMockObj
 
-		deploymentApiExecutor.Handle(w, req)
+		deploymentAPIExecutor.Handle(w, req)
 
 		if w.Code != test.expectCode {
 			t.Errorf("Expected error code : %d, Actual error code : %d\n", test.expectCode, w.Code)
@@ -475,7 +475,7 @@ func TestStartApiWhenControllerFailed_ExpectReturnError(t *testing.T) {
 	}
 }
 
-func TestStopApi_ExpectSuccess(t *testing.T) {
+func TestStopAPI_ExpectSuccess(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -490,14 +490,14 @@ func TestStopApi_ExpectSuccess(t *testing.T) {
 
 	deploymentExecutor = deploymentExecutorMockObj
 
-	deploymentApiExecutor.Handle(w, req)
+	deploymentAPIExecutor.Handle(w, req)
 
 	if w.Code != http.StatusOK {
 		t.Errorf("Expected return OK, Actual Return : %d", w.Code)
 	}
 }
 
-func TestStopApiWhenControllerFailed_ExpectReturnError(t *testing.T) {
+func TestStopAPIWhenControllerFailed_ExpectReturnError(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -513,7 +513,7 @@ func TestStopApiWhenControllerFailed_ExpectReturnError(t *testing.T) {
 
 		deploymentExecutor = deploymentExecutorMockObj
 
-		deploymentApiExecutor.Handle(w, req)
+		deploymentAPIExecutor.Handle(w, req)
 
 		if w.Code != test.expectCode {
 			t.Errorf("Expected error code : %d, Actual error code : %d\n", test.expectCode, w.Code)
@@ -521,7 +521,7 @@ func TestStopApiWhenControllerFailed_ExpectReturnError(t *testing.T) {
 	}
 }
 
-func TestUpdateApi_ExpectSuccess(t *testing.T) {
+func TestUpdateAPI_ExpectSuccess(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -537,14 +537,14 @@ func TestUpdateApi_ExpectSuccess(t *testing.T) {
 
 	deploymentExecutor = deploymentExecutorMockObj
 
-	deploymentApiExecutor.Handle(w, req)
+	deploymentAPIExecutor.Handle(w, req)
 
 	if w.Code != http.StatusOK {
 		t.Errorf("Expected return OK, Actual Return : %d", w.Code)
 	}
 }
 
-func TestUpdateApiWhenControllerFailed_ExpectReturnError(t *testing.T) {
+func TestUpdateAPIWhenControllerFailed_ExpectReturnError(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -560,7 +560,7 @@ func TestUpdateApiWhenControllerFailed_ExpectReturnError(t *testing.T) {
 
 		deploymentExecutor = deploymentExecutorMockObj
 
-		deploymentApiExecutor.Handle(w, req)
+		deploymentAPIExecutor.Handle(w, req)
 
 		if w.Code != test.expectCode {
 			t.Errorf("Expected error code : %d, Actual error code : %d\n", test.expectCode, w.Code)
