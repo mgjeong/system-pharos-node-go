@@ -639,6 +639,31 @@ func TestCalledStartApp_ExpectSuccess(t *testing.T) {
 	}
 }
 
+func TestStartAppWhenGetAppStateFailed_ExpectReturnError(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	dbExecutorMockObj := dbmocks.NewMockCommand(ctrl)
+
+	gomock.InOrder(
+		dbExecutorMockObj.EXPECT().GetAppState(APP_ID).Return("", errors.Unknown{}),
+	)
+
+	// pass mockObj to a real object.
+	dbExecutor = dbExecutorMockObj
+
+	err := Executor.StartApp(APP_ID)
+
+	if err == nil {
+		t.Errorf("Expected err: %s, actual err: %s", "Unknown", "nil")
+	}
+	switch err.(type) {
+	default:
+		t.Errorf("Expected err: %s, actual err: %s", "Unknown", err.Error())
+	case errors.Unknown:
+	}
+}
+
 func TestCalledStartAppWhenSetYAMLFileFailed_ExpectErrorReturn(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -683,6 +708,33 @@ func TestCalledStartAppWhenComposeStartFailed_ExpectErrorReturn(t *testing.T) {
 	}
 }
 
+func TestStartAppWhenUpdateAppStateFailed_ExpectReturnError(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	dockerExecutorMockObj := dockermocks.NewMockCommand(ctrl)
+	dbExecutorMockObj := dbmocks.NewMockCommand(ctrl)
+
+	gomock.InOrder(
+		dbExecutorMockObj.EXPECT().GetAppState(APP_ID).Return(APP_STATE, nil),
+		dbExecutorMockObj.EXPECT().GetApp(APP_ID).Return(DB_GET_OBJ, nil),
+		dockerExecutorMockObj.EXPECT().Start(gomock.Any(), gomock.Any()).Return(nil),
+		dbExecutorMockObj.EXPECT().UpdateAppState(APP_ID, RUNNING_STATE).Return(errors.Unknown{}),
+	)
+
+	// pass mockObj to a real object.
+	dockerExecutor = dockerExecutorMockObj
+	dbExecutor = dbExecutorMockObj
+
+	err := Executor.StartApp(APP_ID)
+
+	switch err.(type) {
+	default:
+		t.Errorf("Expected err: %s, actual err: %s", "Unknown", err.Error())
+	case errors.Unknown:
+	}
+}
+
 func TestCalledStopApp_ExpectSuccess(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -705,6 +757,34 @@ func TestCalledStopApp_ExpectSuccess(t *testing.T) {
 
 	if err != nil {
 		t.Errorf("Unexpected err: %s", err.Error())
+	}
+}
+
+func TestStopAppWhenGetAppStateFailed_ExpectReturnError(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	dockerExecutorMockObj := dockermocks.NewMockCommand(ctrl)
+	dbExecutorMockObj := dbmocks.NewMockCommand(ctrl)
+
+	gomock.InOrder(
+		dbExecutorMockObj.EXPECT().GetAppState(APP_ID).Return("", errors.Unknown{}),
+	)
+
+	// pass mockObj to a real object.
+	dockerExecutor = dockerExecutorMockObj
+	dbExecutor = dbExecutorMockObj
+
+	err := Executor.StopApp(APP_ID)
+
+	if err == nil {
+		t.Errorf("Expected err: %s, actual err: %s", "Unknown", "nil")
+	}
+
+	switch err.(type) {
+	default:
+		t.Errorf("Expected err: %s, actual err: %s", "Unknown", err.Error())
+	case errors.Unknown:
 	}
 }
 
@@ -1673,6 +1753,7 @@ func TestRestoreStateWhenStopFailed_ExpectReturnError(t *testing.T) {
 	dockerExecutor = dockerExecutorMockObj
 
 	err := restoreState(APP_ID, EXITED_STATE)
+
 	switch err.(type) {
 	default:
 		t.Errorf("Expected err: UnknownError, actual err: %s", err.Error())
@@ -1685,6 +1766,7 @@ func TestUpdateYamlFile_ExpectSuccess(t *testing.T) {
 	defer ctrl.Finish()
 
 	_, err := updateYamlFile(APP_ID, ORIGIN_DESCRIPTION_JSON, SERVICE, REPOSITORY_WITH_PORT_IMAGE+":"+NEW_TAG)
+
 	if err != nil {
 		t.Errorf("Unexpected err: %s", err.Error())
 	}
@@ -1695,6 +1777,7 @@ func TestUpdateYamlFileWithInvalidJSON_ExpectReturnError(t *testing.T) {
 	defer ctrl.Finish()
 
 	_, err := updateYamlFile(APP_ID, WRONG_DESCRIPTION_JSON, SERVICE, REPOSITORY_WITH_PORT_IMAGE+":"+NEW_TAG)
+
 	if err == nil {
 		t.Errorf("Expected err: %s, actual err: %s", "json unmarshal", "nil")
 	}
@@ -1705,6 +1788,7 @@ func TestUpdateYamlFileWithInvalidDescription_ExpectReturnError(t *testing.T) {
 	defer ctrl.Finish()
 
 	_, err := updateYamlFile(APP_ID, DESCRIPTION_JSON_WITHOUT_SERVICE, SERVICE, REPOSITORY_WITH_PORT_IMAGE+":"+NEW_TAG)
+
 	if err == nil {
 		t.Errorf("Expected err: %s, actual err: %s", "can't find application info unmarshal", "nil")
 	}
@@ -1715,6 +1799,7 @@ func TestExtractQueryInfoWithRepoWithPortAndTag_ExpectSuccess(t *testing.T) {
 	defer ctrl.Finish()
 
 	tagExist, repo, tag, err := extractQueryInfo(REPOSITORY_WITH_PORT_IMAGE + ":" + OLD_TAG)
+
 	if tagExist == false || repo != REPOSITORY_WITH_PORT_IMAGE || tag != OLD_TAG || err != nil {
 		t.Errorf("Unexpected err: %s", err.Error())
 	}
@@ -1725,6 +1810,7 @@ func TestExtractQueryInfoWithRepoWithPortAndNoTag_ExpectSuccess(t *testing.T) {
 	defer ctrl.Finish()
 
 	tagExist, repo, tag, err := extractQueryInfo(REPOSITORY_WITH_PORT_IMAGE)
+
 	if tagExist == true || repo != REPOSITORY_WITH_PORT_IMAGE || tag != "" || err != nil {
 		t.Errorf("Unexpected err: %s", err.Error())
 	}
@@ -1737,8 +1823,24 @@ func TestExtractQueryInfoWithRepoWithoutPortAndTag_ExpectSuccess(t *testing.T) {
 	REPOSITORY_WITHOUT_PORT := "docker"
 
 	tagExist, repo, tag, err := extractQueryInfo(REPOSITORY_WITHOUT_PORT + ":" + OLD_TAG)
+
 	if tagExist == false || repo != REPOSITORY_WITHOUT_PORT || tag != OLD_TAG || err != nil {
 		t.Errorf("Unexpected err: %s", err.Error())
+	}
+}
+
+func TestExtractQueryInfoWithRepoWithPortAndInvalidTag_ExpectReturnFalse(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	tagExist, _, _, err := extractQueryInfo(REPOSITORY_WITH_PORT_IMAGE + ":")
+
+	if tagExist != false {
+		t.Errorf("Unexpected err: %s", err.Error())
+	}
+
+	if err == nil {
+		t.Error("Expected err : Unknown - invalid repository, Actual err : nil")
 	}
 }
 
@@ -1749,6 +1851,7 @@ func TestExtractQueryInfoWithRepoWithoutPortAndNoTag_ExpectSuccess(t *testing.T)
 	REPOSITORY_WITHOUT_PORT := "docker"
 
 	tagExist, repo, tag, err := extractQueryInfo(REPOSITORY_WITHOUT_PORT)
+
 	if tagExist == true || repo != REPOSITORY_WITHOUT_PORT || tag != "" || err != nil {
 		t.Errorf("Unexpected err: %s", err.Error())
 	}
@@ -1759,12 +1862,47 @@ func TestGetServiceName_ExpectSuccess(t *testing.T) {
 	defer ctrl.Finish()
 
 	serviceName, err := getServiceName(REPOSITORY_WITH_PORT_IMAGE, []byte(UPDATED_DESCRIPTION_JSON))
+
 	if serviceName != SERVICE {
 		t.Errorf("Expected service name: %s, actual service name: %s", SERVICE_NAME, serviceName)
 	}
 
 	if err != nil {
 		t.Errorf("Unexpected err: %s", err.Error())
+	}
+}
+
+func TestGetServiceNameWithNoServiceDescription_ExpectReturnError(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	_, err := getServiceName(REPOSITORY_WITH_PORT_IMAGE, []byte(DESCRIPTION_JSON_WITHOUT_SERVICE))
+
+	if err == nil {
+		t.Error("Expected err: Unknown, actual err : nil")
+	}
+
+	switch err.(type) {
+	default:
+		t.Errorf("Expected err: Unknown, actual err: %s", err.Error())
+	case errors.Unknown:
+	}
+}
+
+func TestGetServiceNameWithInvalidDescription_ExpectReturnError(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	_, err := getServiceName(REPOSITORY_WITH_PORT_IMAGE, []byte(INVALID_JSON_FORMAT))
+
+	if err == nil {
+		t.Error("Expected err: IOError, actual err : nil")
+	}
+
+	switch err.(type) {
+	default:
+		t.Errorf("Expected err: IOError, actual err: %s", err.Error())
+	case errors.IOError:
 	}
 }
 
@@ -1776,9 +1914,7 @@ func TestGetServiceNameWithNoPortRepository_ExpectSuccess(t *testing.T) {
 
 	DESCRIPTION_JSON_WITH_NO_PORT_REPOSITORY := "{\"services\":{\"" + SERVICE + "\":{\"image\":\"" + NO_PORT_REPOSITORY + ":" + OLD_TAG + "\"}},\"version\":\"2\"}"
 	serviceName, err := getServiceName(NO_PORT_REPOSITORY, []byte(DESCRIPTION_JSON_WITH_NO_PORT_REPOSITORY))
-	if serviceName != SERVICE {
-		t.Errorf("Expected service name: %s, actual service name: %s", SERVICE_NAME, serviceName)
-	}
+
 	if serviceName != SERVICE {
 		t.Errorf("Expected service name: %s, actual service name: %s", SERVICE_NAME, serviceName)
 	}

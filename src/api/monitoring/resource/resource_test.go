@@ -56,13 +56,13 @@ type testObj struct {
 	expectCode int
 }
 
-var resourceApiExecutor Command
+var resourceAPIExecutor Command
 
 func init() {
-	resourceApiExecutor = Executor{}
+	resourceAPIExecutor = Executor{}
 }
 
-func TestResourceApiInvalidOperation(t *testing.T) {
+func TestResourceAPIInvalidOperation(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -71,7 +71,7 @@ func TestResourceApiInvalidOperation(t *testing.T) {
 			w := httptest.NewRecorder()
 			req, _ := http.NewRequest(method, api, nil)
 
-			resourceApiExecutor.Handle(w, req)
+			resourceAPIExecutor.Handle(w, req)
 
 			if w.Code != http.StatusMethodNotAllowed {
 				t.Errorf("Expected error : %d, Actual Error : %d", http.StatusMethodNotAllowed, w.Code)
@@ -80,7 +80,23 @@ func TestResourceApiInvalidOperation(t *testing.T) {
 	}
 }
 
-func TestHostResourceApi_ExpectSuccess(t *testing.T) {
+func TestResourceAPIInvalidUrl(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	InvalidUrl := "http://0.0.0.0:48098/api/v1/monitoring/resource/resource"
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest(GET, InvalidUrl, nil)
+
+	resourceAPIExecutor.Handle(w, req)
+
+	if w.Code != http.StatusNotFound {
+		t.Errorf("Expected error : %d, Actual Error : %d", http.StatusNotFound, w.Code)
+	}
+}
+
+func TestHostResourceAPI_ExpectSuccess(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -95,14 +111,14 @@ func TestHostResourceApi_ExpectSuccess(t *testing.T) {
 
 	resourceExecutor = resourceExecutorMockObj
 
-	resourceApiExecutor.Handle(w, req)
+	resourceAPIExecutor.Handle(w, req)
 
 	if w.Code != http.StatusOK {
 		t.Errorf("Unexpected error code : %d", w.Code)
 	}
 }
 
-func TestHostResourceApiWhenControllerFailed_ExpectReturnError(t *testing.T) {
+func TestHostResourceAPIWhenControllerFailed_ExpectReturnError(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -118,7 +134,7 @@ func TestHostResourceApiWhenControllerFailed_ExpectReturnError(t *testing.T) {
 
 		resourceExecutor = resourceExecutorMockObj
 
-		resourceApiExecutor.Handle(w, req)
+		resourceAPIExecutor.Handle(w, req)
 
 		if w.Code != test.expectCode {
 			t.Errorf("Unexpected error code : %d\n", w.Code)
@@ -126,7 +142,7 @@ func TestHostResourceApiWhenControllerFailed_ExpectReturnError(t *testing.T) {
 	}
 }
 
-func TestAppResourceApi_ExpectSuccess(t *testing.T) {
+func TestAppResourceAPI_ExpectSuccess(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -141,14 +157,14 @@ func TestAppResourceApi_ExpectSuccess(t *testing.T) {
 
 	resourceExecutor = resourceExecutorMockObj
 
-	resourceApiExecutor.Handle(w, req)
+	resourceAPIExecutor.Handle(w, req)
 
 	if w.Code != http.StatusOK {
 		t.Errorf("Unexpected error code : %d", w.Code)
 	}
 }
 
-func TestAppResourceApiWhenControllerFailed_ExpectReturnError(t *testing.T) {
+func TestAppResourceAPIWhenControllerFailed_ExpectReturnError(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -164,7 +180,7 @@ func TestAppResourceApiWhenControllerFailed_ExpectReturnError(t *testing.T) {
 
 		resourceExecutor = resourceExecutorMockObj
 
-		resourceApiExecutor.Handle(w, req)
+		resourceAPIExecutor.Handle(w, req)
 
 		if w.Code != test.expectCode {
 			t.Errorf("Unexpected error code : %d\n", w.Code)

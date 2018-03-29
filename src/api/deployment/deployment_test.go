@@ -532,7 +532,6 @@ func TestUpdateApi_ExpectSuccess(t *testing.T) {
 	)
 
 	w := httptest.NewRecorder()
-	print(urls.Base() + urls.Management() + urls.Apps() + appId + urls.Update())
 	req, _ := http.NewRequest(POST, urls.Base()+urls.Management()+urls.Apps()+"/"+appId+urls.Update(), nil)
 
 	deploymentExecutor = deploymentExecutorMockObj
