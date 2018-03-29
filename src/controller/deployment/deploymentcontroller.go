@@ -127,7 +127,18 @@ func (executor depExecutorImpl) DeployApp(body string) (map[string]interface{}, 
 	data, err := dbExecutor.InsertComposeFile(string(jsonData), RUNNING_STATE)
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
-		return nil, err
+		switch err.(type) {
+		default:
+			return nil, err
+		case errors.AlreadyReported:
+			deployedApp, err := executor.App(data[ID].(string))
+			if err != nil {
+				logger.Logging(logger.ERROR, err.Error())
+				return nil, err
+			}
+			deployedApp[ID] = data[ID].(string)
+			return deployedApp, err
+		}
 	}
 
 	err = dockerExecutor.Events(data[ID].(string), COMPOSE_FILE, events)
@@ -276,7 +287,7 @@ func (depExecutorImpl) UpdateAppInfo(appId string, body string) error {
 	err = dbExecutor.UpdateAppInfo(appId, string(jsonData))
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
-		return convertDBError(err, appId)
+		return err
 	}
 
 	return nil
