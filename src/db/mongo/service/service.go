@@ -134,7 +134,7 @@ func (Executor) InsertComposeFile(description string, state string) (map[string]
 	app := App{}
 	err = getCollection(session, DB_NAME, APP_COLLECTION).Find(bson.M{"_id": id}).One(&app)
 	if err == nil {
-		return nil, errors.AlreadyReported{Msg: id}
+		return app.convertToMap(), errors.AlreadyReported{Msg: id}
 	}
 
 	images, err := getImageNames([]byte(description))
@@ -216,6 +216,16 @@ func (Executor) GetApp(app_id string) (map[string]interface{}, error) {
 func (Executor) UpdateAppInfo(app_id string, description string) error {
 	if len(app_id) == 0 {
 		err := errors.InvalidParam{"Invalid param error : app_id is empty."}
+		return err
+	}
+
+	id, err := generateID(description)
+	if err != nil {
+		return err
+	}
+
+	if strings.Compare(app_id, id) != 0 {
+		err := errors.InvalidYaml{`the description is information that can not be reflected in the app that matches the appId .`}
 		return err
 	}
 
