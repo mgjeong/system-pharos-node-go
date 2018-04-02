@@ -880,7 +880,7 @@ func getServiceName(repository string, desc []byte) (string, error) {
 	if err != nil {
 		return "", errors.IOError{Msg: "json unmarshal fail"}
 	}
-	if len(description[SERVICES].(map[string]interface{})) == 0 || description[SERVICES] == nil {
+	if description[SERVICES] == nil || len(description[SERVICES].(map[string]interface{})) == 0 {
 		return "", errors.Unknown{Msg: "can't find application info"}
 	}
 

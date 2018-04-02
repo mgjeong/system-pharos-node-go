@@ -413,13 +413,6 @@ func TestGetContainerConfigByName(t *testing.T) {
 	})
 }
 
-func runisContainedName(t *testing.T, source []string, input string, expected bool) {
-	ret := isContainedStringInList(source, input)
-	if ret != expected {
-		t.Errorf("Expect %s, but returned %s", strconv.FormatBool(expected), strconv.FormatBool(ret))
-	}
-}
-
 func TestCalcNetworkIO(t *testing.T) {
 	var network map[string]types.NetworkStats = map[string]types.NetworkStats{
 		"one": types.NetworkStats{
@@ -436,7 +429,8 @@ func TestCalcNetworkIO(t *testing.T) {
 		t.Errorf("Expected rx : 11, tx : 13, Actual rx : %f, tx : %f", rx, tx)
 	}
 }
-func TestIsContainedName(t *testing.T) {
+
+func TestIsContainedStringInList(t *testing.T) {
 	type testList struct {
 		testType string
 		expect   bool
@@ -448,8 +442,10 @@ func TestIsContainedName(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.testType, func(t *testing.T) {
-			input := test.input
-			runisContainedName(t, source, input, test.expect)
+			ret := isContainedStringInList(source, test.input)
+			if ret != test.expect {
+				t.Errorf("Expect %s, but returned %s", strconv.FormatBool(test.expect), strconv.FormatBool(ret))
+			}
 		})
 	}
 }

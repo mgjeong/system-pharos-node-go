@@ -80,6 +80,22 @@ func TestResourceAPIInvalidOperation(t *testing.T) {
 	}
 }
 
+func TestResourceAPIInvalidUrl(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	InvalidUrl := "http://0.0.0.0:48098/api/v1/monitoring/resource/resource"
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest(GET, InvalidUrl, nil)
+
+	resourceAPIExecutor.Handle(w, req)
+
+	if w.Code != http.StatusNotFound {
+		t.Errorf("Expected error : %d, Actual Error : %d", http.StatusNotFound, w.Code)
+	}
+}
+
 func TestHostResourceAPI_ExpectSuccess(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
