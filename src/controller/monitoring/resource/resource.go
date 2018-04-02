@@ -19,7 +19,7 @@ package resource
 import (
 	"commons/errors"
 	"commons/logger"
-	"controller/deployment/dockercontroller"
+	"controller/dockercontroller"
 	"db/mongo/service"
 	"encoding/json"
 	"github.com/shirou/gopsutil/cpu"

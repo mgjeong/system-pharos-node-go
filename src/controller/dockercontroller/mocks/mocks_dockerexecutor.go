@@ -21,7 +21,7 @@
 package mocks
 
 import (
-	. "controller/deployment/dockercontroller"
+	. "controller/dockercontroller"
 	gomock "github.com/golang/mock/gomock"
 	reflect "reflect"
 )

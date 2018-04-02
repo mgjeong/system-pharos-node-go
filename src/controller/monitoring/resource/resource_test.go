@@ -18,7 +18,7 @@ package resource
 
 import (
 	"commons/errors"
-	dockermocks "controller/deployment/dockercontroller/mocks"
+	dockermocks "controller/dockercontroller/mocks"
 	dbmocks "db/mongo/service/mocks"
 	"github.com/golang/mock/gomock"
 	"testing"
