@@ -22,7 +22,7 @@ package deployment
 import (
 	"commons/errors"
 	"commons/logger"
-	"controller/deployment/dockercontroller"
+	"controller/dockercontroller"
 	"db/mongo/service"
 	"encoding/json"
 	"gopkg.in/yaml.v2"

@@ -18,7 +18,7 @@ package deployment
 
 import (
 	"commons/errors"
-	dockermocks "controller/deployment/dockercontroller/mocks"
+	dockermocks "controller/dockercontroller/mocks"
 	dbmocks "db/mongo/service/mocks"
 	"github.com/golang/mock/gomock"
 	"os"
