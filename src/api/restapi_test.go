@@ -24,10 +24,12 @@ import (
 	"strings"
 	"testing"
 
+	configurationapi "api/configuration/mocks"
 	deploymentapi "api/deployment/mocks"
+	deviceapi "api/device/mocks"
 	healthapi "api/health/mocks"
 	resourceapi "api/monitoring/resource/mocks"
-	deviceapi "api/device/mocks"
+	notificationapi "api/notification/mocks"
 )
 
 const (
@@ -160,6 +162,54 @@ func TestServeHTTPsendDeviceAPI(t *testing.T) {
 			req, _ := http.NewRequest(method, key, nil)
 
 			deviceAPIExecutor = deviceAPIExecutorMockObj
+			NodeAPIs.ServeHTTP(w, req)
+		}
+	}
+}
+
+func TestServeHTTPsendConfigurationApi(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	configApiExecutorMockObj := configurationapi.NewMockCommand(ctrl)
+
+	urlList := make(map[string][]string)
+	urlList["/api/v1/management/device/configuration"] = []string{GET, POST}
+
+	for key, vals := range urlList {
+		for _, method := range vals {
+			gomock.InOrder(
+				configApiExecutorMockObj.EXPECT().Handle(gomock.Any(), gomock.Any()),
+			)
+
+			w := httptest.NewRecorder()
+			req, _ := http.NewRequest(method, key, nil)
+
+			configurationAPIExecutor = configApiExecutorMockObj
+			NodeAPIs.ServeHTTP(w, req)
+		}
+	}
+}
+
+func TestServeHTTPsendNotificationApi(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	notiApiExecutorMockObj := notificationapi.NewMockCommand(ctrl)
+
+	urlList := make(map[string][]string)
+	urlList["/api/v1/notification/apps/watch"] = []string{POST, DELETE}
+
+	for key, vals := range urlList {
+		for _, method := range vals {
+			gomock.InOrder(
+				notiApiExecutorMockObj.EXPECT().Handle(gomock.Any(), gomock.Any()),
+			)
+
+			w := httptest.NewRecorder()
+			req, _ := http.NewRequest(method, key, nil)
+
+			notificationAPIExecutor = notiApiExecutorMockObj
 			NodeAPIs.ServeHTTP(w, req)
 		}
 	}
