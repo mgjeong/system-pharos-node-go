@@ -25,6 +25,7 @@ import (
 	deviceapi "api/device"
 	healthapi "api/health"
 	resourceapi "api/monitoring/resource"
+	notificationapi "api/notification"
 	"commons/errors"
 	"commons/logger"
 	"commons/url"
@@ -45,6 +46,7 @@ var healthAPIExecutor healthapi.Command
 var resourceAPIExecutor resourceapi.Command
 var configurationAPIExecutor configurationapi.Command
 var deviceAPIExecutor deviceapi.Command
+var notificationAPIExecutor notificationapi.Command
 var NodeAPIs Executor
 
 type Executor struct{}
@@ -55,6 +57,7 @@ func init() {
 	resourceAPIExecutor = resourceapi.Executor{}
 	configurationAPIExecutor = configurationapi.Executor{}
 	deviceAPIExecutor = deviceapi.Executor{}
+	notificationAPIExecutor = notificationapi.Executor{}
 }
 
 // Implements of http serve interface.
@@ -69,7 +72,8 @@ func (Executor) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		common.MakeErrorResponse(w, errors.NotFoundURL{reqUrl})
 
 	case !(strings.Contains(reqUrl, (url.Base()+url.Management())) ||
-		strings.Contains(reqUrl, (url.Base()+url.Monitoring()))):
+		strings.Contains(reqUrl, (url.Base()+url.Monitoring())) ||
+		strings.Contains(reqUrl, (url.Base()+url.Notification()))):
 		logger.Logging(logger.DEBUG, "Unknown URL")
 		common.MakeErrorResponse(w, errors.NotFoundURL{reqUrl})
 
@@ -88,5 +92,8 @@ func (Executor) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 	case strings.Contains(reqUrl, url.Device()):
 		deviceAPIExecutor.Handle(w, req)
+
+	case strings.Contains(reqUrl, url.Notification()):
+		notificationAPIExecutor.Handle(w, req)
 	}
 }
