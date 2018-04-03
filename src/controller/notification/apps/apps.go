@@ -1,0 +1,233 @@
+/*******************************************************************************
+ * Copyright 2018 Samsung Electronics All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ *******************************************************************************/
+package apps
+
+import (
+	"bytes"
+	"commons/errors"
+	"commons/logger"
+	"commons/url"
+	"controller/configuration"
+	"controller/dockercontroller"
+	"db/mongo/event"
+	"db/mongo/service"
+	"encoding/json"
+	"messenger"
+	"strings"
+)
+
+const (
+	COMPOSE_FILE        = "docker-compose.yaml"
+	DESCRIPTION         = "description"
+	SERVICES            = "services"
+	IMAGE               = "image"
+	HTTP_TAG            = "http://"
+	DEFAULT_ANCHOR_PORT = "48099"
+)
+
+type Command interface {
+	SubscribeEvent(body string) (map[string]interface{}, error)
+	SendNotification(appId, serviceName, cid, event string)
+	UnsubscribeEvent(body string) error
+}
+
+type Executor struct{}
+
+var httpExecutor messenger.Command
+var dockerExecutor dockercontroller.Command
+var dbExecutor event.Command
+var serviceExecutor service.Command
+var configurator configuration.Command
+
+var Events chan dockercontroller.Event
+
+func init() {
+	httpExecutor = messenger.NewExecutor()
+	dockerExecutor = dockercontroller.Executor
+	dbExecutor = event.Executor{}
+	serviceExecutor = service.Executor{}
+	configurator = configuration.Executor{}
+
+	Events = make(chan dockercontroller.Event)
+}
+
+func (Executor) SubscribeEvent(body string) (map[string]interface{}, error) {
+	logger.Logging(logger.DEBUG, "IN")
+	defer logger.Logging(logger.DEBUG, "OUT")
+
+	bodyMap, err := convertJsonToMap(body)
+	if err != nil {
+		logger.Logging(logger.ERROR, err.Error())
+		return nil, err
+	}
+
+	var appId, imageName string
+	if value, exists := bodyMap["appid"]; exists {
+		appId = value.(string)
+	}
+	if value, exists := bodyMap["imagename"]; exists {
+		imageName = value.(string)
+	}
+
+	event, err := dbExecutor.InsertEvent(bodyMap["eventid"].(string), appId, imageName)
+	if err != nil {
+		logger.Logging(logger.ERROR, err.Error())
+		switch err.(type) {
+		default:
+			return nil, err
+		case errors.AlreadyReported:
+			return event, err
+		}
+	}
+
+	return event, err
+}
+
+func (Executor) SendNotification(appId, serviceName, cid, event string) {
+	logger.Logging(logger.DEBUG, "IN")
+	defer logger.Logging(logger.DEBUG, "OUT")
+
+	logger.Logging(logger.DEBUG, "received event info: "+"appId="+appId+", serviceName="+serviceName+",cid="+cid+",event="+event)
+
+	// Get docker image name from service name.
+	imageName := getImageNameByServiceName(appId, serviceName)
+	evts, _ := dbExecutor.GetEvents(appId, imageName)
+	if len(evts) == 0 {
+		logger.Logging(logger.DEBUG, "There is no subscribers.")
+		return
+	}
+
+	// Get node id from configuration.
+	nodeId := ""
+	config, err := configurator.GetConfiguration()
+	if err != nil {
+		logger.Logging(logger.ERROR, err.Error())
+		return
+	}
+
+	for _, prop := range config["properties"].([]map[string]interface{}) {
+		if value, exists := prop["nodeid"]; exists {
+			nodeId = value.(string)
+		}
+	}
+
+	// Generate notification data.
+	ids := make([]string, 0)
+	for _, evt := range evts {
+		ids = append(ids, evt["id"].(string))
+	}
+
+	containerInfo := make(map[string]interface{})
+	containerInfo["nodeid"] = nodeId
+	containerInfo["appid"] = appId
+	containerInfo["imagename"] = imageName
+	containerInfo["cid"] = cid
+	containerInfo["status"] = event
+
+	eventInfo := make(map[string]interface{})
+	eventInfo["eventid"] = ids
+	eventInfo["event"] = containerInfo
+
+	// Notify container event to pharos-anchor.
+	url := makeRequestUrl(url.Notification(), url.Events())
+	jsonData, _ := convertMapToJson(eventInfo)
+	httpExecutor.SendHttpRequest("POST", url, []byte(jsonData))
+}
+
+func (Executor) UnsubscribeEvent(body string) error {
+	logger.Logging(logger.DEBUG, "IN")
+	defer logger.Logging(logger.DEBUG, "OUT")
+
+	bodyMap, err := convertJsonToMap(body)
+	if err != nil {
+		logger.Logging(logger.ERROR, err.Error())
+		return err
+	}
+
+	err = dbExecutor.DeleteEvent(bodyMap["eventid"].(string))
+	if err != nil {
+		logger.Logging(logger.ERROR, err.Error())
+		return err
+	}
+
+	return err
+}
+
+func getImageNameByServiceName(appId string, serviceName string) string {
+	app, err := serviceExecutor.GetApp(appId)
+	if err != nil {
+		logger.Logging(logger.DEBUG, err.Error())
+	}
+
+	description := make(map[string]interface{})
+	json.Unmarshal([]byte(app[DESCRIPTION].(string)), &description)
+
+	for name, info := range description[SERVICES].(map[string]interface{}) {
+		if strings.Compare(name, serviceName) == 0 {
+			// Parse full image name to exclude tag.
+			fullImageName := info.(map[string]interface{})[IMAGE].(string)
+			words := strings.Split(fullImageName, "/")
+			imageNameWithoutRepo := strings.Join(words[:len(words)-1], "/")
+			repo := strings.Split(words[len(words)-1], ":")
+
+			imageNameWithoutTag := imageNameWithoutRepo
+			if len(words) > 1 {
+				imageNameWithoutTag += "/"
+			}
+			imageNameWithoutTag += repo[0]
+			return imageNameWithoutTag
+		}
+	}
+	return ""
+}
+
+func convertJsonToMap(jsonStr string) (map[string]interface{}, error) {
+	result := make(map[string]interface{})
+	err := json.Unmarshal([]byte(jsonStr), &result)
+	if err != nil {
+		return nil, errors.InvalidJSON{"Unmarshalling Failed"}
+	}
+	return result, err
+}
+
+func convertMapToJson(data map[string]interface{}) (string, error) {
+	result, err := json.Marshal(data)
+	if err != nil {
+		return "", errors.Unknown{"json marshalling failed"}
+	}
+	return string(result), nil
+}
+
+func makeRequestUrl(api_parts ...string) string {
+	// Get pharos-anchor address from configuration.
+	anchoraddress := ""
+	config, _ := configurator.GetConfiguration()
+	for _, prop := range config["properties"].([]map[string]interface{}) {
+		if value, exists := prop["anchoraddress"]; exists {
+			anchoraddress = value.(string)
+		}
+	}
+
+	var full_url bytes.Buffer
+	full_url.WriteString(HTTP_TAG + anchoraddress + ":" + DEFAULT_ANCHOR_PORT + url.Base())
+	for _, api_part := range api_parts {
+		full_url.WriteString(api_part)
+	}
+
+	logger.Logging(logger.DEBUG, full_url.String())
+	return full_url.String()
+}

@@ -23,6 +23,7 @@ import (
 	"commons/errors"
 	"commons/logger"
 	"controller/dockercontroller"
+	"controller/monitoring/apps"
 	"db/mongo/service"
 	"encoding/json"
 	"gopkg.in/yaml.v2"
@@ -78,18 +79,15 @@ type depExecutorImpl struct{}
 
 var Executor depExecutorImpl
 var dockerExecutor dockercontroller.Command
+var appsMonitor apps.Command
 
 var fileMode = os.FileMode(0755)
 var dbExecutor service.Command
 
-var events chan dockercontroller.Event
-
 func init() {
 	dockerExecutor = dockercontroller.Executor
 	dbExecutor = service.Executor{}
-
-	events = make(chan dockercontroller.Event)
-	startContainerEventMonitoring()
+	appsMonitor = apps.Executor{}
 }
 
 // Deploy app to target by yaml description.
@@ -141,7 +139,7 @@ func (executor depExecutorImpl) DeployApp(body string) (map[string]interface{}, 
 		}
 	}
 
-	err = dockerExecutor.Events(data[ID].(string), COMPOSE_FILE, events)
+	err = appsMonitor.EnableEventMonitoring(data[ID].(string), COMPOSE_FILE)
 	if err != nil {
 		dbExecutor.DeleteApp(data[ID].(string))
 		return nil, err
@@ -564,7 +562,7 @@ func (depExecutorImpl) DeleteApp(appId string) error {
 		return err
 	}
 
-	err = dockerExecutor.Events(appId, COMPOSE_FILE, nil)
+	err = appsMonitor.DisableEventMonitoring(appId, COMPOSE_FILE)
 	if err != nil {
 		dbExecutor.DeleteApp(appId)
 		return err
@@ -956,15 +954,4 @@ func updateAppEvent(appId string) error {
 		}
 	}
 	return err
-}
-
-func startContainerEventMonitoring() {
-	go func() {
-		for {
-			for event := range events {
-				// TODO: Notify container event.
-				logger.Logging(logger.DEBUG, "ServiceName:"+event.Service+", Event:"+event.Event)
-			}
-		}
-	}()
 }

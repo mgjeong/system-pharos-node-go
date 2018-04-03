@@ -38,6 +38,8 @@ import (
 )
 
 type Event struct {
+	AppID   string
+	CID     string
 	Service string
 	Event   string
 }
@@ -453,8 +455,10 @@ func (dockerExecutorImpl) Events(id, path string, evt chan Event, services ...st
 
 	if evt == nil {
 		e := events.ContainerEvent{}
-		evts[id] <- e
-		delete(evts, id)
+		if _, exists := evts[id]; exists {
+			evts[id] <- e
+			delete(evts, id)
+		}
 		return nil
 	}
 
@@ -479,6 +483,8 @@ func (dockerExecutorImpl) Events(id, path string, evt chan Event, services ...st
 					return
 				}
 				e := Event{
+					AppID:   id,
+					CID:     event.ID,
 					Service: event.Service,
 					Event:   event.Event,
 				}
