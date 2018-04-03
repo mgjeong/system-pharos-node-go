@@ -46,6 +46,7 @@ func startHealthCheck(nodeID string) {
 	intervalInt, _ := strconv.Atoi(interval)
 	common.ticker = time.NewTicker(time.Duration(intervalInt) * TIME_UNIT)
 	go func() {
+		sendPingRequest(nodeID, interval)
 		for {
 			select {
 			case <-common.ticker.C:
