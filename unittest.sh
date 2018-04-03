@@ -11,7 +11,7 @@ go get github.com/shirou/gopsutil
 
 rm -rf $GOPATH/src/github.com/docker/distribution/vendor/github.com/opencontainers
 
-pkg_list=("api/common" "api/deployment" "api/health" "api/monitoring/resource" "api/configuration" "controller/deployment" "controller/dockercontroller" "controller/health" "controller/monitoring/resource" "controller/configuration" "controller/shellcommand" "db/mongo/service" "messenger")
+pkg_list=("api" "api/common" "api/deployment" "api/health" "api/monitoring/resource" "api/configuration" "api/notification" "api/notification/apps" "controller/deployment" "controller/dockercontroller" "controller/health" "controller/monitoring/resource" "controller/configuration" "controller/shellcommand" "controller/monitoring/apps" "controller/notification/apps" "db/mongo/service" "db/mongo/event" "messenger")
 
 function func_cleanup(){
     rm *.out *.test
