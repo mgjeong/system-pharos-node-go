@@ -22,6 +22,7 @@ package deployment
 import (
 	"commons/errors"
 	"commons/logger"
+	"commons/util"
 	"controller/dockercontroller"
 	"db/mongo/service"
 	"encoding/json"
@@ -388,7 +389,7 @@ func (depExecutorImpl) HandleEvents(appId string, body string) error {
 	logger.Logging(logger.DEBUG, "IN", appId)
 	defer logger.Logging(logger.DEBUG, "OUT")
 
-	convertedBody, err := convertJsonToMap(body)
+	convertedBody, err := util.ConvertJsonToMap(body)
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
 		return err
@@ -778,21 +779,6 @@ func convert(in interface{}) interface{} {
 		}
 	}
 	return in
-}
-
-// convertJsonToMap converts JSON data into a map.
-// If successful, this function returns an error as nil.
-// otherwise, an appropriate error will be returned.
-func convertJsonToMap(jsonStr string) (map[string]interface{}, error) {
-	logger.Logging(logger.DEBUG, "IN")
-	defer logger.Logging(logger.DEBUG, "OUT")
-
-	result := make(map[string]interface{})
-	err := json.Unmarshal([]byte(jsonStr), &result)
-	if err != nil {
-		return nil, errors.InvalidJSON{"Unmarshalling Failed"}
-	}
-	return result, err
 }
 
 // Update events received from the registry are reflected in the app collection.

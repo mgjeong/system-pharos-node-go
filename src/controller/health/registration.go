@@ -22,6 +22,7 @@ import (
 	"commons/errors"
 	"commons/logger"
 	"commons/url"
+	"commons/util"
 	"controller/configuration"
 	"encoding/json"
 	"messenger"
@@ -153,7 +154,7 @@ func sendRegisterRequest(body map[string]interface{}) (int, string, error) {
 
 	url := common.makeRequestUrl(url.Nodes(), url.Register())
 
-	jsonData, err := common.convertMapToJson(body)
+	jsonData, err := util.ConvertMapToJson(body)
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
 		return 500, "", err

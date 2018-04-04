@@ -23,7 +23,7 @@ import (
 	"commons/errors"
 	"commons/logger"
 	"commons/url"
-	"encoding/json"
+	"commons/util"
 	"time"
 )
 
@@ -46,25 +46,8 @@ func (ctx context) makeRequestUrl(api_parts ...string) string {
 	return full_url.String()
 }
 
-func (ctx context) convertJsonToMap(jsonStr string) (map[string]interface{}, error) {
-	result := make(map[string]interface{})
-	err := json.Unmarshal([]byte(jsonStr), &result)
-	if err != nil {
-		return nil, errors.InvalidParam{"json unmarshalling failed"}
-	}
-	return result, err
-}
-
-func (ctx context) convertMapToJson(data map[string]interface{}) (string, error) {
-	result, err := json.Marshal(data)
-	if err != nil {
-		return "", errors.Unknown{"json marshalling failed"}
-	}
-	return string(result), nil
-}
-
 func (ctx context) convertRespToMap(respStr string) (map[string]interface{}, error) {
-	resp, err := ctx.convertJsonToMap(respStr)
+	resp, err := util.ConvertJsonToMap(respStr)
 	if err != nil {
 		logger.Logging(logger.ERROR, "Failed to convert response from string to map")
 		return nil, errors.Unknown{"Json Converting Failed"}

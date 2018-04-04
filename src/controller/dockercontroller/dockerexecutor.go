@@ -22,6 +22,7 @@ import (
 	"bytes"
 	"commons/errors"
 	"commons/logger"
+	"commons/util"
 	"docker.io/go-docker"
 	"docker.io/go-docker/api/types"
 	"encoding/json"
@@ -93,8 +94,8 @@ var getContainerInspect func(*docker.Client, context.Context, string) (types.Con
 var getContainerStats func(*docker.Client, context.Context, string, bool) (types.ContainerStats, error)
 var getPs func(instance project.APIProject, ctx context.Context, params ...string) (project.InfoSet, error)
 var getComposeInstance func(string, string) (project.APIProject, error)
-//type createType func(*project.APIProject, context.Context, options.Create, ...string) error
 
+//type createType func(*project.APIProject, context.Context, options.Create, ...string) error
 
 //var create createType
 
@@ -147,7 +148,7 @@ func (dockerExecutorImpl) GetAppStats(id, path string) ([]map[string]interface{}
 
 	result := make([]map[string]interface{}, 0)
 	for _, container := range containers {
-		if isContainedStringInList(appContainersNames, container.Names[0]) {
+		if util.IsContainedStringInList(appContainersNames, container.Names[0]) {
 			cStats, err := getContainerStats(client, context.Background(), container.ID, false)
 			if err != nil {
 				logger.Logging(logger.ERROR, err.Error())
@@ -388,7 +389,7 @@ func (d dockerExecutorImpl) GetContainerConfigByName(containerName string) (map[
 
 	for _, container := range containers {
 		target_str := "/" + containerName
-		if isContainedStringInList(container.Names, target_str) {
+		if util.IsContainedStringInList(container.Names, target_str) {
 			ins, err := getContainerInspect(client, context.Background(), container.ID)
 			if err != nil {
 				logger.Logging(logger.ERROR, err.Error())
@@ -421,7 +422,7 @@ func (d dockerExecutorImpl) GetImageDigestByName(imageName string) (string, erro
 	}
 
 	for _, image := range images {
-		if isContainedStringInList(image.RepoTags, imageName) &&
+		if util.IsContainedStringInList(image.RepoTags, imageName) &&
 			image.RepoDigests != nil && len(image.RepoDigests[0]) != 0 {
 			return image.RepoDigests[0], nil
 		}
@@ -440,7 +441,7 @@ func (dockerExecutorImpl) GetImageIDByRepoDigest(repoDigest string) (string, err
 	}
 
 	for _, image := range images {
-		if isContainedStringInList(image.RepoDigests, repoDigest) && len(image.RepoTags) == 0 {
+		if util.IsContainedStringInList(image.RepoDigests, repoDigest) && len(image.RepoTags) == 0 {
 			return image.ID, nil
 		}
 	}
@@ -488,15 +489,6 @@ func (dockerExecutorImpl) Events(id, path string, evt chan Event, services ...st
 	}()
 
 	return nil
-}
-
-func isContainedStringInList(list []string, name string) bool {
-	for _, str := range list {
-		if strings.Compare(str, name) == 0 {
-			return true
-		}
-	}
-	return false
 }
 
 func getComposeInstanceImpl(id, path string) (project.APIProject, error) {

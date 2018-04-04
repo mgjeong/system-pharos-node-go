@@ -21,8 +21,8 @@ package configuration
 import (
 	"commons/errors"
 	"commons/logger"
+	"commons/util"
 	"db/mongo/configuration"
-	"encoding/json"
 	"github.com/shirou/gopsutil/cpu"
 	"github.com/shirou/gopsutil/host"
 	"os"
@@ -137,7 +137,7 @@ func (configurator Executor) SetConfiguration(body string) error {
 	logger.Logging(logger.DEBUG, "IN")
 	defer logger.Logging(logger.DEBUG, "OUT")
 
-	bodyMap, err := convertJsonToMap(body)
+	bodyMap, err := util.ConvertJsonToMap(body)
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
 		return err
@@ -240,22 +240,4 @@ func convertDBError(err error) error {
 	default:
 		return errors.Unknown{Msg: "db operation fail"}
 	}
-}
-
-func convertJsonToMap(jsonStr string) (map[string]interface{}, error) {
-	result := make(map[string]interface{})
-	err := json.Unmarshal([]byte(jsonStr), &result)
-	if err != nil {
-		return nil, errors.InvalidJSON{"Unmarshalling Failed"}
-	}
-	return result, err
-}
-
-func searchStringFromSlice(slice []string, str string) bool {
-	for _, value := range slice {
-		if value == str {
-			return true
-		}
-	}
-	return false
 }
