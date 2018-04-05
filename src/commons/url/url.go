@@ -77,3 +77,9 @@ func Restore() string { return "/restore" }
 
 // Returning Control url as string.
 func Control() string { return "/control" }
+
+//Returning Notification url as string.
+func Notification() string { return "/notification" }
+
+//Returning Watch url as string.
+func Watch() string { return "/watch" }

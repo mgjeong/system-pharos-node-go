@@ -19,6 +19,7 @@ package deployment
 import (
 	"commons/errors"
 	dockermocks "controller/dockercontroller/mocks"
+	appmocks "controller/monitoring/apps/mocks"
 	dbmocks "db/mongo/service/mocks"
 	"github.com/golang/mock/gomock"
 	"os"
@@ -195,10 +196,11 @@ func TestCalledDeployApp_ExpectSuccess(t *testing.T) {
 
 	dockerExecutorMockObj := dockermocks.NewMockCommand(ctrl)
 	dbExecutorMockObj := dbmocks.NewMockCommand(ctrl)
+	appExecutorMockObj := appmocks.NewMockCommand(ctrl)
 
 	gomock.InOrder(
 		dbExecutorMockObj.EXPECT().InsertComposeFile(DESCRIPTION_JSON, RUNNING_STATE).Return(DB_GET_APP_OBJ, nil),
-		dockerExecutorMockObj.EXPECT().Events(gomock.Any(), gomock.Any(), events).Return(nil),
+		appExecutorMockObj.EXPECT().EnableEventMonitoring(gomock.Any(), gomock.Any()).Return(nil),
 		dockerExecutorMockObj.EXPECT().Up(gomock.Any(), gomock.Any()).Return(nil),
 		dbExecutorMockObj.EXPECT().GetApp(APP_ID).Return(DB_GET_APP_OBJ, nil),
 		dockerExecutorMockObj.EXPECT().Ps(gomock.Any(), COMPOSE_FILE_PATH, SERVICE_NAME).Return(PS_EXPECT_RETURN, nil),
@@ -208,6 +210,7 @@ func TestCalledDeployApp_ExpectSuccess(t *testing.T) {
 	// pass mockObj to a real object.
 	dockerExecutor = dockerExecutorMockObj
 	dbExecutor = dbExecutorMockObj
+	appsMonitor = appExecutorMockObj
 
 	res, err := Executor.DeployApp(DESCRIPTION_YAML)
 
@@ -253,16 +256,18 @@ func TestCalledDeployAppWhenFailedToSetEventChannelFailed_ExpectErrorReturn(t *t
 
 	dockerExecutorMockObj := dockermocks.NewMockCommand(ctrl)
 	dbExecutorMockObj := dbmocks.NewMockCommand(ctrl)
+	appExecutorMockObj := appmocks.NewMockCommand(ctrl)
 
 	gomock.InOrder(
 		dbExecutorMockObj.EXPECT().InsertComposeFile(DESCRIPTION_JSON, RUNNING_STATE).Return(DB_OBJ, nil),
-		dockerExecutorMockObj.EXPECT().Events(gomock.Any(), gomock.Any(), events).Return(UnknownError),
+		appExecutorMockObj.EXPECT().EnableEventMonitoring(gomock.Any(), gomock.Any()).Return(UnknownError),
 		dbExecutorMockObj.EXPECT().DeleteApp(gomock.Any()).Return(nil),
 	)
 
 	// pass mockObj to a real object.
 	dockerExecutor = dockerExecutorMockObj
 	dbExecutor = dbExecutorMockObj
+	appsMonitor = appExecutorMockObj
 
 	_, err := Executor.DeployApp(DESCRIPTION_YAML)
 
@@ -279,10 +284,11 @@ func TestCalledDeployAppWhenComposeUpFailed_ExpectErrorReturn(t *testing.T) {
 
 	dockerExecutorMockObj := dockermocks.NewMockCommand(ctrl)
 	dbExecutorMockObj := dbmocks.NewMockCommand(ctrl)
+	appExecutorMockObj := appmocks.NewMockCommand(ctrl)
 
 	gomock.InOrder(
 		dbExecutorMockObj.EXPECT().InsertComposeFile(DESCRIPTION_JSON, RUNNING_STATE).Return(DB_OBJ, nil),
-		dockerExecutorMockObj.EXPECT().Events(gomock.Any(), gomock.Any(), events).Return(nil),
+		appExecutorMockObj.EXPECT().EnableEventMonitoring(gomock.Any(), gomock.Any()).Return(nil),
 		dockerExecutorMockObj.EXPECT().Up(gomock.Any(), gomock.Any()).Return(UnknownError),
 		dockerExecutorMockObj.EXPECT().DownWithRemoveImages(gomock.Any(), gomock.Any()).Return(nil),
 		dbExecutorMockObj.EXPECT().DeleteApp(gomock.Any()).Return(nil),
@@ -291,6 +297,7 @@ func TestCalledDeployAppWhenComposeUpFailed_ExpectErrorReturn(t *testing.T) {
 	// pass mockObj to a real object.
 	dockerExecutor = dockerExecutorMockObj
 	dbExecutor = dbExecutorMockObj
+	appsMonitor = appExecutorMockObj
 
 	_, err := Executor.DeployApp(DESCRIPTION_YAML)
 
@@ -838,17 +845,19 @@ func TestCalledDeleteApp_ExpectSuccess(t *testing.T) {
 
 	dockerExecutorMockObj := dockermocks.NewMockCommand(ctrl)
 	dbExecutorMockObj := dbmocks.NewMockCommand(ctrl)
+	appExecutorMockObj := appmocks.NewMockCommand(ctrl)
 
 	gomock.InOrder(
 		dbExecutorMockObj.EXPECT().GetApp(APP_ID).Return(DB_GET_OBJ, nil),
 		dockerExecutorMockObj.EXPECT().DownWithRemoveImages(gomock.Any(), gomock.Any()).Return(nil),
-		dockerExecutorMockObj.EXPECT().Events(gomock.Any(), gomock.Any(), nil).Return(nil),
+		appExecutorMockObj.EXPECT().DisableEventMonitoring(gomock.Any(), gomock.Any()).Return(nil),
 		dbExecutorMockObj.EXPECT().DeleteApp(gomock.Any()).Return(nil),
 	)
 
 	// pass mockObj to a real object.
 	dockerExecutor = dockerExecutorMockObj
 	dbExecutor = dbExecutorMockObj
+	appsMonitor = appExecutorMockObj
 
 	err := Executor.DeleteApp(APP_ID)
 
@@ -907,17 +916,19 @@ func TestCalledDeleteAppWhenFailedToUnsetEventChannel_ExpectErrorReturn(t *testi
 
 	dockerExecutorMockObj := dockermocks.NewMockCommand(ctrl)
 	dbExecutorMockObj := dbmocks.NewMockCommand(ctrl)
+	appExecutorMockObj := appmocks.NewMockCommand(ctrl)
 
 	gomock.InOrder(
 		dbExecutorMockObj.EXPECT().GetApp(APP_ID).Return(DB_GET_OBJ, nil),
 		dockerExecutorMockObj.EXPECT().DownWithRemoveImages(gomock.Any(), gomock.Any()).Return(nil),
-		dockerExecutorMockObj.EXPECT().Events(gomock.Any(), gomock.Any(), nil).Return(UnknownError),
+		appExecutorMockObj.EXPECT().DisableEventMonitoring(gomock.Any(), gomock.Any()).Return(UnknownError),
 		dbExecutorMockObj.EXPECT().DeleteApp(gomock.Any()).Return(nil),
 	)
 
 	// pass mockObj to a real object.
 	dockerExecutor = dockerExecutorMockObj
 	dbExecutor = dbExecutorMockObj
+	appsMonitor = appExecutorMockObj
 
 	err := Executor.DeleteApp(APP_ID)
 
@@ -932,17 +943,19 @@ func TestCalledDeleteAppWhenDBDeleteAppFailed_ExpectErrorReturn(t *testing.T) {
 
 	dockerExecutorMockObj := dockermocks.NewMockCommand(ctrl)
 	dbExecutorMockObj := dbmocks.NewMockCommand(ctrl)
+	appExecutorMockObj := appmocks.NewMockCommand(ctrl)
 
 	gomock.InOrder(
 		dbExecutorMockObj.EXPECT().GetApp(APP_ID).Return(DB_GET_OBJ, nil),
 		dockerExecutorMockObj.EXPECT().DownWithRemoveImages(gomock.Any(), gomock.Any()).Return(nil),
-		dockerExecutorMockObj.EXPECT().Events(gomock.Any(), gomock.Any(), nil).Return(nil),
+		appExecutorMockObj.EXPECT().DisableEventMonitoring(gomock.Any(), gomock.Any()).Return(nil),
 		dbExecutorMockObj.EXPECT().DeleteApp(gomock.Any()).Return(UnknownError),
 	)
 
 	// pass mockObj to a real object.
 	dockerExecutor = dockerExecutorMockObj
 	dbExecutor = dbExecutorMockObj
+	appsMonitor = appExecutorMockObj
 
 	err := Executor.DeleteApp(APP_ID)
 
