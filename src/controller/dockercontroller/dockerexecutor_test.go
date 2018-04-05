@@ -430,26 +430,6 @@ func TestCalcNetworkIO(t *testing.T) {
 	}
 }
 
-func TestIsContainedStringInList(t *testing.T) {
-	type testList struct {
-		testType string
-		expect   bool
-		input    string
-	}
-	tests := [...]testList{{"Negative", false, "getcontiner"}, {"Positive", true, "test"}}
-
-	source := []string{"test", "contained", "container", "name"}
-
-	for _, test := range tests {
-		t.Run(test.testType, func(t *testing.T) {
-			ret := isContainedStringInList(source, test.input)
-			if ret != test.expect {
-				t.Errorf("Expect %s, but returned %s", strconv.FormatBool(test.expect), strconv.FormatBool(ret))
-			}
-		})
-	}
-}
-
 func TestConvertToHumanReadableBinaryUnit(t *testing.T) {
 	t.Run("ConvertToHumanReadableBinrayUnit_ReturnBSuccessful", func(t *testing.T) {
 		res := convertToHumanReadableBinaryUnit(1023.0)

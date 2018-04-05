@@ -21,6 +21,7 @@ package health
 import (
 	"commons/logger"
 	"commons/url"
+	"commons/util"
 	"strconv"
 	"time"
 )
@@ -72,7 +73,7 @@ func sendPingRequest(nodeID string, interval string) (int, error) {
 	data := make(map[string]interface{})
 	data[INTERVAL] = interval
 
-	jsonData, err := common.convertMapToJson(data)
+	jsonData, err := util.ConvertMapToJson(data)
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
 		return 500, err
