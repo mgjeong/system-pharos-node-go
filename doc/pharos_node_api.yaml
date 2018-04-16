@@ -26,8 +26,25 @@ tags:
   - name: Configuration
     description: Properties and configurations of Pharos Node
 paths:
+  '/api/v1/monitoring/apps/{app_id}/resource':
+    get:
+      tags:
+        - InfoCollecting
+      description: >-
+        Returns each service's resource usage in an app.
+      parameters:
+        - name: app_id
+          in: path
+          description: ID of the app assigned by Pharos
+          required: true
+          type: string
+      responses:
+        '200':
+          description: Successful operation.
+          schema:
+            $ref: "#/definitions/response_of_app_resource"
   /api/v1/monitoring/resource:
-    post:
+    get:
       tags:
         - InfoCollecting
       description: >-
@@ -352,6 +369,14 @@ definitions:
         example:
           - {"devicename":"EdgeDevice"}
           - {"pinginterval":"10"}
+  response_of_app_resource:
+    required:
+      - services
+    properties:
+      services:
+        type: array
+        example:
+          - {"blockinput": "0.000B", "blockoutput": "0.000B", "cid": "abcd1234", "cname": "service1", "cpu": "0.000%",      "mem": "0.00%", "memlimit": "0.000B", "memusage": "0.000B", "networkinput": "0.000B", "networkoutput": "0.000B", "pids": 0}
   response_of_deployment:
     required:
       - id
