@@ -25,21 +25,28 @@ import (
 	"encoding/json"
 	origineErr "errors"
 	"github.com/docker/libcompose/project"
+	"github.com/docker/libcompose/project/events"
+	"github.com/docker/libcompose/project/options"
 	"golang.org/x/net/context"
 	"gopkg.in/yaml.v2"
 	"io"
 	"io/ioutil"
 	"os"
+	"reflect"
 	"strconv"
 	"strings"
 	"testing"
 )
 
+type testObj struct {
+	received events.Event
+	expected Event
+}
+
 type tearDown func(t *testing.T)
 
 func setUp(t *testing.T) tearDown {
 	//client = nil
-	getPs = fakeGetPsFunc
 	getComposeInstance = fakeGetComposeInstance
 	getImageList = fakeImageList
 	getContainerList = fakeContainerList
@@ -47,6 +54,9 @@ func setUp(t *testing.T) tearDown {
 	getImagePull = fakeImagePull
 	getImageTag = fakeImageTag
 	getContainerStats = fakeContainerStats
+	getPs = fakeComposePs
+	getPull = fakeComposePull
+	getUp = fakeComposeUp
 
 	return func(t *testing.T) {
 		client, _ = docker.NewEnvClient()
@@ -57,9 +67,10 @@ func setUp(t *testing.T) tearDown {
 		getImagePull = (*docker.Client).ImagePull
 		getImageTag = (*docker.Client).ImageTag
 		getContainerStats = (*docker.Client).ContainerStats
-		getPs = dockerPs
+		getPs = composePs
+		getPull = composePull
+		getUp = composeUp
 	}
-
 }
 
 var fakeGetComposeInstanceImpl func() (project.APIProject, error)
@@ -69,7 +80,9 @@ var fakeRunContaienrInspect func() (types.ContainerJSON, error)
 var fakeRunImagePull func() (io.ReadCloser, error)
 var fakeRunImageTag func() error
 var fakeRunContainerStats func() (types.ContainerStats, error)
-var fakeRunGetPsFunc func() (project.InfoSet, error)
+var fakeRunComposePs func() (project.InfoSet, error)
+var fakeRunComposePull func() error
+var fakeRunComposeUp func() error
 
 func fakeImagePull(*docker.Client, context.Context, string, types.ImagePullOptions) (io.ReadCloser, error) {
 	return fakeRunImagePull()
@@ -99,8 +112,143 @@ func fakeContainerStats(*docker.Client, context.Context, string, bool) (types.Co
 	return fakeRunContainerStats()
 }
 
-func fakeGetPsFunc(instance project.APIProject, ctx context.Context, params ...string) (project.InfoSet, error) {
-	return fakeRunGetPsFunc()
+func fakeComposePs(instance project.APIProject, ctx context.Context, params ...string) (project.InfoSet, error) {
+	return fakeRunComposePs()
+}
+
+func fakeComposePull(instance project.APIProject, ctx context.Context, services ...string) error {
+	return fakeRunComposePull()
+}
+
+func fakeComposeUp(instance project.APIProject, ctx context.Context, opt options.Up, services ...string) error {
+	return fakeRunComposeUp()
+}
+
+func TestIsDeployEvent(t *testing.T) {
+	eventWithExpectedResult := map[events.EventType]bool{
+		events.ServicePull:      true,
+		events.ContainerCreated: true,
+		events.ContainerStarted: true,
+		events.ServiceAdd:       false,
+	}
+
+	t.Run("ReturnTrueOrFalse", func(t *testing.T) {
+		for event, expectedRet := range eventWithExpectedResult {
+			ret := isDeployEventType(event)
+			if ret != expectedRet {
+				t.Errorf("Expected err: %s, actual err: %s", expectedRet, ret)
+			}
+		}
+	})
+}
+
+func TestMakeDeployEvent(t *testing.T) {
+	tearDown := setUp(t)
+	defer tearDown(t)
+
+	t.Run("Success", func(t *testing.T) {
+		testFileName := "test"
+		description := make(map[string]interface{})
+		description_str := `"services:\n  my-test:\n    image: ubuntu:latest\nversion: \'2\'\n"`
+		json.Unmarshal([]byte(description_str), &description)
+		yaml, _ := yaml.Marshal(description)
+		ioutil.WriteFile(testFileName, yaml, os.FileMode(0755))
+
+		testAppID := "appid"
+		testEventID := "eventid"
+		testServiceName := "servicename"
+
+		testList := []testObj{
+			{
+				received: events.Event{events.ServicePull, testServiceName, nil},
+				expected: Event{
+					ID:          testEventID,
+					Type:        IMAGE,
+					AppID:       testAppID,
+					ServiceName: testServiceName,
+					Status:      PULLED,
+				},
+			},
+			{
+				received: events.Event{events.ContainerCreated, testServiceName, nil},
+				expected: Event{
+					ID:          testEventID,
+					Type:        CONTAINER,
+					AppID:       testAppID,
+					ServiceName: testServiceName,
+					Status:      CREATED,
+					ContainerEvent: ContainerEvent{
+						CID: "testcid",
+					},
+				},
+			},
+			{
+				received: events.Event{events.ContainerStarted, testServiceName, nil},
+				expected: Event{
+					ID:          testEventID,
+					Type:        CONTAINER,
+					AppID:       testAppID,
+					ServiceName: testServiceName,
+					Status:      STARTED,
+					ContainerEvent: ContainerEvent{
+						CID: "testcid",
+					},
+				},
+			},
+		}
+		getComposeInstance = getComposeInstanceImpl
+
+		fakeRunComposePs = func() (project.InfoSet, error) {
+			var infoset project.InfoSet
+			testInfoSet := `[{"Command":"","Id":"testcid","Name":"","Ports":"","State":""}]`
+			err := json.Unmarshal([]byte(testInfoSet), &infoset)
+			if err != nil {
+				return nil, err
+			}
+			return infoset, nil
+		}
+
+		for _, test := range testList {
+			ret := makeDeployEvent(testAppID, testFileName, testEventID, test.received)
+			if !reflect.DeepEqual(ret, test.expected) {
+				t.Errorf("Expected result: %v, Actual result: %v", test.expected, ret)
+			}
+		}
+		os.RemoveAll(testFileName)
+	})
+}
+
+func TestUpWithEvent(t *testing.T) {
+	tearDown := setUp(t)
+	defer tearDown(t)
+
+	t.Run("Success", func(t *testing.T) {
+		testAppID := "appid"
+		testEventID := "eventid"
+		testFileName := "test"
+		description := make(map[string]interface{})
+		description_str := `"services:\n  my-test:\n    image: ubuntu:latest\nversion: \'2\'\n"`
+		json.Unmarshal([]byte(description_str), &description)
+		yaml, _ := yaml.Marshal(description)
+		ioutil.WriteFile(testFileName, yaml, os.FileMode(0755))
+
+		getComposeInstance = getComposeInstanceImpl
+
+		fakeRunComposePull = func() error {
+			return nil
+		}
+		fakeRunComposeUp = func() error {
+			return nil
+		}
+
+		evt := make(chan Event)
+		err := Executor.UpWithEvent(testAppID, testFileName, testEventID, evt)
+		if err != nil {
+			t.Errorf("Exepcted err : nil, Actual err : %s", err.Error())
+		}
+		close(evt)
+		os.RemoveAll(testFileName)
+	})
 }
 
 func TestGetImageIDByRepoDigest(t *testing.T) {
@@ -213,7 +361,7 @@ func TestGetAppStats(t *testing.T) {
 
 	t.Run("GetContainerStats_ExpectReturnError", func(t *testing.T) {
 		getComposeInstance = getComposeInstanceImpl
-		fakeRunGetPsFunc = func() (project.InfoSet, error) {
+		fakeRunComposePs = func() (project.InfoSet, error) {
 			var infoset project.InfoSet
 
 			testInfoSet := `[{"Command":"/usr/bin/cadvisor -logtostderr","Id":"9081b5c76879096799265c62848e6ea798d107c689632229cfa63d4110849a4e","Name":"2277a03208c65ce497de317bd19015fd2a8fba15_one_1","Ports":"8080/tcp","State":"Up 2 hours"},{"Command":"/usr/bin/cadvisor","Id":"e176ed709b89322909d1eb4771cb8548d37dcf5932dde4bc4240706c1f350376","Name":"2277a03208c65ce497de317bd19015fd2a8fba15_two_1","Ports":"8080/tcp","State":"Up 2 hours"}]`
@@ -251,7 +399,7 @@ func TestGetAppStats(t *testing.T) {
 
 	t.Run("GetContainerListError_ExpectReturnError", func(t *testing.T) {
 		getComposeInstance = getComposeInstanceImpl
-		fakeRunGetPsFunc = func() (project.InfoSet, error) {
+		fakeRunComposePs = func() (project.InfoSet, error) {
 			var infoset project.InfoSet
 
 			testInfoSet := `[{"Command":"/usr/bin/cadvisor -logtostderr","Id":"9081b5c76879096799265c62848e6ea798d107c689632229cfa63d4110849a4e","Name":"2277a03208c65ce497de317bd19015fd2a8fba15_one_1","Ports":"8080/tcp","State":"Up 2 hours"},{"Command":"/usr/bin/cadvisor","Id":"e176ed709b89322909d1eb4771cb8548d37dcf5932dde4bc4240706c1f350376","Name":"2277a03208c65ce497de317bd19015fd2a8fba15_two_1","Ports":"8080/tcp","State":"Up 2 hours"}]`
@@ -275,7 +423,7 @@ func TestGetAppStats(t *testing.T) {
 
 	t.Run("PsError_ExpectReturnError", func(t *testing.T) {
 		getComposeInstance = getComposeInstanceImpl
-		fakeRunGetPsFunc = func() (project.InfoSet, error) {
+		fakeRunComposePs = func() (project.InfoSet, error) {
 			return nil, errors.Unknown{}
 		}
 
@@ -289,7 +437,7 @@ func TestGetAppStats(t *testing.T) {
 
 	t.Run("Success", func(t *testing.T) {
 		getComposeInstance = getComposeInstanceImpl
-		fakeRunGetPsFunc = func() (project.InfoSet, error) {
+		fakeRunComposePs = func() (project.InfoSet, error) {
 			var infoset project.InfoSet
 
 			testInfoSet := `[{"Command":"/usr/bin/cadvisor -logtostderr","Id":"9081b5c76879096799265c62848e6ea798d107c689632229cfa63d4110849a4e","Name":"2277a03208c65ce497de317bd19015fd2a8fba15_one_1","Ports":"8080/tcp","State":"Up 2 hours"},{"Command":"/usr/bin/cadvisor","Id":"e176ed709b89322909d1eb4771cb8548d37dcf5932dde4bc4240706c1f350376","Name":"2277a03208c65ce497de317bd19015fd2a8fba15_two_1","Ports":"8080/tcp","State":"Up 2 hours"}]`

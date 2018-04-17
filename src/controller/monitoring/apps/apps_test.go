@@ -18,8 +18,10 @@ package apps
 
 import (
 	"commons/errors"
+	"controller/dockercontroller"
 	dockermocks "controller/dockercontroller/mocks"
 	"github.com/golang/mock/gomock"
+	"reflect"
 	"testing"
 )
 
@@ -121,5 +123,17 @@ func TestDisableEventMonitoringWhenFailedToSetEventChannel_ExpectErrorReturn(t *
 	default:
 		t.Errorf("Expected err: %s, actual err: %s", "Unknown", err.Error())
 	case errors.Unknown:
+	}
+}
+
+func TestGetEventChannel(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	testChan := make(chan dockercontroller.Event)
+	ret := Executor{}.GetEventChannel()
+
+	if reflect.TypeOf(ret) != reflect.TypeOf(testChan) {
+		t.Errorf("Expected type of ret : chan dockercontroller.Event, actual type of ret: %v", reflect.TypeOf(ret))
 	}
 }

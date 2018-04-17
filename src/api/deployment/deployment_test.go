@@ -104,7 +104,7 @@ func TestDeployAPI_ExpectSuccess(t *testing.T) {
 	deployedApp[ID] = appId
 
 	gomock.InOrder(
-		deploymentExecutorMockObj.EXPECT().DeployApp(gomock.Any()).Return(deployedApp, nil),
+		deploymentExecutorMockObj.EXPECT().DeployApp(gomock.Any(), nil).Return(deployedApp, nil),
 	)
 
 	w := httptest.NewRecorder()
@@ -128,7 +128,7 @@ func TestDeployAPIWhenControllerFailed_ExpecReturnError(t *testing.T) {
 
 	for _, test := range testList {
 		gomock.InOrder(
-			deploymentExecutorMockObj.EXPECT().DeployApp(gomock.Any()).Return(nil, test.err),
+			deploymentExecutorMockObj.EXPECT().DeployApp(gomock.Any(), nil).Return(nil, test.err),
 		)
 
 		data := url.Values{}

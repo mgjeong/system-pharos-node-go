@@ -26,7 +26,6 @@ import (
 	"docker.io/go-docker"
 	"docker.io/go-docker/api/types"
 	"encoding/json"
-	"fmt"
 	dockercompose "github.com/docker/libcompose/docker"
 	"github.com/docker/libcompose/docker/ctx"
 	"github.com/docker/libcompose/project"
@@ -107,15 +106,21 @@ var getContainerList func(*docker.Client, context.Context, types.ContainerListOp
 var getContainerInspect func(*docker.Client, context.Context, string) (types.ContainerJSON, error)
 var getContainerStats func(*docker.Client, context.Context, string, bool) (types.ContainerStats, error)
 var getPs func(instance project.APIProject, ctx context.Context, params ...string) (project.InfoSet, error)
+var getPull func(instance project.APIProject, ctx context.Context, services ...string) error
+var getUp func(instance project.APIProject, ctx context.Context, options options.Up, services ...string) error
 var getComposeInstance func(string, string) (project.APIProject, error)
-
-//type createType func(*project.APIProject, context.Context, options.Create, ...string) error
-
-//var create createType
 
 var evts map[string]chan events.ContainerEvent
 
-func dockerPs(instance project.APIProject, ctx context.Context, params ...string) (project.InfoSet, error) {
+func composePull(instance project.APIProject, ctx context.Context, services ...string) error {
+	return instance.Pull(ctx, services...)
+}
+
+func composeUp(instance project.APIProject, ctx context.Context, options options.Up, services ...string) error {
+	return instance.Up(ctx, options, services...)
+}
+
+func composePs(instance project.APIProject, ctx context.Context, params ...string) (project.InfoSet, error) {
 	return instance.Ps(ctx, params...)
 }
 
@@ -131,7 +136,9 @@ func init() {
 	getImagePull = (*docker.Client).ImagePull
 	getImageTag = (*docker.Client).ImageTag
 	getContainerStats = (*docker.Client).ContainerStats
-	getPs = dockerPs
+	getPs = composePs
+	getPull = composePull
+	getUp = composeUp
 }
 
 func (dockerExecutorImpl) GetAppStats(id, path string) ([]map[string]interface{}, error) {
@@ -255,26 +262,8 @@ func (dockerExecutorImpl) UpWithEvent(id, path, eventID string, evt chan Event, 
 		for {
 			select {
 			case event := <-eventChan:
-				if isDeployEvent(event.EventType) {
-					e := Event{
-						ID:          eventID,
-						AppID:       id,
-						ServiceName: event.ServiceName,
-					}
-					if event.EventType == events.ServicePull {
-						e.Type = IMAGE
-						e.Status = PULLED
-					} else if event.EventType == events.ContainerCreated {
-						e.Type = CONTAINER
-						e.Status = CREATED
-						cid, _ := getContainerIDByServiceName(id, path, event.ServiceName)
-						e.CID = cid
-					} else if event.EventType == events.ContainerStarted {
-						e.Type = CONTAINER
-						e.Status = STARTED
-						cid, _ := getContainerIDByServiceName(id, path, event.ServiceName)
-						e.CID = cid
-					}
+				if isDeployEventType(event.EventType) {
+					e := makeDeployEvent(id, path, eventID, event)
 					evt <- e
 				}
 			case <-exitChan:
@@ -283,12 +272,12 @@ func (dockerExecutorImpl) UpWithEvent(id, path, eventID string, evt chan Event, 
 		}
 	}(id, path, eventID)
 
-	err = compose.Pull(context.Background(), services...)
+	err = composePull(compose, context.Background(), services...)
 	if err != nil {
 		return err
 	}
 
-	err = compose.Up(context.Background(), options.Up{Create: options.Create{ForceRecreate: true}}, services...)
+	err = composeUp(compose, context.Background(), options.Up{Create: options.Create{ForceRecreate: true}}, services...)
 	if err != nil {
 		return err
 	}
@@ -441,6 +430,7 @@ func (dockerExecutorImpl) Ps(id, path string, args ...string) ([]map[string]stri
 	if err != nil {
 		return nil, err
 	}
+
 	infos, retErr := getPs(compose, context.Background(), args...)
 	retMap := make([]map[string]string, len(infos))
 
@@ -644,7 +634,30 @@ func convertToHumanReadableUnit(num float64) string {
 	}
 }
 
-func isDeployEvent(eventType events.EventType) bool {
+func makeDeployEvent(id, path, eventID string, event events.Event) Event {
+	e := Event{
+		ID:          eventID,
+		AppID:       id,
+		ServiceName: event.ServiceName,
+	}
+	if event.EventType == events.ServicePull {
+		e.Type = IMAGE
+		e.Status = PULLED
+	} else if event.EventType == events.ContainerCreated {
+		e.Type = CONTAINER
+		e.Status = CREATED
+		cid, _ := getContainerIDByServiceName(id, path, event.ServiceName)
+		e.CID = cid
+	} else if event.EventType == events.ContainerStarted {
+		e.Type = CONTAINER
+		e.Status = STARTED
+		cid, _ := getContainerIDByServiceName(id, path, event.ServiceName)
+		e.CID = cid
+	}
+	return e
+}
+
+func isDeployEventType(eventType events.EventType) bool {
 	if eventType == events.ServicePull || eventType == events.ContainerCreated || eventType == events.ContainerStarted {
 		return true
 	} else {
@@ -657,7 +670,10 @@ func getContainerIDByServiceName(id, path, serviceName string) (string, error) {
 		return "", errors.Unknown{"No service's name"}
 	}
 	infos, err := Executor.Ps(id, path, serviceName)
-
+	if err != nil {
+		logger.Logging(logger.DEBUG, err.Error())
+		return "", err
+	}
 	if infos == nil || len(infos) == 0 {
 		logger.Logging(logger.ERROR, "No container with the given service's name")
 		return "", errors.Unknown{"No container with the given service's name"}
