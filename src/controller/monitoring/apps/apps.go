@@ -25,6 +25,7 @@ import (
 type Command interface {
 	EnableEventMonitoring(appId, path string) error
 	DisableEventMonitoring(appId, path string) error
+	GetEventChannel() chan dockercontroller.Event
 }
 
 type Executor struct{}
@@ -39,6 +40,13 @@ func init() {
 
 	events = make(chan dockercontroller.Event)
 	startEventMonitoring()
+}
+
+func (Executor) GetEventChannel() chan dockercontroller.Event {
+	logger.Logging(logger.DEBUG, "IN")
+	defer logger.Logging(logger.DEBUG, "OUT")
+
+	return events
 }
 
 func (Executor) EnableEventMonitoring(appId, path string) error {
@@ -69,7 +77,7 @@ func startEventMonitoring() {
 	go func() {
 		for {
 			for event := range events {
-				notiExecutor.SendNotification(event.AppID, event.Service, event.CID, event.Event)
+				notiExecutor.SendNotification(event)
 			}
 		}
 	}()

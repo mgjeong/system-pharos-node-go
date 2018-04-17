@@ -39,10 +39,16 @@ import (
 )
 
 type Event struct {
-	AppID   string
-	CID     string
-	Service string
-	Event   string
+	ID          string
+	Type        string
+	AppID       string
+	ServiceName string
+	Status      string
+	ContainerEvent
+}
+
+type ContainerEvent struct {
+	CID string
 }
 
 type Command interface {
@@ -63,6 +69,7 @@ type Command interface {
 	ImagePull(image string) error
 	ImageTag(imageID string, repoTags string) error
 	Events(id, path string, evt chan Event, services ...string) error
+	UpWithEvent(id, path, eventID string, evt chan Event, services ...string) error
 }
 
 const (
@@ -80,6 +87,11 @@ const (
 	NETWORKINPUT  string = "networkinput"
 	NETWORKOUTPUT string = "networkoutput"
 	PIDS          string = "pids"
+	CONTAINER     string = "container"
+	IMAGE         string = "image"
+	PULLED        string = "pulled"
+	CREATED       string = "created"
+	STARTED       string = "started"
 )
 
 var Executor dockerExecutorImpl
@@ -219,6 +231,71 @@ func (dockerExecutorImpl) Up(id, path string, services ...string) error {
 		return err
 	}
 	return compose.Up(context.Background(), options.Up{Create: options.Create{ForceRecreate: true}}, services...)
+}
+
+func (dockerExecutorImpl) UpWithEvent(id, path, eventID string, evt chan Event, services ...string) error {
+	logger.Logging(logger.DEBUG)
+	defer logger.Logging(logger.DEBUG, "OUT")
+
+	compose, err := getComposeInstance(id, path)
+	if err != nil {
+		return err
+	}
+
+	eventChan := make(chan events.Event)
+	exitChan := make(chan bool)
+
+	compose.AddListener(eventChan)
+
+	go func(id, path, eventID string) {
+		defer func() {
+			close(eventChan)
+			close(exitChan)
+		}()
+		for {
+			select {
+			case event := <-eventChan:
+				if isDeployEvent(event.EventType) {
+					e := Event{
+						ID:          eventID,
+						AppID:       id,
+						ServiceName: event.ServiceName,
+					}
+					if event.EventType == events.ServicePull {
+						e.Type = IMAGE
+						e.Status = PULLED
+					} else if event.EventType == events.ContainerCreated {
+						e.Type = CONTAINER
+						e.Status = CREATED
+						cid, _ := getContainerIDByServiceName(id, path, event.ServiceName)
+						e.CID = cid
+					} else if event.EventType == events.ContainerStarted {
+						e.Type = CONTAINER
+						e.Status = STARTED
+						cid, _ := getContainerIDByServiceName(id, path, event.ServiceName)
+						e.CID = cid
+					}
+					evt <- e
+				}
+			case <-exitChan:
+				return
+			}
+		}
+	}(id, path, eventID)
+
+	err = compose.Pull(context.Background(), services...)
+	if err != nil {
+		return err
+	}
+
+	err = compose.Up(context.Background(), options.Up{Create: options.Create{ForceRecreate: true}}, services...)
+	if err != nil {
+		return err
+	}
+
+	exitChan <- true
+
+	return nil
 }
 
 // Stop and remove containers of service list in the yaml description.
@@ -484,10 +561,14 @@ func (dockerExecutorImpl) Events(id, path string, evt chan Event, services ...st
 					return
 				}
 				e := Event{
-					AppID:   id,
-					CID:     event.ID,
-					Service: event.Service,
-					Event:   event.Event,
+					ID:          "",
+					Type:        CONTAINER,
+					AppID:       id,
+					ServiceName: event.Service,
+					Status:      event.Event,
+					ContainerEvent: ContainerEvent{
+						CID: event.ID,
+					},
 				}
 				evt <- e
 			}
@@ -561,4 +642,29 @@ func convertToHumanReadableUnit(num float64) string {
 	} else {
 		return fmt.Sprintf("%.3f", num) + "B"
 	}
+}
+
+func isDeployEvent(eventType events.EventType) bool {
+	if eventType == events.ServicePull || eventType == events.ContainerCreated || eventType == events.ContainerStarted {
+		return true
+	} else {
+		return false
+	}
+}
+
+func getContainerIDByServiceName(id, path, serviceName string) (string, error) {
+	if len(serviceName) == 0 {
+		return "", errors.Unknown{"No service's name"}
+	}
+	infos, err := Executor.Ps(id, path, serviceName)
+
+	if infos == nil || len(infos) == 0 {
+		logger.Logging(logger.ERROR, "No container with the given service's name")
+		return "", errors.Unknown{"No container with the given service's name"}
+	}
+	if err != nil {
+		logger.Logging(logger.ERROR, err.Error())
+		return "", err
+	}
+	return infos[0]["Id"], nil
 }

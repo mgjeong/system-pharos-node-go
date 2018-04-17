@@ -41,7 +41,7 @@ const (
 
 type Command interface {
 	SubscribeEvent(body string) (map[string]interface{}, error)
-	SendNotification(appId, serviceName, cid, event string)
+	SendNotification(event dockercontroller.Event)
 	UnsubscribeEvent(body string) error
 }
 
@@ -97,21 +97,36 @@ func (Executor) SubscribeEvent(body string) (map[string]interface{}, error) {
 	return event, err
 }
 
-func (Executor) SendNotification(appId, serviceName, cid, event string) {
+func (Executor) SendNotification(e dockercontroller.Event) {
 	logger.Logging(logger.DEBUG, "IN")
 	defer logger.Logging(logger.DEBUG, "OUT")
 
-	logger.Logging(logger.DEBUG, "received event info: "+"appId="+appId+", serviceName="+serviceName+",cid="+cid+",event="+event)
+	cid := ""
 
-	// Get docker image name from service name.
-	imageName := getImageNameByServiceName(appId, serviceName)
-	evts, _ := dbExecutor.GetEvents(appId, imageName)
-	if len(evts) == 0 {
-		logger.Logging(logger.DEBUG, "There is no subscribers.")
-		return
+	if e.Type == dockercontroller.IMAGE {
+		logger.Logging(logger.DEBUG, "received event info: e.ID=", e.ID, "appId="+e.AppID+", serviceName="+e.ServiceName+", status="+e.Status)
+	} else if e.Type == dockercontroller.CONTAINER {
+		logger.Logging(logger.DEBUG, "received event info: e.ID=", e.ID, "appId="+e.AppID+", serviceName="+e.ServiceName+", cid="+e.CID+", status="+e.Status)
+		cid = e.CID
 	}
 
-	// Get node id from configuration.
+	// Get docker image name from service name.
+	imageName := getImageNameByServiceName(e.AppID, e.ServiceName)
+
+	ids := make([]string, 0)
+	if len(e.ID) == 0 {
+		evts, _ := dbExecutor.GetEvents(e.AppID, imageName)
+		if len(evts) == 0 {
+			logger.Logging(logger.DEBUG, "There is no subscribers.")
+			return
+		}
+		for _, evt := range evts {
+			ids = append(ids, evt["id"].(string))
+		}
+	} else {
+		ids = append(ids, e.ID)
+	}
+
 	nodeId := ""
 	config, err := configurator.GetConfiguration()
 	if err != nil {
@@ -125,26 +140,20 @@ func (Executor) SendNotification(appId, serviceName, cid, event string) {
 		}
 	}
 
-	// Generate notification data.
-	ids := make([]string, 0)
-	for _, evt := range evts {
-		ids = append(ids, evt["id"].(string))
-	}
-
-	containerInfo := make(map[string]interface{})
-	containerInfo["nodeid"] = nodeId
-	containerInfo["appid"] = appId
-	containerInfo["imagename"] = imageName
-	containerInfo["cid"] = cid
-	containerInfo["status"] = event
-
 	eventInfo := make(map[string]interface{})
-	eventInfo["eventid"] = ids
-	eventInfo["event"] = containerInfo
+	eventInfo["nodeid"] = nodeId
+	eventInfo["appid"] = e.AppID
+	eventInfo["status"] = e.Status
+	eventInfo["imagename"] = imageName
+	eventInfo["cid"] = cid
+
+	notiInfo := make(map[string]interface{})
+	notiInfo["eventid"] = ids
+	notiInfo["event"] = eventInfo
 
 	// Notify container event to pharos-anchor.
 	url := makeRequestUrl(url.Notification(), url.Events())
-	jsonData, _ := convertMapToJson(eventInfo)
+	jsonData, _ := convertMapToJson(notiInfo)
 	httpExecutor.SendHttpRequest("POST", url, []byte(jsonData))
 }
 
