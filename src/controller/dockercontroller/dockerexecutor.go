@@ -14,7 +14,6 @@
  * limitations under the License.
  *
  *******************************************************************************/
-
 // Package dockercontroller provide functionlity of docker commands.
 package dockercontroller
 
@@ -542,7 +541,7 @@ func (dockerExecutorImpl) Events(id, path string, evt chan Event, services ...st
 	}
 	evts[id] = containerEvents
 
-	go func() {
+	go func(id string) {
 		for {
 			for event := range containerEvents {
 				if _, exists := evts[id]; !exists {
@@ -563,7 +562,7 @@ func (dockerExecutorImpl) Events(id, path string, evt chan Event, services ...st
 				evt <- e
 			}
 		}
-	}()
+	}(id)
 
 	return nil
 }
