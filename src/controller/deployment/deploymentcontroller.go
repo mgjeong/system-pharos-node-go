@@ -89,6 +89,8 @@ func init() {
 	dockerExecutor = dockercontroller.Executor
 	dbExecutor = service.Executor{}
 	appsMonitor = apps.Executor{}
+
+	restoreAllAppsState()
 }
 
 // Deploy app to target by yaml description.
@@ -658,6 +660,7 @@ func restoreState(appId, state string) error {
 	var err error
 
 	if len(state) == 0 {
+		logger.Logging(logger.ERROR, "empty state")
 		return errors.InvalidParam{Msg: "empty state"}
 	}
 
@@ -736,7 +739,11 @@ func updateYamlFile(appId string, orginDescription string, service string, newIm
 // otherwise, return error.
 func getServiceState(appId, serviceName string) (map[string]interface{}, error) {
 	infos, err := dockerExecutor.Ps(appId, COMPOSE_FILE, serviceName)
-	if len(infos) == 0 || err != nil {
+	if len(infos) == 0 {
+		logger.Logging(logger.ERROR, "no information about service")
+		return nil, errors.Unknown{Msg: "no information about service"}
+	}
+	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
 		return nil, err
 	}
@@ -927,7 +934,7 @@ func updateAppEvent(appId string) error {
 	for _, serviceInfo := range services {
 		descImageName := serviceInfo.(map[string]interface{})[IMAGE].(string)
 		for _, image := range images {
-			if changes, ok := image[CHANGES]; ok {
+			if changes, exists := image[CHANGES]; exists {
 				changesTag := changes.(map[string]interface{})[TAG].(string)
 				if (image[NAME].(string) + ":" + changesTag) == descImageName {
 					err = dbExecutor.UpdateAppEvent(appId, image[NAME].(string), changesTag, NONE)
@@ -940,4 +947,25 @@ func updateAppEvent(appId string) error {
 		}
 	}
 	return err
+}
+
+func restoreAllAppsState() {
+	logger.Logging(logger.DEBUG, "IN")
+	defer logger.Logging(logger.DEBUG, "OUT")
+
+	apps, err := dbExecutor.GetAppList()
+	if err != nil {
+		logger.Logging(logger.ERROR, err.Error())
+		return
+	}
+
+	for _, app := range apps {
+		appId := app[ID].(string)
+		appInfo, err := Executor.App(appId)
+		if err != nil {
+			logger.Logging(logger.ERROR, err.Error())
+			return
+		}
+		restoreState(appId, appInfo[STATE].(string))
+	}
 }
