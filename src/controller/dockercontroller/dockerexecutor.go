@@ -25,6 +25,7 @@ import (
 	"docker.io/go-docker"
 	"docker.io/go-docker/api/types"
 	"encoding/json"
+	"fmt"
 	dockercompose "github.com/docker/libcompose/docker"
 	"github.com/docker/libcompose/docker/ctx"
 	"github.com/docker/libcompose/project"
