@@ -62,10 +62,11 @@ const (
 	UPDATING_STATE = "updating"
 	NONE           = "none"
 	CHANGES        = "changes"
+	EVENTID        = "eventId"
 )
 
 type Command interface {
-	DeployApp(body string) (map[string]interface{}, error)
+	DeployApp(body string, query map[string]interface{}) (map[string]interface{}, error)
 	Apps() (map[string]interface{}, error)
 	App(appId string) (map[string]interface{}, error)
 	UpdateAppInfo(appId string, body string) error
@@ -99,7 +100,7 @@ func init() {
 // and create, start containers on the target.
 // if succeed to deploy, return app_id
 // otherwise, return error.
-func (executor depExecutorImpl) DeployApp(body string) (map[string]interface{}, error) {
+func (executor depExecutorImpl) DeployApp(body string, query map[string]interface{}) (map[string]interface{}, error) {
 	logger.Logging(logger.DEBUG, "IN")
 	defer logger.Logging(logger.DEBUG, "OUT")
 
@@ -148,7 +149,12 @@ func (executor depExecutorImpl) DeployApp(body string) (map[string]interface{}, 
 		return nil, err
 	}
 
-	err = dockerExecutor.Up(data[ID].(string), COMPOSE_FILE)
+	if eventIds, exists := query[EVENTID]; exists {
+		err = dockerExecutor.UpWithEvent(data[ID].(string), COMPOSE_FILE, eventIds.([]string)[0], appsMonitor.GetEventChannel())
+	} else {
+		err = dockerExecutor.Up(data[ID].(string), COMPOSE_FILE)
+	}
+
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
 		e := dockerExecutor.DownWithRemoveImages(data[ID].(string), COMPOSE_FILE)

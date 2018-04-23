@@ -111,7 +111,7 @@ func (innerExecutorImpl) deploy(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	response, e := deploymentExecutor.DeployApp(bodyStr)
+	response, e := deploymentExecutor.DeployApp(bodyStr, parseQuery(req))
 	if e != nil {
 		common.MakeErrorResponse(w, e)
 		return
