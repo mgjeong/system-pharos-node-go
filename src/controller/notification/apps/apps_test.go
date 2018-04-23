@@ -18,6 +18,7 @@ package apps
 
 import (
 	"commons/errors"
+	"controller/dockercontroller"
 	dbmocks "db/mongo/event/mocks"
 	servicedbmocks "db/mongo/service/mocks"
 	"github.com/golang/mock/gomock"
@@ -37,6 +38,16 @@ const (
 )
 
 var (
+	testEvent = dockercontroller.Event{
+		ID:          "",
+		Type:        "container",
+		AppID:       appId,
+		ServiceName: serviceName,
+		Status:      status,
+		ContainerEvent: dockercontroller.ContainerEvent{
+			CID: cid,
+		},
+	}
 	testBody = map[string]interface{}{
 		"eventid":   "test_event_id",
 		"appid":     "test_app_id",
@@ -123,7 +134,7 @@ func TestSendNotification_ExpectSuccess(t *testing.T) {
 	dbExecutor = dbExecutorMockObj
 	serviceExecutor = serviceDbExecutor
 
-	Executor{}.SendNotification(appId, serviceName, cid, status)
+	Executor{}.SendNotification(testEvent)
 }
 
 func TestUnsubscribeEvent_ExpectSuccess(t *testing.T) {
