@@ -76,6 +76,21 @@ var (
 		},
 	}
 
+	DB_GET_APP_WITH_EXITED_STATE_OBJ = map[string]interface{}{
+		"id":          APP_ID,
+		"state":       EXITED_STATE,
+		"description": ORIGIN_DESCRIPTION_JSON,
+		"images": []map[string]interface{}{
+			{
+				"name": REPOSITORY_WITH_PORT_IMAGE,
+				"changes": map[string]interface{}{
+					"tag":   NEW_TAG,
+					"state": "update",
+				},
+			},
+		},
+	}
+
 	DB_GET_APP_UPDATING_OBJ = map[string]interface{}{
 		"id":          APP_ID,
 		"state":       UPDATING_STATE,
@@ -2109,4 +2124,81 @@ func TestUpdateAppEventWhenUpdateAppEventFailed_ExpectReturnError(t *testing.T) 
 	if err == nil {
 		t.Errorf("Expected err: %s, actual err: %s", "Unknown error", "nil")
 	}
+}
+
+func TestRestoreAllAppsStateWhenGetAppListFailed_ExpectReturn(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	dbExecutorMockObj := dbmocks.NewMockCommand(ctrl)
+	dockerExecutorMockObj := dockermocks.NewMockCommand(ctrl)
+
+	gomock.InOrder(
+		dbExecutorMockObj.EXPECT().GetAppList().Return(DB_OBJs, errors.Unknown{}),
+	)
+
+	dbExecutor = dbExecutorMockObj
+	dockerExecutor = dockerExecutorMockObj
+
+	restoreAllAppsState()
+}
+
+func TestRestoreAllAppsStateWhenAppFailed_ExpectReturn(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	dbExecutorMockObj := dbmocks.NewMockCommand(ctrl)
+	dockerExecutorMockObj := dockermocks.NewMockCommand(ctrl)
+
+	gomock.InOrder(
+		dbExecutorMockObj.EXPECT().GetAppList().Return(DB_OBJs, nil),
+		dbExecutorMockObj.EXPECT().GetApp(APP_ID).Return(DB_GET_APP_OBJ, errors.Unknown{}),
+	)
+
+	dbExecutor = dbExecutorMockObj
+	dockerExecutor = dockerExecutorMockObj
+
+	restoreAllAppsState()
+}
+
+func TestRestoreAllAppsState_Up(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	dbExecutorMockObj := dbmocks.NewMockCommand(ctrl)
+	dockerExecutorMockObj := dockermocks.NewMockCommand(ctrl)
+
+	gomock.InOrder(
+		dbExecutorMockObj.EXPECT().GetAppList().Return(DB_OBJs, nil),
+		dbExecutorMockObj.EXPECT().GetApp(APP_ID).Return(DB_GET_APP_OBJ, nil),
+		dockerExecutorMockObj.EXPECT().Ps(APP_ID, gomock.Any(), SERVICE_NAME).Return(PS_EXPECT_RETURN, nil),
+		dockerExecutorMockObj.EXPECT().GetContainerConfigByName(CONTAINER_NAME).Return(INSPECT_RETURN_MSG, nil),
+		dockerExecutorMockObj.EXPECT().Up(APP_ID, COMPOSE_FILE).Return(nil),
+	)
+
+	dbExecutor = dbExecutorMockObj
+	dockerExecutor = dockerExecutorMockObj
+
+	restoreAllAppsState()
+}
+
+func TestRestoreAllAppsState_Stop(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	dbExecutorMockObj := dbmocks.NewMockCommand(ctrl)
+	dockerExecutorMockObj := dockermocks.NewMockCommand(ctrl)
+
+	gomock.InOrder(
+		dbExecutorMockObj.EXPECT().GetAppList().Return(DB_OBJs, nil),
+		dbExecutorMockObj.EXPECT().GetApp(APP_ID).Return(DB_GET_APP_WITH_EXITED_STATE_OBJ, nil),
+		dockerExecutorMockObj.EXPECT().Ps(APP_ID, gomock.Any(), SERVICE_NAME).Return(PS_EXPECT_RETURN, nil),
+		dockerExecutorMockObj.EXPECT().GetContainerConfigByName(CONTAINER_NAME).Return(INSPECT_RETURN_MSG, nil),
+		dockerExecutorMockObj.EXPECT().Stop(APP_ID, COMPOSE_FILE).Return(nil),
+	)
+
+	dbExecutor = dbExecutorMockObj
+	dockerExecutor = dockerExecutorMockObj
+
+	restoreAllAppsState()
 }
