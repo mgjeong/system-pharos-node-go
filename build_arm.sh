@@ -42,8 +42,9 @@ function download_pkgs(){
         "gopkg.in/yaml.v2"
         "-d docker.io/go-docker"
         "-d github.com/docker/libcompose"
-	"golang.org/x/sys/unix"
-	"github.com/shirou/gopsutil"
+        "golang.org/x/sys/unix"
+        "github.com/shirou/gopsutil"
+        "github.com/boltdb/bolt"
         )
 
 

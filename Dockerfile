@@ -22,10 +22,6 @@ ENV APP_DIR=/pharos
 ENV APP_PORT=48098
 ENV APP=pharos-node
 
-# install MongoDB
-RUN apk add --no-cache mongodb bash && \
-    rm -rf /var/cache/apk/*
-
 # copy files
 COPY $APP run.sh $APP_DIR/
 
@@ -35,7 +31,7 @@ EXPOSE $APP_PORT
 # set the working directory
 WORKDIR $APP_DIR
 
-# make mongodb volume
+# make boltdb volume
 RUN mkdir /data
 RUN mkdir /data/db
 VOLUME /data/db

@@ -15,15 +15,12 @@
 #
 ###############################################################################
 # Docker image for "pharos-node"
-FROM arm32v7/ubuntu:16.04
+FROM arm32v6/alpine:3.6
 
 # environment variables
 ENV APP_DIR=/pharos
 ENV APP_PORT=48098
 ENV APP=pharos-node
-
-RUN apt-get update
-RUN apt-get install -y mongodb
 
 #copy files
 COPY $APP run.sh $APP_DIR/
@@ -34,7 +31,7 @@ EXPOSE $APP_PORT
 #set the working directory
 WORKDIR $APP_DIR
 
-#make mongodb volume
+#make boltdb volume
 RUN mkdir /data && mkdir /data/db
 VOLUME /data/db
 
