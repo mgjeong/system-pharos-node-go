@@ -22,7 +22,7 @@ import (
 	"commons/errors"
 	"commons/logger"
 	"commons/util"
-	"db/mongo/configuration"
+	"db/bolt/configuration"
 	"github.com/shirou/gopsutil/cpu"
 	"github.com/shirou/gopsutil/host"
 	"os"

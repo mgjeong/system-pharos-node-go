@@ -25,7 +25,7 @@ import (
 	"commons/util"
 	"controller/dockercontroller"
 	"controller/monitoring/apps"
-	"db/mongo/service"
+	"db/bolt/service"
 	"encoding/json"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
@@ -309,12 +309,13 @@ func (depExecutorImpl) StartApp(appId string) error {
 	logger.Logging(logger.DEBUG, "IN", appId)
 	defer logger.Logging(logger.DEBUG, "OUT")
 
-	state, err := dbExecutor.GetAppState(appId)
+	app, err := dbExecutor.GetApp(appId)
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
 		return convertDBError(err, appId)
 	}
 
+	state := app["state"].(string)
 	if state == RUNNING_STATE {
 		return errors.AlreadyReported{Msg: state}
 	}
@@ -351,12 +352,13 @@ func (depExecutorImpl) StopApp(appId string) error {
 	logger.Logging(logger.DEBUG, "IN", appId)
 	defer logger.Logging(logger.DEBUG, "OUT")
 
-	state, err := dbExecutor.GetAppState(appId)
+	app, err := dbExecutor.GetApp(appId)
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
 		return convertDBError(err, appId)
 	}
 
+	state := app["state"].(string)
 	if state == EXITED_STATE {
 		return errors.AlreadyReported{Msg: state}
 	}
@@ -559,11 +561,13 @@ func (depExecutorImpl) DeleteApp(appId string) error {
 	err = dockerExecutor.DownWithRemoveImages(appId, COMPOSE_FILE)
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
-		state, e := dbExecutor.GetAppState(appId)
+		app, e := dbExecutor.GetApp(appId)
 		if e != nil {
 			logger.Logging(logger.ERROR, e.Error())
-			return err
+			return e
 		}
+
+		state := app["state"].(string)
 		e = restoreState(appId, state)
 		if e != nil {
 			logger.Logging(logger.ERROR, e.Error())

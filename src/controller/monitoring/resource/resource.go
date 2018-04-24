@@ -20,7 +20,7 @@ import (
 	"commons/errors"
 	"commons/logger"
 	"controller/dockercontroller"
-	"db/mongo/service"
+	"db/bolt/service"
 	"encoding/json"
 	"github.com/shirou/gopsutil/cpu"
 	"github.com/shirou/gopsutil/disk"
