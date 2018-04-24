@@ -283,3 +283,25 @@ func (e InternalServerError) Error() string {
 func (e *InternalServerError) SetMsg(msg string) {
 	e.Msg = msg
 }
+
+// Struct DBConnectionError will be used for return case of error
+// which connection failed with db server.
+type DBConnectionError struct {
+	Msg string
+}
+
+// Error sets an error message of DBConnectionError.
+func (e DBConnectionError) Error() string {
+	return "db connection failed: " + e.Msg
+}
+
+// Struct DBOperationError will be used for return case of error
+// which db operation failed(e.g., insert, update, delete).
+type DBOperationError struct {
+	Msg string
+}
+
+// Error sets an error message of DBOperationError.
+func (e DBOperationError) Error() string {
+	return "db operation failed: " + e.Msg
+}
