@@ -20,17 +20,55 @@ import (
 	"commons/errors"
 	"controller/dockercontroller"
 	dockermocks "controller/dockercontroller/mocks"
+	dbmocks "db/mongo/service/mocks"
 	"github.com/golang/mock/gomock"
 	"reflect"
 	"testing"
 )
 
 const (
+	serviceName             = "test_service"
+	serviceName2            = "test_service2"
+	oldTag                  = "1.0"
+	repositoryWithPortImage = "test_url:5000/test"
+	descriptionJson         = "{\"services\":{\"" + serviceName + "\":{\"image\":\"" + repositoryWithPortImage + ":" + oldTag + "\"},\"" +
+		serviceName2 + "\":{\"image\":\"" + repositoryWithPortImage + ":" + oldTag + "\"}},\"version\":\"2\"}"
+
 	appId = "test_app_id"
 	path  = "test_path"
 )
 
 var (
+	psWithUpObj = []map[string]string{
+		{
+			"State": "Up",
+		},
+	}
+	psWithForcefullyExitedObj = []map[string]string{
+		{
+			"State": "Exited (137)",
+		},
+	}
+	psWithGracefullyExitedObj = []map[string]string{
+		{
+			"State": "Exited (0)",
+		},
+	}
+
+	dbGetAppObj = map[string]interface{}{
+		"id":          appId,
+		"state":       RUNNING_STATE,
+		"description": descriptionJson,
+		"images": []map[string]interface{}{
+			{
+				"name": repositoryWithPortImage,
+				"changes": map[string]interface{}{
+					"tag":   oldTag,
+					"state": "update",
+				},
+			},
+		},
+	}
 	unknownError = errors.Unknown{}
 )
 
@@ -136,4 +174,89 @@ func TestGetEventChannel(t *testing.T) {
 	if reflect.TypeOf(ret) != reflect.TypeOf(testChan) {
 		t.Errorf("Expected type of ret : chan dockercontroller.Event, actual type of ret: %v", reflect.TypeOf(ret))
 	}
+}
+
+func TestExtractStringInParenthesis(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	expectedRet := "123"
+	testStr := "(" + expectedRet + ") test string"
+	ret := extractStringInParenthesis(testStr)
+
+	if ret != expectedRet {
+		t.Errorf("Expected result : %s, actual result : %s", expectedRet, ret)
+	}
+}
+
+func TestUpdateAppstate_ExpectUpdateAppStateToRunning(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	dbExecutorMockObj := dbmocks.NewMockCommand(ctrl)
+	dockerExecutorMockObj := dockermocks.NewMockCommand(ctrl)
+
+	gomock.InOrder(
+		dbExecutorMockObj.EXPECT().GetApp(appId).Return(dbGetAppObj, nil),
+		dockerExecutorMockObj.EXPECT().Ps(appId, "docker-compose.yml", serviceName).Return(psWithUpObj, nil),
+		dockerExecutorMockObj.EXPECT().Ps(appId, "docker-compose.yml", serviceName2).Return(psWithUpObj, nil),
+		dbExecutorMockObj.EXPECT().UpdateAppState(appId, RUNNING_STATE),
+	)
+
+	// pass mockObj to a real object.
+	dockerExecutor = dockerExecutorMockObj
+	dbExecutor = dbExecutorMockObj
+
+	testEvent := dockercontroller.Event{
+		AppID: appId,
+	}
+	updateAppState(testEvent)
+}
+
+func TestUpdateAppstate_ExpectUpdateAppStateToPartiallyExited(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	dbExecutorMockObj := dbmocks.NewMockCommand(ctrl)
+	dockerExecutorMockObj := dockermocks.NewMockCommand(ctrl)
+
+	gomock.InOrder(
+		dbExecutorMockObj.EXPECT().GetApp(appId).Return(dbGetAppObj, nil),
+		dockerExecutorMockObj.EXPECT().Ps(appId, "docker-compose.yml", serviceName).Return(psWithForcefullyExitedObj, nil),
+		dockerExecutorMockObj.EXPECT().Ps(appId, "docker-compose.yml", serviceName2).Return(psWithUpObj, nil),
+		dbExecutorMockObj.EXPECT().UpdateAppState(appId, PARTIALLY_EXITED_STATE),
+	)
+
+	// pass mockObj to a real object.
+	dockerExecutor = dockerExecutorMockObj
+	dbExecutor = dbExecutorMockObj
+
+	testEvent := dockercontroller.Event{
+		AppID: appId,
+	}
+	updateAppState(testEvent)
+}
+
+func TestUpdateAppstate_ExpectUpdateAppStateToExited(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	dbExecutorMockObj := dbmocks.NewMockCommand(ctrl)
+	dockerExecutorMockObj := dockermocks.NewMockCommand(ctrl)
+
+	gomock.InOrder(
+		dbExecutorMockObj.EXPECT().GetApp(appId).Return(dbGetAppObj, nil),
+		dockerExecutorMockObj.EXPECT().Ps(appId, "docker-compose.yml", serviceName).Return(psWithForcefullyExitedObj, nil),
+		dockerExecutorMockObj.EXPECT().Ps(appId, "docker-compose.yml", serviceName2).Return(psWithForcefullyExitedObj, nil),
+		dbExecutorMockObj.EXPECT().UpdateAppState(appId, EXITED_STATE),
+	)
+
+	// pass mockObj to a real object.
+	dockerExecutor = dockerExecutorMockObj
+	dbExecutor = dbExecutorMockObj
+
+	testEvent := dockercontroller.Event{
+		AppID: appId,
+	}
+	updateAppState(testEvent)
 }
