@@ -971,7 +971,7 @@ func restoreAllAppsState() {
 
 	for _, app := range apps {
 		appId := app[ID].(string)
-		state, err := dbExecutor.GetAppState(appId)
+		app, err := dbExecutor.GetApp(appId)
 		if err != nil {
 			logger.Logging(logger.ERROR, err.Error())
 			return
@@ -983,6 +983,7 @@ func restoreAllAppsState() {
 			return
 		}
 
+		state := app["state"].(string)
 		restoreState(appId, state)
 	}
 }
