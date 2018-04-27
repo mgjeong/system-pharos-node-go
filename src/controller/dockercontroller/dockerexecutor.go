@@ -544,7 +544,8 @@ func (dockerExecutorImpl) Events(id, path string, evt chan Event, services ...st
 
 	go func(id string) {
 		for {
-			for event := range containerEvents {
+			select {
+			case event := <-containerEvents:
 				if _, exists := evts[id]; !exists {
 					cancelFun()
 					close(containerEvents)

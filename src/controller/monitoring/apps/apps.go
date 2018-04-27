@@ -20,6 +20,22 @@ import (
 	"commons/logger"
 	"controller/dockercontroller"
 	"controller/notification/apps"
+	"db/mongo/service"
+	"encoding/json"
+	"gopkg.in/yaml.v2"
+	"io/ioutil"
+	"os"
+	"reflect"
+	"strconv"
+	"strings"
+)
+
+const (
+	EXITED_STATE           = "exited"
+	RUNNING_STATE          = "running"
+	PARTIALLY_EXITED_STATE = "partially exited"
+	START                  = "start"
+	DIE                    = "die"
 )
 
 type Command interface {
@@ -30,12 +46,14 @@ type Command interface {
 
 type Executor struct{}
 
+var dbExecutor service.Command
 var dockerExecutor dockercontroller.Command
 var notiExecutor apps.Command
 var events chan dockercontroller.Event
 
 func init() {
 	dockerExecutor = dockercontroller.Executor
+	dbExecutor = service.Executor{}
 	notiExecutor = apps.Executor{}
 
 	events = make(chan dockercontroller.Event)
@@ -58,6 +76,7 @@ func (Executor) EnableEventMonitoring(appId, path string) error {
 		logger.Logging(logger.ERROR, err.Error())
 		return err
 	}
+
 	return nil
 }
 
@@ -76,9 +95,87 @@ func (Executor) DisableEventMonitoring(appId, path string) error {
 func startEventMonitoring() {
 	go func() {
 		for {
-			for event := range events {
+			select {
+			case event := <-events:
 				notiExecutor.SendNotification(event)
+				if event.Status == START ||
+					event.Status == DIE {
+					updateAppState(event)
+				}
 			}
 		}
 	}()
+}
+
+func updateAppState(event dockercontroller.Event) {
+	app, err := dbExecutor.GetApp(event.AppID)
+	if err != nil {
+		logger.Logging(logger.ERROR, err.Error())
+		return
+	}
+
+	description := make(map[string]interface{})
+	err = json.Unmarshal([]byte(app["description"].(string)), &description)
+	if err != nil {
+		logger.Logging(logger.ERROR, err.Error())
+		return
+	}
+
+	yaml, err := yaml.Marshal(description)
+	if err != nil {
+		logger.Logging(logger.ERROR, err.Error())
+		return
+	}
+
+	err = ioutil.WriteFile("docker-compose.yml", yaml, os.FileMode(0755))
+	if err != nil {
+		logger.Logging(logger.ERROR, err.Error())
+		return
+	}
+	defer os.RemoveAll("docker-compose.yml")
+
+	if description["services"] == nil || len(description["services"].(map[string]interface{})) == 0 {
+		return
+	}
+
+	exitedServiceCnt := 0
+	serviceCnt := len(description["services"].(map[string]interface{}))
+
+	for _, serviceName := range reflect.ValueOf(description["services"].(map[string]interface{})).MapKeys() {
+		infos, err := dockerExecutor.Ps(event.AppID, "docker-compose.yml", serviceName.String())
+		if len(infos) == 0 {
+			logger.Logging(logger.ERROR, "no information about service")
+			return
+		}
+		if err != nil {
+			logger.Logging(logger.ERROR, err.Error())
+			return
+		}
+
+		if strings.Contains(infos[0]["State"], "Exited") {
+			exitCode, _ := strconv.ParseUint(extractStringInParenthesis(infos[0]["State"]), 10, 32)
+			if exitCode != 0 {
+				exitedServiceCnt++
+			}
+		}
+	}
+
+	if exitedServiceCnt == 0 {
+		dbExecutor.UpdateAppState(event.AppID, RUNNING_STATE)
+	} else if exitedServiceCnt < serviceCnt {
+		dbExecutor.UpdateAppState(event.AppID, PARTIALLY_EXITED_STATE)
+	} else if exitedServiceCnt == serviceCnt {
+		dbExecutor.UpdateAppState(event.AppID, EXITED_STATE)
+	}
+}
+
+func extractStringInParenthesis(s string) string {
+	i := strings.Index(s, "(")
+	if i >= 0 {
+		j := strings.Index(s[i:], ")")
+		if j >= 0 {
+			return s[i+1 : j+i]
+		}
+	}
+	return ""
 }
