@@ -90,12 +90,23 @@ func initConfiguration() {
 		logger.Logging(logger.ERROR, err.Error())
 	}
 
-	properties := make([]map[string]interface{}, 0)
+	deviceName := DEFAULT_DEVICE_NAME
+	prop, err := dbExecutor.GetProperty("devicename")
+	if err == nil {
+		deviceName = prop["value"].(string)
+	}
 
+	interval := DEFAULT_PING_INTERVAL
+	prop, err = dbExecutor.GetProperty("pinginterval")
+	if err == nil {
+		interval = prop["value"].(string)
+	}
+
+	properties := make([]map[string]interface{}, 0)
 	properties = append(properties, makeProperty("anchoraddress", anchoraddress, true))
 	properties = append(properties, makeProperty("nodeaddress", nodeaddress, true))
-	properties = append(properties, makeProperty("devicename", DEFAULT_DEVICE_NAME, false))
-	properties = append(properties, makeProperty("pinginterval", DEFAULT_PING_INTERVAL, false))
+	properties = append(properties, makeProperty("devicename", deviceName, false))
+	properties = append(properties, makeProperty("pinginterval", interval, false))
 	properties = append(properties, makeProperty("os", os, true))
 	properties = append(properties, makeProperty("platform", platform, true))
 	properties = append(properties, makeProperty("processor", processor, true))

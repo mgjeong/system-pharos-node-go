@@ -24,6 +24,7 @@ import (
 	"commons/url"
 	"commons/util"
 	"controller/configuration"
+	"db/bolt/service"
 	"encoding/json"
 	"messenger"
 	"time"
@@ -48,10 +49,12 @@ type Executor struct{}
 
 var httpExecutor messenger.Command
 var configurator configuration.Command
+var dbExecutor service.Command
 
 func init() {
 	httpExecutor = messenger.NewExecutor()
 	configurator = configuration.Executor{}
+	dbExecutor = service.Executor{}
 
 	// Register
 	err := register()
@@ -200,6 +203,16 @@ func makeRegistrationBody(config map[string]interface{}) map[string]interface{} 
 	configData := make(map[string]interface{})
 	configData["properties"] = filteredProps
 
+	// Set application information in request body.
+	apps, err := dbExecutor.GetAppList()
+	appIds := make([]string, 0)
+	if err == nil {
+		for _, app := range apps {
+			appIds = append(appIds, app["id"].(string))
+		}
+	}
+
 	data["config"] = configData
+	data["apps"] = appIds
 	return data
 }
