@@ -18,7 +18,7 @@ package configuration
 
 import (
 	"commons/errors"
-	dbmocks "db/mongo/configuration/mocks"
+	dbmocks "db/bolt/configuration/mocks"
 	"encoding/json"
 	"github.com/golang/mock/gomock"
 	"testing"

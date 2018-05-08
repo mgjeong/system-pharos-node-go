@@ -19,8 +19,8 @@ package apps
 import (
 	"commons/errors"
 	"controller/dockercontroller"
-	dbmocks "db/mongo/event/mocks"
-	servicedbmocks "db/mongo/service/mocks"
+	dbmocks "db/bolt/event/mocks"
+	servicedbmocks "db/bolt/service/mocks"
 	"github.com/golang/mock/gomock"
 	"testing"
 )

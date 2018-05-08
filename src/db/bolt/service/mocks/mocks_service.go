@@ -95,19 +95,6 @@ func (mr *MockCommandMockRecorder) DeleteApp(app_id interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteApp", reflect.TypeOf((*MockCommand)(nil).DeleteApp), app_id)
 }
 
-// GetAppState mocks base method
-func (m *MockCommand) GetAppState(app_id string) (string, error) {
-	ret := m.ctrl.Call(m, "GetAppState", app_id)
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetAppState indicates an expected call of GetAppState
-func (mr *MockCommandMockRecorder) GetAppState(app_id interface{}) *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAppState", reflect.TypeOf((*MockCommand)(nil).GetAppState), app_id)
-}
-
 // UpdateAppState mocks base method
 func (m *MockCommand) UpdateAppState(app_id, state string) error {
 	ret := m.ctrl.Call(m, "UpdateAppState", app_id, state)

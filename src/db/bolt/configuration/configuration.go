@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright 2017 Samsung Electronics All Rights Reserved.
+ * Copyright 2018 Samsung Electronics All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,8 +19,9 @@ package configuration
 
 import (
 	"commons/errors"
-	. "db/mongo/wrapper"
-	"gopkg.in/mgo.v2/bson"
+	"commons/logger"
+	. "db/bolt/wrapper"
+	"encoding/json"
 )
 
 // Interface of Service model's operations.
@@ -36,49 +37,22 @@ type Command interface {
 }
 
 const (
-	DB_NAME                  = "DeploymentNodeDB"
-	CONFIGURATION_COLLECTION = "CONFIGURATION"
-	DB_URL                   = "127.0.0.1:27017"
+	BUCKET_NAME = "configuration"
 )
 
 type Property struct {
-	Name     string `bson:"_id,omitempty"`
-	Value    interface{}
-	ReadOnly bool
+	Name     string      `json:"name"`
+	Value    interface{} `json:"value"`
+	ReadOnly bool        `json:"readonly"`
 }
 
 type Executor struct {
 }
 
-var mgoDial Connection
+var db Database
 
 func init() {
-	mgoDial = MongoDial{}
-}
-
-// Try to connect with mongo db server.
-// if succeed to connect with mongo db server, return error as nil,
-// otherwise, return error.
-func connect(url string) (Session, error) {
-	// Create a MongoDB Session
-	session, err := mgoDial.Dial(url)
-
-	if err != nil {
-		return nil, ConvertMongoError(err, "")
-	}
-
-	return session, err
-}
-
-// close of mongodb session.
-func close(mgoSession Session) {
-	mgoSession.Close()
-}
-
-// Getting collection by name.
-// return mongodb Collection
-func getCollection(mgoSession Session, dbname string, collectionName string) Collection {
-	return mgoSession.DB(dbname).C(collectionName)
+	db = NewBoltDB(BUCKET_NAME)
 }
 
 // Convert to map by object of struct Configuration.
@@ -91,21 +65,32 @@ func (prop Property) convertToMap() map[string]interface{} {
 	}
 }
 
+func (prop Property) encode() ([]byte, error) {
+	encoded, err := json.Marshal(prop)
+	if err != nil {
+		return nil, errors.InvalidJSON{Msg: err.Error()}
+	}
+	return encoded, nil
+}
+
+func decode(data []byte) (*Property, error) {
+	var prop *Property
+	err := json.Unmarshal(data, &prop)
+	if err != nil {
+		return nil, errors.InvalidJSON{Msg: err.Error()}
+	}
+	return prop, nil
+}
+
 // SetProperty inserts a map of configuration into the database.
 // if succeed to add new configuration sets, returns an error as nil.
 // otherwise, return error.
 func (Executor) SetProperty(property map[string]interface{}) error {
-	session, err := connect(DB_URL)
-	if err != nil {
-		return err
-	}
-	defer close(session)
+	logger.Logging(logger.DEBUG, "IN")
+	defer logger.Logging(logger.DEBUG, "OUT")
 
-	prop := Property{}
-	query := bson.M{"_id": property["name"].(string)}
-	err = getCollection(session, DB_NAME, CONFIGURATION_COLLECTION).Find(query).One(&prop)
+	value, err := db.Get([]byte(property["name"].(string)))
 	if err != nil {
-		err = ConvertMongoError(err, "")
 		switch err.(type) {
 		default:
 			return err
@@ -116,67 +101,72 @@ func (Executor) SetProperty(property map[string]interface{}) error {
 				ReadOnly: property["readOnly"].(bool),
 			}
 
-			err = getCollection(session, DB_NAME, CONFIGURATION_COLLECTION).Insert(prop)
+			encoded, err := prop.encode()
 			if err != nil {
-				return ConvertMongoError(err, "")
+				return err
 			}
-			return err
+
+			err = db.Put([]byte(property["name"].(string)), encoded)
+			if err != nil {
+				return err
+			}
+			return nil
 		}
 	}
 
-	query = bson.M{"_id": property["name"].(string)}
-	update := bson.M{"$set": bson.M{"value": property["value"].(interface{})}}
-	err = getCollection(session, DB_NAME, CONFIGURATION_COLLECTION).Update(query, update)
+	prop, err := decode(value)
 	if err != nil {
-		return ConvertMongoError(err, "Failed to update property value")
+		return err
 	}
 
-	return err
+	prop.Value = property["value"]
+	encoded, err := prop.encode()
+	if err != nil {
+		return err
+	}
+
+	return db.Put([]byte(property["name"].(string)), encoded)
 }
 
 // GetProperty returns a single configuration property specified by name parameter.
 // if succeed to get, returns an error as nil.
 // otherwise, return error.
 func (Executor) GetProperty(name string) (map[string]interface{}, error) {
-	session, err := connect(DB_URL)
+	logger.Logging(logger.DEBUG, "IN")
+	defer logger.Logging(logger.DEBUG, "OUT")
+
+	value, err := db.Get([]byte(name))
 	if err != nil {
 		return nil, err
 	}
-	defer close(session)
 
-	prop := Property{}
-	query := bson.M{"_id": name}
-	err = getCollection(session, DB_NAME, CONFIGURATION_COLLECTION).Find(query).One(&prop)
+	prop, err := decode(value)
 	if err != nil {
-		err = ConvertMongoError(err, "")
 		return nil, err
 	}
 
-	result := prop.convertToMap()
-	return result, err
+	return prop.convertToMap(), nil
 }
 
 // GetProperties returns a list of configurations stored in database.
 // if succeed to get, return list of all configurations as slice.
 // otherwise, return error.
 func (Executor) GetProperties() ([]map[string]interface{}, error) {
-	session, err := connect(DB_URL)
+	logger.Logging(logger.DEBUG, "IN")
+	defer logger.Logging(logger.DEBUG, "OUT")
+
+	props, err := db.List()
 	if err != nil {
 		return nil, err
 	}
-	defer close(session)
 
-	props := []Property{}
-	err = getCollection(session, DB_NAME, CONFIGURATION_COLLECTION).Find(nil).All(&props)
-	if err != nil {
-		err = ConvertMongoError(err, "Failed to get all apps")
-		return nil, err
+	result := make([]map[string]interface{}, 0)
+	for _, value := range props {
+		prop, err := decode([]byte(value.(string)))
+		if err != nil {
+			continue
+		}
+		result = append(result, prop.convertToMap())
 	}
-
-	result := make([]map[string]interface{}, len(props))
-	for i, prop := range props {
-		result[i] = prop.convertToMap()
-	}
-
-	return result, err
+	return result, nil
 }

@@ -19,7 +19,7 @@ package resource
 import (
 	"commons/errors"
 	dockermocks "controller/dockercontroller/mocks"
-	dbmocks "db/mongo/service/mocks"
+	dbmocks "db/bolt/service/mocks"
 	"github.com/golang/mock/gomock"
 	"testing"
 )

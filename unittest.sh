@@ -8,10 +8,11 @@ go get -d docker.io/go-docker
 go get -d github.com/docker/libcompose
 go get golang.org/x/sys/unix
 go get github.com/shirou/gopsutil
+go get github.com/boltdb/bolt
 
 rm -rf $GOPATH/src/github.com/docker/distribution/vendor/github.com/opencontainers
 
-pkg_list=("api" "api/common" "api/deployment" "api/health" "api/monitoring/resource" "api/configuration" "api/notification" "api/notification/apps" "controller/deployment" "controller/dockercontroller" "controller/health" "controller/monitoring/resource" "controller/configuration" "controller/shellcommand" "controller/monitoring/apps" "controller/notification/apps" "db/mongo/service" "db/mongo/event" "messenger")
+pkg_list=("api" "api/common" "api/deployment" "api/health" "api/monitoring/resource" "api/configuration" "api/notification" "api/notification/apps" "controller/deployment" "controller/dockercontroller" "controller/health" "controller/monitoring/resource" "controller/configuration" "controller/shellcommand" "controller/monitoring/apps" "controller/notification/apps" "db/bolt/event" "db/bolt/configuration" "db/bolt/service" "messenger")
 
 function func_cleanup(){
     rm *.out *.test

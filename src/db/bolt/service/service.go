@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright 2017 Samsung Electronics All Rights Reserved.
+ * Copyright 2018 Samsung Electronics All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,11 +19,11 @@ package service
 
 import (
 	"commons/errors"
+	"commons/logger"
 	"crypto/sha1"
-	. "db/mongo/wrapper"
+	. "db/bolt/wrapper"
 	"encoding/hex"
 	"encoding/json"
-	"gopkg.in/mgo.v2/bson"
 	"sort"
 	"strings"
 )
@@ -45,9 +45,6 @@ type Command interface {
 	// DeleteApp delete docker-compose data of target app.
 	DeleteApp(app_id string) error
 
-	// GetAppState returns app's state
-	GetAppState(app_id string) (string, error)
-
 	// UpdateAppState updates app's State.
 	UpdateAppState(app_id string, state string) error
 
@@ -56,53 +53,26 @@ type Command interface {
 }
 
 const (
-	DB_NAME        = "DeploymentNodeDB"
-	APP_COLLECTION = "APP"
+	BUCKET_NAME    = "service"
 	SERVICES_FIELD = "services"
 	IMAGE_FIELD    = "image"
-	DB_URL         = "127.0.0.1:27017"
 	EVENT_NONE     = "none"
 )
 
 type App struct {
-	ID          string `bson:"_id,omitempty"`
-	Description string
-	State       string
-	Images      []map[string]interface{}
+	ID          string                   `json:"id"`
+	Description string                   `json:"description"`
+	State       string                   `json:"state"`
+	Images      []map[string]interface{} `json:"images"`
 }
 
 type Executor struct {
 }
 
-var mgoDial Connection
+var db Database
 
 func init() {
-	mgoDial = MongoDial{}
-}
-
-// Try to connect with mongo db server.
-// if succeed to connect with mongo db server, return error as nil,
-// otherwise, return error.
-func connect(url string) (Session, error) {
-	// Create a MongoDB Session
-	session, err := mgoDial.Dial(url)
-
-	if err != nil {
-		return nil, ConvertMongoError(err, "")
-	}
-
-	return session, err
-}
-
-// close of mongodb session.
-func close(mgoSession Session) {
-	mgoSession.Close()
-}
-
-// Getting collection by name.
-// return mongodb Collection
-func getCollection(mgoSession Session, dbname string, collectionName string) Collection {
-	return mgoSession.DB(dbname).C(collectionName)
+	db = NewBoltDB(BUCKET_NAME)
 }
 
 // Convert to map by object of struct App.
@@ -116,25 +86,41 @@ func (app App) convertToMap() map[string]interface{} {
 	}
 }
 
+func (app App) encode() ([]byte, error) {
+	encoded, err := json.Marshal(app)
+	if err != nil {
+		return nil, errors.InvalidJSON{Msg: err.Error()}
+	}
+	return encoded, nil
+}
+
+func decode(data []byte) (*App, error) {
+	var app *App
+	err := json.Unmarshal(data, &app)
+	if err != nil {
+		return nil, errors.InvalidJSON{Msg: err.Error()}
+	}
+	return app, nil
+}
+
 // Add app description to app collection in mongo server.
 // if succeed to add, return app information as map.
 // otherwise, return error.
 func (Executor) InsertComposeFile(description string, state string) (map[string]interface{}, error) {
+	logger.Logging(logger.DEBUG, "IN")
+	defer logger.Logging(logger.DEBUG, "OUT")
+
 	id, err := generateID(description)
 	if err != nil {
 		return nil, err
 	}
 
-	session, err := connect(DB_URL)
-	if err != nil {
-		return nil, err
-	}
-	defer close(session)
-
-	app := App{}
-	err = getCollection(session, DB_NAME, APP_COLLECTION).Find(bson.M{"_id": id}).One(&app)
+	value, err := db.Get([]byte(id))
 	if err == nil {
-		return app.convertToMap(), errors.AlreadyReported{Msg: id}
+		app, err := decode(value)
+		if err == nil {
+			return app.convertToMap(), errors.AlreadyReported{Msg: id}
+		}
 	}
 
 	images, err := getImageNames([]byte(description))
@@ -142,78 +128,80 @@ func (Executor) InsertComposeFile(description string, state string) (map[string]
 		return nil, err
 	}
 
-	app = App{
+	installedApp := App{
 		ID:          id,
 		Description: description,
 		State:       state,
 		Images:      images,
 	}
 
-	err = getCollection(session, DB_NAME, APP_COLLECTION).Insert(app)
+	encoded, err := installedApp.encode()
 	if err != nil {
-		return nil, ConvertMongoError(err, "")
+		return nil, err
 	}
 
-	result := app.convertToMap()
-	return result, err
+	err = db.Put([]byte(id), encoded)
+	if err != nil {
+		return nil, err
+	}
+
+	return installedApp.convertToMap(), nil
 }
 
 // Getting all of app informations.
 // if succeed to get, return list of all app information as slice.
 // otherwise, return error.
 func (Executor) GetAppList() ([]map[string]interface{}, error) {
-	session, err := connect(DB_URL)
+	logger.Logging(logger.DEBUG, "IN")
+	defer logger.Logging(logger.DEBUG, "OUT")
+
+	apps, err := db.List()
 	if err != nil {
 		return nil, err
 	}
-	defer close(session)
 
-	apps := []App{}
-	err = getCollection(session, DB_NAME, APP_COLLECTION).Find(nil).All(&apps)
-	if err != nil {
-		err = ConvertMongoError(err, "Failed to get all apps")
-		return nil, err
+	result := make([]map[string]interface{}, 0)
+	for _, value := range apps {
+		app, err := decode([]byte(value.(string)))
+		if err != nil {
+			continue
+		}
+		result = append(result, app.convertToMap())
 	}
-
-	result := make([]map[string]interface{}, len(apps))
-	for i, app := range apps {
-		result[i] = app.convertToMap()
-	}
-
-	return result, err
+	return result, nil
 }
 
 // Getting app information by app_id.
 // if succeed to get, return app information as map.
 // otherwise, return error.
 func (Executor) GetApp(app_id string) (map[string]interface{}, error) {
-	session, err := connect(DB_URL)
-	if err != nil {
-		return nil, err
-	}
-	defer close(session)
+	logger.Logging(logger.DEBUG, "IN")
+	defer logger.Logging(logger.DEBUG, "OUT")
 
 	if len(app_id) == 0 {
 		err := errors.InvalidParam{"Invalid param error : app_id is empty."}
 		return nil, err
 	}
 
-	app := App{}
-	err = getCollection(session, DB_NAME, APP_COLLECTION).Find(bson.M{"_id": app_id}).One(&app)
+	value, err := db.Get([]byte(app_id))
 	if err != nil {
-		errMsg := "Failed to find a app by " + app_id
-		err = ConvertMongoError(err, errMsg)
 		return nil, err
 	}
 
-	result := app.convertToMap()
-	return result, err
+	app, err := decode(value)
+	if err != nil {
+		return nil, err
+	}
+	return app.convertToMap(), nil
 }
 
 // Updating app information by app_id.
 // if succeed to update, return error as nil.
 // otherwise, return error.
 func (Executor) UpdateAppInfo(app_id string, description string) error {
+	logger.Logging(logger.DEBUG, "IN")
+	defer logger.Logging(logger.DEBUG, "OUT")
+
 	if len(app_id) == 0 {
 		err := errors.InvalidParam{"Invalid param error : app_id is empty."}
 		return err
@@ -229,78 +217,47 @@ func (Executor) UpdateAppInfo(app_id string, description string) error {
 		return err
 	}
 
-	session, err := connect(DB_URL)
+	value, err := db.Get([]byte(app_id))
 	if err != nil {
 		return err
 	}
-	defer close(session)
 
-	update := bson.M{"$set": bson.M{"description": description}}
-	err = getCollection(session, DB_NAME, APP_COLLECTION).Update(bson.M{"_id": app_id}, update)
+	app, err := decode(value)
 	if err != nil {
-		errMsg := "Failed to update a app by " + app_id
-		err = ConvertMongoError(err, errMsg)
 		return err
 	}
 
-	return err
+	app.Description = description
+	encoded, err := app.encode()
+	if err != nil {
+		return err
+	}
+
+	return db.Put([]byte(app_id), encoded)
 }
 
 // Deleting app collection by app_id.
 // if succeed to delete, return error as nil.
 // otherwise, return error.
 func (Executor) DeleteApp(app_id string) error {
+	logger.Logging(logger.DEBUG, "IN")
+	defer logger.Logging(logger.DEBUG, "OUT")
+
 	if len(app_id) == 0 {
 		err := errors.InvalidParam{"Invalid param error : app_id is empty."}
 		return err
 	}
 
-	session, err := connect(DB_URL)
-	if err != nil {
-		return err
-	}
-	defer close(session)
-
-	err = getCollection(session, DB_NAME, APP_COLLECTION).Remove(bson.M{"_id": app_id})
-	if err != nil {
-		errMsg := "Failed to remove a app by " + app_id
-		err = ConvertMongoError(err, errMsg)
-		return err
-	}
-
-	return err
-}
-
-// Getting app state by app_id.
-// if succeed to get state, return state (e.g.DEPLOY, UP, STOP...).
-// otherwise, return error.
-func (Executor) GetAppState(app_id string) (string, error) {
-	if len(app_id) == 0 {
-		err := errors.InvalidParam{"Invalid param error : app_id is empty."}
-		return "", err
-	}
-
-	session, err := connect(DB_URL)
-	if err != nil {
-		return "", err
-	}
-	defer close(session)
-
-	app := App{}
-	err = getCollection(session, DB_NAME, APP_COLLECTION).Find(bson.M{"_id": app_id}).One(&app)
-	if err != nil {
-		errMsg := "Failed to get app's state by " + app_id
-		err = ConvertMongoError(err, errMsg)
-		return "", err
-	}
-
-	return app.State, err
+	return db.Delete([]byte(app_id))
 }
 
 // Updating app state by app_id.
 // if succeed to update state, return error as nil.
 // otherwise, return error.
 func (Executor) UpdateAppState(app_id string, state string) error {
+	logger.Logging(logger.DEBUG, "IN")
+	defer logger.Logging(logger.DEBUG, "OUT")
+
 	if len(state) == 0 {
 		err := errors.InvalidParam{"Invalid param error : state is empty."}
 		return err
@@ -310,40 +267,41 @@ func (Executor) UpdateAppState(app_id string, state string) error {
 		return err
 	}
 
-	session, err := connect(DB_URL)
+	value, err := db.Get([]byte(app_id))
 	if err != nil {
 		return err
 	}
-	defer close(session)
 
-	update := bson.M{"$set": bson.M{"state": state}}
-	err = getCollection(session, DB_NAME, APP_COLLECTION).Update(bson.M{"_id": app_id}, update)
+	app, err := decode(value)
 	if err != nil {
-		errMsg := "Failed to update app's state by " + app_id
-		err = ConvertMongoError(err, errMsg)
 		return err
 	}
 
-	return err
+	app.State = state
+	encoded, err := app.encode()
+	if err != nil {
+		return err
+	}
+
+	return db.Put([]byte(app_id), encoded)
 }
 
 func (Executor) UpdateAppEvent(app_id string, repo string, tag string, event string) error {
+	logger.Logging(logger.DEBUG, "IN")
+	defer logger.Logging(logger.DEBUG, "OUT")
+
 	if len(app_id) == 0 {
 		err := errors.InvalidParam{"Invalid param error : app_id is empty."}
 		return err
 	}
 
-	session, err := connect(DB_URL)
+	value, err := db.Get([]byte(app_id))
 	if err != nil {
 		return err
 	}
-	defer close(session)
 
-	app := App{}
-	err = getCollection(session, DB_NAME, APP_COLLECTION).Find(bson.M{"_id": app_id}).One(&app)
+	app, err := decode(value)
 	if err != nil {
-		errMsg := "Failed to get app information by " + app_id
-		err = ConvertMongoError(err, errMsg)
 		return err
 	}
 
@@ -362,13 +320,12 @@ func (Executor) UpdateAppEvent(app_id string, repo string, tag string, event str
 		}
 
 		// Save the changes to database.
-		update := bson.M{"$set": bson.M{"images": app.Images}}
-		err = getCollection(session, DB_NAME, APP_COLLECTION).Update(bson.M{"_id": app_id}, update)
+		encoded, err := app.encode()
 		if err != nil {
-			errMsg := "Failed to update app information" + app_id
-			return ConvertMongoError(err, errMsg)
+			return err
 		}
-		return nil
+
+		return db.Put([]byte(app_id), encoded)
 	}
 
 	return errors.NotFound{Msg: "There is no matching image"}

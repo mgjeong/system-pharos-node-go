@@ -20,7 +20,7 @@ import (
 	"commons/logger"
 	"controller/dockercontroller"
 	"controller/notification/apps"
-	"db/mongo/service"
+	"db/bolt/service"
 	"encoding/json"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
