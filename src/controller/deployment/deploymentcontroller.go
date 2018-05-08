@@ -971,13 +971,14 @@ func restoreAllAppsState() {
 
 	for _, app := range apps {
 		appId := app[ID].(string)
-		app, err := dbExecutor.GetApp(appId)
+
+		err = setYamlFile(appId)
 		if err != nil {
 			logger.Logging(logger.ERROR, err.Error())
 			return
 		}
 
-		err = setYamlFile(appId)
+		app, err := dbExecutor.GetApp(appId)
 		if err != nil {
 			logger.Logging(logger.ERROR, err.Error())
 			return
