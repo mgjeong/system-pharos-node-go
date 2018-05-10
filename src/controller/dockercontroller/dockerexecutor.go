@@ -112,6 +112,8 @@ var getComposeInstance func(string, string) (project.APIProject, error)
 
 var evts map[string]chan events.ContainerEvent
 
+var conflictRepository string = "unable to remove repository reference"
+
 func composePull(instance project.APIProject, ctx context.Context, services ...string) error {
 	return instance.Pull(ctx, services...)
 }
@@ -313,7 +315,14 @@ func (dockerExecutorImpl) DownWithRemoveImages(id, path string) error {
 	if err != nil {
 		return err
 	}
-	return compose.Down(context.Background(), options.Down{RemoveImages: "all"})
+
+	err = compose.Down(context.Background(), options.Down{RemoveImages: "all"})
+	if err != nil {
+		if isConflictRepository(err.Error()) {
+			return nil
+		}
+	}
+	return err
 }
 
 // Starting containers of service list in the yaml description.
@@ -684,4 +693,8 @@ func getContainerIDByServiceName(id, path, serviceName string) (string, error) {
 		return "", err
 	}
 	return infos[0]["Id"], nil
+}
+
+func isConflictRepository(msg string) bool {
+	return strings.Contains(msg, conflictRepository)
 }
