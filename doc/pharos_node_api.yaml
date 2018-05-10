@@ -43,7 +43,7 @@ paths:
           description: Successful operation.
           schema:
             $ref: "#/definitions/response_of_app_resource"
-  /api/v1/monitoring/resource:
+  '/api/v1/monitoring/resource':
     get:
       tags:
         - InfoCollecting
@@ -58,7 +58,7 @@ paths:
           description: Successful operation.
           schema:
             $ref: '#/definitions/response_of_resource'
-  /api/v1/management/nodes/register:
+  '/api/v1/management/nodes/register':
     post:
       tags:
         - To Anchor
@@ -79,7 +79,7 @@ paths:
       responses:
         '200':
           description: Node registration succeeds
-  /api/v1/management/nodes/ping:
+  '/api/v1/management/nodes/ping':
     post:
       tags:
         - To Anchor
@@ -91,7 +91,7 @@ paths:
       responses:
         '200':
           description: Successful operation.
-  /api/v1/management/nodes/unregister:
+  '/api/v1/management/nodes/unregister':
     post:
       tags:
         - Health
@@ -103,7 +103,7 @@ paths:
       responses:
         '200':
           description: Node un-registration succeeds
-  /api/v1/management/apps:
+  '/api/v1/management/apps':
     get:
       tags:
         - Deployment
@@ -115,7 +115,7 @@ paths:
           description: successful operation
           schema:
             $ref: '#/definitions/response_of_app_list'
-  /api/v1/management/apps/deploy:
+  '/api/v1/management/apps/deploy':
     post:
       tags:
         - Deployment
