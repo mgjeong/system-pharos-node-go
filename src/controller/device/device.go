@@ -85,7 +85,7 @@ func (Executor) Reboot() error {
 
 func makeSCRequestUrl(api_parts ...string) string {
 	var full_url bytes.Buffer
-	full_url.WriteString(HTTP_TAG + systemContainerIP + url.Base() + url.Management() + url.Device())
+	full_url.WriteString(HTTP_TAG + systemContainerIP + url.Base() + url.Device() + url.Management())
 	for _, api_part := range api_parts {
 		full_url.WriteString(api_part)
 	}
