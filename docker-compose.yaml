@@ -1,0 +1,21 @@
+## app containers spec
+
+version: '2'
+services:
+  node:
+    image: system-pharos-node-go
+    #ports:
+    #  - "48098:48098"
+    container_name: node
+    volumes:       
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ~/pharos-node/data/db:/data/db
+    labels:
+      - "traefik.frontend.rule=PathPrefixStrip: /pharos-node"
+      - "traefik.port=48098"
+    networks:
+      - proxy
+
+networks:
+  proxy:
+    external: true
