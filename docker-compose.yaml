@@ -13,6 +13,9 @@ services:
     labels:
       - "traefik.frontend.rule=PathPrefixStrip: /pharos-node"
       - "traefik.port=48098"
+    environment:
+      - ANCHOR_ADDRESS=127.0.0.1 # Change it to actual Anchor's address
+      - NODE_ADDRESS=127.0.0.1 # Change it to actual Node's address
     networks:
       - proxy
 
