@@ -40,7 +40,7 @@ func TestReboot_ExpectSuccess(t *testing.T) {
 
 	msgMockObj := msgmocks.NewMockCommand(ctrl)
 
-	url := "http://" + testSCIP + "/api/v1/management/device/reboot"
+	url := "http://" + testSCIP + "/api/v1/device/management/reboot"
 
 	gomock.InOrder(
 		msgMockObj.EXPECT().SendHttpRequest(POST, url, gomock.Any()).Return(200, testResponse, nil),
@@ -76,7 +76,7 @@ func TestRebootWhenSendHttpRequestFailed_ExpectSuccess(t *testing.T) {
 
 	msgMockObj := msgmocks.NewMockCommand(ctrl)
 
-	url := "http://" + testSCIP + "/api/v1/management/device/reboot"
+	url := "http://" + testSCIP + "/api/v1/device/management/reboot"
 
 	gomock.InOrder(
 		msgMockObj.EXPECT().SendHttpRequest(POST, url, gomock.Any()).Return(500, "", errors.Unknown{}),
@@ -100,7 +100,7 @@ func TestRestore_ExpectSuccess(t *testing.T) {
 
 	msgMockObj := msgmocks.NewMockCommand(ctrl)
 
-	url := "http://" + testSCIP + "/api/v1/management/device/restore"
+	url := "http://" + testSCIP + "/api/v1/device/management/restore"
 
 	gomock.InOrder(
 		msgMockObj.EXPECT().SendHttpRequest(POST, url, gomock.Any()).Return(200, testResponse, nil),
@@ -136,7 +136,7 @@ func TestRestoreWhenSendHttpRequestFailed_ExpectReturnError(t *testing.T) {
 
 	msgMockObj := msgmocks.NewMockCommand(ctrl)
 
-	url := "http://" + testSCIP + "/api/v1/management/device/restore"
+	url := "http://" + testSCIP + "/api/v1/device/management/restore"
 
 	gomock.InOrder(
 		msgMockObj.EXPECT().SendHttpRequest(POST, url, gomock.Any()).Return(500, "", errors.Unknown{}),
