@@ -294,3 +294,16 @@ func (mr *MockCommandMockRecorder) UpWithEvent(id, path, eventID, evt interface{
 	varargs := append([]interface{}{id, path, eventID, evt}, services...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpWithEvent", reflect.TypeOf((*MockCommand)(nil).UpWithEvent), varargs...)
 }
+
+// Info mocks base method
+func (m *MockCommand) Info() (map[string]interface{}, error) {
+	ret := m.ctrl.Call(m, "Info")
+	ret0, _ := ret[0].(map[string]interface{})
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Info indicates an expected call of Info
+func (mr *MockCommandMockRecorder) Info() *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Info", reflect.TypeOf((*MockCommand)(nil).Info))
+}
