@@ -24,8 +24,8 @@ import (
 	"commons/url"
 	"commons/util"
 	"controller/configuration"
+	configDB "db/bolt/configuration"
 	"db/bolt/service"
-	"encoding/json"
 	"messenger"
 	"time"
 )
@@ -49,15 +49,17 @@ type Executor struct{}
 
 var httpExecutor messenger.Command
 var configurator configuration.Command
-var dbExecutor service.Command
+var svrDbExecutor service.Command
+var configDbExecutor configDB.Command
 
 func init() {
 	httpExecutor = messenger.NewExecutor()
 	configurator = configuration.Executor{}
-	dbExecutor = service.Executor{}
+	svrDbExecutor = service.Executor{}
+	configDbExecutor = configDB.Executor{}
 
 	// Register
-	err := register()
+	err := register(true)
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
 	}
@@ -67,7 +69,7 @@ func init() {
 // should know the pharos-anchor address(ip:port)
 // if succeed to register, return error as nil
 // otherwise, return error.
-func register() error {
+func register(enableHealthCheck bool) error {
 	logger.Logging(logger.DEBUG, "IN")
 	defer logger.Logging(logger.DEBUG, "OUT")
 
@@ -105,21 +107,23 @@ func register() error {
 	}
 
 	// Insert node id in configuration db.
-	updatedProp := make(map[string]interface{})
-	updatedProp["nodeid"] = respMap["id"]
+	property, err := configDbExecutor.GetProperty("nodeid")
+	if err != nil {
+		logger.Logging(logger.ERROR, err.Error())
+		return errors.InvalidJSON{"not supported property"}
+	}
 
-	updatedProperties := make(map[string]interface{})
-	updatedProperties["properties"] = []map[string]interface{}{updatedProp}
-
-	jsonString, _ := json.Marshal(updatedProperties)
-	err = configurator.SetConfiguration(string(jsonString))
+	property["value"] = respMap["id"]
+	err = configDbExecutor.SetProperty(property)
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
 		return err
 	}
 
 	// Start a new ticker and send a ping message repeatedly at regular intervals.
-	startHealthCheck(respMap["id"].(string))
+	if enableHealthCheck {
+		startHealthCheck()
+	}
 	return nil
 }
 
@@ -131,19 +135,19 @@ func (Executor) Unregister() error {
 	defer logger.Logging(logger.DEBUG, "OUT")
 
 	// Reset node id.
-	updatedProp := make(map[string]interface{})
-	updatedProp["nodeid"] = ""
+	property, err := configDbExecutor.GetProperty("nodeid")
+	if err != nil {
+		logger.Logging(logger.ERROR, err.Error())
+		return errors.InvalidJSON{"not supported property"}
+	}
 
-	updatedProperties := make(map[string]interface{})
-	updatedProperties["properties"] = []map[string]interface{}{updatedProp}
-
-	jsonString, _ := json.Marshal(updatedProperties)
-	err := configurator.SetConfiguration(string(jsonString))
+	property["value"] = ""
+	err = configDbExecutor.SetProperty(property)
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
 		return err
 	}
-
+	
 	// Stop a ticker to send ping request.
 	if common.quit != nil {
 		common.quit <- true
@@ -204,7 +208,7 @@ func makeRegistrationBody(config map[string]interface{}) map[string]interface{} 
 	configData["properties"] = filteredProps
 
 	// Set application information in request body.
-	apps, err := dbExecutor.GetAppList()
+	apps, err := svrDbExecutor.GetAppList()
 	appIds := make([]string, 0)
 	if err == nil {
 		for _, app := range apps {
