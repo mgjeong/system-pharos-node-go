@@ -76,7 +76,7 @@ func initConfiguration() {
 	anchoraddress := os.Getenv("ANCHOR_ADDRESS")
 	nodeaddress := os.Getenv("NODE_ADDRESS")
 
-	osType, osInfo, err := getOSInfo()
+	os, platform, err := getOSInfo()
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
 	}
@@ -103,8 +103,8 @@ func initConfiguration() {
 	properties = append(properties, makeProperty("nodeaddress", nodeaddress, true))
 	properties = append(properties, makeProperty("devicename", deviceName, false))
 	properties = append(properties, makeProperty("pinginterval", interval, false))
-	properties = append(properties, makeProperty("ostype", osType, true))
-	properties = append(properties, makeProperty("os", osInfo, true))
+	properties = append(properties, makeProperty("os", os, true))
+	properties = append(properties, makeProperty("platform", platform, true))
 	properties = append(properties, makeProperty("processor", processor, true))
 	properties = append(properties, makeProperty("nodeid", "", false))
 
