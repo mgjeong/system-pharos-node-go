@@ -2136,7 +2136,6 @@ func TestRestoreAllAppsState(t *testing.T) {
 		dbExecutorMockObj.EXPECT().GetApp(APP_ID).Return(DB_GET_APP_OBJ, nil),
 		dbExecutorMockObj.EXPECT().GetApp(APP_ID).Return(DB_GET_APP_OBJ, nil),
 		dockerExecutorMockObj.EXPECT().Up(APP_ID, gomock.Any()).Return(nil),
-		dockerExecutorMockObj.EXPECT().Up(APP_ID, gomock.Any()).Return(nil),
 	)
 
 	dbExecutor = dbExecutorMockObj
@@ -2189,7 +2188,7 @@ func TestRestoreAllAppsStateUpFailed_ExpectReturn(t *testing.T) {
 		dbExecutorMockObj.EXPECT().GetAppList().Return(DB_OBJs, nil),
 		dbExecutorMockObj.EXPECT().GetApp(APP_ID).Return(DB_GET_APP_OBJ, nil),
 		dbExecutorMockObj.EXPECT().GetApp(APP_ID).Return(DB_GET_APP_OBJ, nil),
-		dockerExecutorMockObj.EXPECT().Up(APP_ID, COMPOSE_FILE).Return(errors.Unknown{}),
+		dockerExecutorMockObj.EXPECT().Up(APP_ID, gomock.Any()).Return(errors.Unknown{}),
 	)
 
 	dbExecutor = dbExecutorMockObj
@@ -2209,7 +2208,7 @@ func TestRestoreAllAppsStateStopFailed_ExpectReturn(t *testing.T) {
 		dbExecutorMockObj.EXPECT().GetAppList().Return(DB_OBJs, nil),
 		dbExecutorMockObj.EXPECT().GetApp(APP_ID).Return(DB_GET_APP_WITH_EXITED_STATE_OBJ, nil),
 		dbExecutorMockObj.EXPECT().GetApp(APP_ID).Return(DB_GET_APP_WITH_EXITED_STATE_OBJ, nil),
-		dockerExecutorMockObj.EXPECT().Stop(APP_ID, COMPOSE_FILE).Return(errors.Unknown{}),
+		dockerExecutorMockObj.EXPECT().Stop(APP_ID, gomock.Any()).Return(errors.Unknown{}),
 	)
 
 	dbExecutor = dbExecutorMockObj
