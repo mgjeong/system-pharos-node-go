@@ -29,13 +29,15 @@ import (
 	"encoding/json"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
+	"math/rand"
 	"os"
 	"reflect"
+	"strconv"
 	"strings"
+	"time"
 )
 
 const (
-	COMPOSE_FILE   = "docker-compose.yaml"
 	ID             = "id"
 	CID            = "cid"
 	DESCRIPTION    = "description"
@@ -104,15 +106,8 @@ func (executor depExecutorImpl) DeployApp(body string, query map[string]interfac
 	logger.Logging(logger.DEBUG, "IN")
 	defer logger.Logging(logger.DEBUG, "OUT")
 
-	err := ioutil.WriteFile(COMPOSE_FILE, []byte(body), fileMode)
-	if err != nil {
-		logger.Logging(logger.ERROR, err.Error())
-		return nil, errors.IOError{Msg: "file io fail"}
-	}
-	defer os.RemoveAll(COMPOSE_FILE)
-
 	var description interface{}
-	err = yaml.Unmarshal([]byte(body), &description)
+	err := yaml.Unmarshal([]byte(body), &description)
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
 		return nil, errors.Unknown{Msg: "db operation fail"}
@@ -143,21 +138,29 @@ func (executor depExecutorImpl) DeployApp(body string, query map[string]interfac
 		}
 	}
 
-	err = appsMonitor.EnableEventMonitoring(data[ID].(string), COMPOSE_FILE)
+	composeFile := genYamlFileName(data[ID].(string), "deploy")
+	err = ioutil.WriteFile(composeFile, []byte(body), fileMode)
+	if err != nil {
+		logger.Logging(logger.ERROR, err.Error())
+		return nil, errors.IOError{Msg: "file io fail"}
+	}
+	defer os.RemoveAll(composeFile)
+
+	err = appsMonitor.EnableEventMonitoring(data[ID].(string), composeFile)
 	if err != nil {
 		dbExecutor.DeleteApp(data[ID].(string))
 		return nil, err
 	}
 
 	if eventIds, exists := query[EVENTID]; exists {
-		err = dockerExecutor.UpWithEvent(data[ID].(string), COMPOSE_FILE, eventIds.([]string)[0], appsMonitor.GetEventChannel())
+		err = dockerExecutor.UpWithEvent(data[ID].(string), composeFile, eventIds.([]string)[0], appsMonitor.GetEventChannel())
 	} else {
-		err = dockerExecutor.Up(data[ID].(string), COMPOSE_FILE)
+		err = dockerExecutor.Up(data[ID].(string), composeFile)
 	}
 
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
-		e := dockerExecutor.DownWithRemoveImages(data[ID].(string), COMPOSE_FILE)
+		e := dockerExecutor.DownWithRemoveImages(data[ID].(string), composeFile)
 		if e != nil {
 			logger.Logging(logger.ERROR, e.Error())
 		}
@@ -227,12 +230,13 @@ func (depExecutorImpl) App(appId string) (map[string]interface{}, error) {
 		return nil, errors.InvalidYaml{Msg: "invalid yaml syntax"}
 	}
 
-	err = ioutil.WriteFile(COMPOSE_FILE, yaml, fileMode)
+	composeFile := genYamlFileName(appId, "app")
+	err = ioutil.WriteFile(composeFile, yaml, fileMode)
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
 		return nil, errors.IOError{Msg: "file io fail"}
 	}
-	defer os.RemoveAll(COMPOSE_FILE)
+	defer os.RemoveAll(composeFile)
 
 	if description[SERVICES] == nil || len(description[SERVICES].(map[string]interface{})) == 0 {
 		return nil, errors.Unknown{Msg: "can't find application info"}
@@ -243,7 +247,7 @@ func (depExecutorImpl) App(appId string) (map[string]interface{}, error) {
 		service := make(map[string]interface{}, 0)
 		state := make(map[string]interface{}, 0)
 
-		config, err := getServiceState(appId, serviceName.String())
+		config, err := getServiceState(appId, composeFile, serviceName.String())
 		if err != nil {
 			logger.Logging(logger.ERROR, err.Error())
 			return nil, errors.Unknown{Msg: "get state fail"}
@@ -320,16 +324,17 @@ func (depExecutorImpl) StartApp(appId string) error {
 		return errors.AlreadyReported{Msg: state}
 	}
 
-	err = setYamlFile(appId)
+	composeFile, err := setYamlFile(appId, "start")
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
 		return err
 	}
+	defer os.RemoveAll(composeFile)
 
-	err = dockerExecutor.Start(appId, COMPOSE_FILE)
+	err = dockerExecutor.Start(appId, composeFile)
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
-		e := restoreState(appId, state)
+		e := restoreState(appId, composeFile, state)
 		if e != nil {
 			logger.Logging(logger.ERROR, err.Error())
 		}
@@ -363,16 +368,17 @@ func (depExecutorImpl) StopApp(appId string) error {
 		return errors.AlreadyReported{Msg: state}
 	}
 
-	err = setYamlFile(appId)
+	composeFile, err := setYamlFile(appId, "stop")
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
 		return err
 	}
+	defer os.RemoveAll(composeFile)
 
-	err = dockerExecutor.Stop(appId, COMPOSE_FILE)
+	err = dockerExecutor.Stop(appId, composeFile)
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
-		e := restoreState(appId, state)
+		e := restoreState(appId, composeFile, state)
 		if e != nil {
 			logger.Logging(logger.ERROR, err.Error())
 		}
@@ -450,11 +456,12 @@ func (depExecutorImpl) UpdateApp(appId string, query map[string]interface{}) err
 		return convertDBError(err, appId)
 	}
 
-	err = setYamlFile(appId)
+	composeFile, err := setYamlFile(appId, "update")
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
 		return err
 	}
+	defer os.RemoveAll(composeFile)
 
 	app, err := dbExecutor.GetApp(appId)
 	if err != nil {
@@ -479,7 +486,7 @@ func (depExecutorImpl) UpdateApp(appId string, query map[string]interface{}) err
 	}
 
 	if query == nil {
-		err = updateApp(appId, app, repoDigests)
+		err = updateApp(appId, composeFile, app, repoDigests)
 		if err != nil {
 			logger.Logging(logger.DEBUG, err.Error())
 			return err
@@ -501,13 +508,13 @@ func (depExecutorImpl) UpdateApp(appId string, query map[string]interface{}) err
 				return err
 			}
 			if tagExist {
-				updatedDescription, err = updateYamlFile(appId, app[DESCRIPTION].(string), serviceName, repo+":"+tag)
+				updatedDescription, err = updateYamlFile(appId, composeFile, app[DESCRIPTION].(string), serviceName, repo+":"+tag)
 				if err != nil {
 					logger.Logging(logger.DEBUG, err.Error())
 					return err
 				}
 			}
-			err = updateService(appId, app, repoDigests, serviceName)
+			err = updateService(appId, composeFile, app, repoDigests, serviceName)
 			if err != nil {
 				logger.Logging(logger.DEBUG, err.Error())
 				return err
@@ -552,13 +559,14 @@ func (depExecutorImpl) DeleteApp(appId string) error {
 	logger.Logging(logger.DEBUG, "IN", appId)
 	defer logger.Logging(logger.DEBUG, "OUT")
 
-	err := setYamlFile(appId)
+	composeFile, err := setYamlFile(appId, "delete")
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
 		return err
 	}
+	defer os.RemoveAll(composeFile)
 
-	err = dockerExecutor.DownWithRemoveImages(appId, COMPOSE_FILE)
+	err = dockerExecutor.DownWithRemoveImages(appId, composeFile)
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
 		app, e := dbExecutor.GetApp(appId)
@@ -568,14 +576,14 @@ func (depExecutorImpl) DeleteApp(appId string) error {
 		}
 
 		state := app["state"].(string)
-		e = restoreState(appId, state)
+		e = restoreState(appId, composeFile, state)
 		if e != nil {
 			logger.Logging(logger.ERROR, e.Error())
 		}
 		return err
 	}
 
-	err = appsMonitor.DisableEventMonitoring(appId, COMPOSE_FILE)
+	err = appsMonitor.DisableEventMonitoring(appId, composeFile)
 	if err != nil {
 		dbExecutor.DeleteApp(appId)
 		return err
@@ -590,7 +598,7 @@ func (depExecutorImpl) DeleteApp(appId string) error {
 	return nil
 }
 
-func restoreRepoDigests(appId string, repoDigests map[string]string, state string) error {
+func restoreRepoDigests(appId, composeFile string, repoDigests map[string]string, state string) error {
 	for imageName, repoDigest := range repoDigests {
 		err := dockerExecutor.ImagePull(repoDigest)
 		if err != nil {
@@ -610,7 +618,7 @@ func restoreRepoDigests(appId string, repoDigests map[string]string, state strin
 		}
 	}
 
-	err := restoreState(appId, state)
+	err := restoreState(appId, composeFile, state)
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
 		return err
@@ -618,20 +626,20 @@ func restoreRepoDigests(appId string, repoDigests map[string]string, state strin
 	return nil
 }
 
-func updateApp(appId string, app map[string]interface{}, repoDigests map[string]string) error {
-	err := dockerExecutor.Pull(appId, COMPOSE_FILE)
+func updateApp(appId, composeFile string, app map[string]interface{}, repoDigests map[string]string) error {
+	err := dockerExecutor.Pull(appId, composeFile)
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
-		e := restoreRepoDigests(appId, repoDigests, app[STATE].(string))
+		e := restoreRepoDigests(appId, composeFile, repoDigests, app[STATE].(string))
 		if e != nil {
 			logger.Logging(logger.ERROR, e.Error())
 		}
 		return err
 	}
-	err = dockerExecutor.Up(appId, COMPOSE_FILE)
+	err = dockerExecutor.Up(appId, composeFile)
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
-		e := restoreRepoDigests(appId, repoDigests, app[STATE].(string))
+		e := restoreRepoDigests(appId, composeFile, repoDigests, app[STATE].(string))
 		if e != nil {
 			logger.Logging(logger.ERROR, e.Error())
 		}
@@ -640,20 +648,20 @@ func updateApp(appId string, app map[string]interface{}, repoDigests map[string]
 	return err
 }
 
-func updateService(appId string, app map[string]interface{}, repoDigests map[string]string, services ...string) error {
-	err := dockerExecutor.Pull(appId, COMPOSE_FILE, services...)
+func updateService(appId, composeFile string, app map[string]interface{}, repoDigests map[string]string, services ...string) error {
+	err := dockerExecutor.Pull(appId, composeFile, services...)
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
-		e := restoreRepoDigests(appId, repoDigests, app[STATE].(string))
+		e := restoreRepoDigests(appId, composeFile, repoDigests, app[STATE].(string))
 		if e != nil {
 			logger.Logging(logger.ERROR, e.Error())
 		}
 		return err
 	}
-	err = dockerExecutor.Up(appId, COMPOSE_FILE, services...)
+	err = dockerExecutor.Up(appId, composeFile, services...)
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
-		e := restoreRepoDigests(appId, repoDigests, app[STATE].(string))
+		e := restoreRepoDigests(appId, composeFile, repoDigests, app[STATE].(string))
 		if e != nil {
 			logger.Logging(logger.ERROR, e.Error())
 		}
@@ -666,7 +674,7 @@ func updateService(appId string, app map[string]interface{}, repoDigests map[str
 // See also controller.StartApp(), controller.StopApp()
 // if succeed to restore, return error as nil
 // otherwise, return error.
-func restoreState(appId, state string) error {
+func restoreState(appId, composeFile, state string) error {
 	var err error
 
 	if len(state) == 0 {
@@ -676,9 +684,9 @@ func restoreState(appId, state string) error {
 
 	switch state {
 	case EXITED_STATE:
-		err = dockerExecutor.Stop(appId, COMPOSE_FILE)
+		err = dockerExecutor.Stop(appId, composeFile)
 	case RUNNING_STATE:
-		err = dockerExecutor.Up(appId, COMPOSE_FILE)
+		err = dockerExecutor.Up(appId, composeFile)
 	}
 
 	if err != nil {
@@ -691,29 +699,31 @@ func restoreState(appId, state string) error {
 // The path is defined as contant
 // if setting YAML is succeeded, return error as nil
 // otherwise, return error.
-func setYamlFile(appId string) error {
+func setYamlFile(appId, api string) (string, error) {
 	app, err := dbExecutor.GetApp(appId)
 	if err != nil {
-		return convertDBError(err, appId)
+		return "", convertDBError(err, appId)
 	}
 	description := make(map[string]interface{})
 	err = json.Unmarshal([]byte(app[DESCRIPTION].(string)), &description)
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
-		return errors.IOError{"json unmarshal fail"}
+		return "", errors.IOError{"json unmarshal fail"}
 	}
 	yaml, err := yaml.Marshal(description)
 	if err != nil {
-		return errors.InvalidYaml{Msg: "invalid yaml syntax"}
+		return "", errors.InvalidYaml{Msg: "invalid yaml syntax"}
 	}
-	err = ioutil.WriteFile(COMPOSE_FILE, yaml, fileMode)
+
+	composeFile := genYamlFileName(appId, api)
+	err = ioutil.WriteFile(composeFile, yaml, fileMode)
 	if err != nil {
-		return errors.IOError{Msg: "file io fail"}
+		return "", errors.IOError{Msg: "file io fail"}
 	}
-	return nil
+	return composeFile, nil
 }
 
-func updateYamlFile(appId string, orginDescription string, service string, newImage string) (map[string]interface{}, error) {
+func updateYamlFile(appId, composeFile, orginDescription, service, newImage string) (map[string]interface{}, error) {
 	updatedDescription := make(map[string]interface{})
 
 	err := json.Unmarshal([]byte(orginDescription), &updatedDescription)
@@ -735,7 +745,7 @@ func updateYamlFile(appId string, orginDescription string, service string, newIm
 	if err != nil {
 		return nil, errors.InvalidYaml{Msg: "invalid yaml syntax"}
 	}
-	err = ioutil.WriteFile(COMPOSE_FILE, yaml, fileMode)
+	err = ioutil.WriteFile(composeFile, yaml, fileMode)
 	if err != nil {
 		return nil, errors.IOError{Msg: "file io fail"}
 	}
@@ -747,8 +757,8 @@ func updateYamlFile(appId string, orginDescription string, service string, newIm
 // And then, get service config from using docker inspect <container name>
 // if getting service state is succeed, return service state
 // otherwise, return error.
-func getServiceState(appId, serviceName string) (map[string]interface{}, error) {
-	infos, err := dockerExecutor.Ps(appId, COMPOSE_FILE, serviceName)
+func getServiceState(appId, composeFile, serviceName string) (map[string]interface{}, error) {
+	infos, err := dockerExecutor.Ps(appId, composeFile, serviceName)
 	if len(infos) == 0 {
 		logger.Logging(logger.ERROR, "no information about service")
 		return nil, errors.Unknown{Msg: "no information about service"}
@@ -972,11 +982,12 @@ func restoreAllAppsState() {
 	for _, app := range apps {
 		appId := app[ID].(string)
 
-		err = setYamlFile(appId)
+		composeFile, err := setYamlFile(appId, "restoreAllAppsState")
 		if err != nil {
 			logger.Logging(logger.ERROR, err.Error())
 			return
 		}
+		defer os.RemoveAll(composeFile)
 
 		app, err := dbExecutor.GetApp(appId)
 		if err != nil {
@@ -985,6 +996,15 @@ func restoreAllAppsState() {
 		}
 
 		state := app["state"].(string)
-		restoreState(appId, state)
+		restoreState(appId, composeFile, state)
 	}
+}
+
+func genYamlFileName(appId string, api string) string {
+	return appId + "_" + api + "_" + strconv.Itoa(genRandNumber(100000))
+}
+
+func genRandNumber(n int) int {
+	source := rand.NewSource(time.Now().UnixNano())
+	return rand.New(source).Intn(n)
 }
