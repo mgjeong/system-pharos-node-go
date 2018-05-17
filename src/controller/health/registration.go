@@ -49,13 +49,13 @@ type Executor struct{}
 
 var httpExecutor messenger.Command
 var configurator configuration.Command
-var svrDbExecutor service.Command
+var srvDbExecutor service.Command
 var configDbExecutor configDB.Command
 
 func init() {
 	httpExecutor = messenger.NewExecutor()
 	configurator = configuration.Executor{}
-	svrDbExecutor = service.Executor{}
+	srvDbExecutor = service.Executor{}
 	configDbExecutor = configDB.Executor{}
 
 	// Register
@@ -147,7 +147,7 @@ func (Executor) Unregister() error {
 		logger.Logging(logger.ERROR, err.Error())
 		return err
 	}
-	
+
 	// Stop a ticker to send ping request.
 	if common.quit != nil {
 		common.quit <- true
@@ -208,7 +208,7 @@ func makeRegistrationBody(config map[string]interface{}) map[string]interface{} 
 	configData["properties"] = filteredProps
 
 	// Set application information in request body.
-	apps, err := svrDbExecutor.GetAppList()
+	apps, err := srvDbExecutor.GetAppList()
 	appIds := make([]string, 0)
 	if err == nil {
 		for _, app := range apps {
