@@ -685,13 +685,26 @@ func restoreState(appId, composeFile, state string) error {
 	switch state {
 	case EXITED_STATE:
 		err = dockerExecutor.Stop(appId, composeFile)
+		if err != nil {
+			logger.Logging(logger.ERROR, err.Error())
+			return err
+		}
+		err = dbExecutor.UpdateAppState(appId, EXITED_STATE)
+		if err != nil {
+			logger.Logging(logger.ERROR, err.Error())
+		}
 	case RUNNING_STATE:
 		err = dockerExecutor.Up(appId, composeFile)
+		if err != nil {
+			logger.Logging(logger.ERROR, err.Error())
+			return err
+		}
+		err = dbExecutor.UpdateAppState(appId, RUNNING_STATE)
+		if err != nil {
+			logger.Logging(logger.ERROR, err.Error())
+		}
 	}
 
-	if err != nil {
-		logger.Logging(logger.ERROR, err.Error())
-	}
 	return err
 }
 
