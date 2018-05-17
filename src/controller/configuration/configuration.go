@@ -192,22 +192,6 @@ func getOSInfo() (string, string, error) {
 	return infoMap["OSType"].(string), infoMap["OperatingSystem"].(string), nil
 }
 
-//
-//func getPlatformInfo() (map[string]interface{}, error) {
-//	platform, family, version, err := host.PlatformInformation()
-//	if err != nil {
-//		logger.Logging(logger.ERROR, err.Error())
-//		return nil, errors.Unknown{"gopsutil host.PlatformInformation() error"}
-//	}
-//
-//	info := platformInfo{}
-//	info.Platform = platform
-//	info.Family = family
-//	info.Version = version
-//
-//	return convertToPlatformMap(info), nil
-//}
-
 func getProcessorInfo() ([]map[string]interface{}, error) {
 	infos, err := cpu.Info()
 	if err != nil {
