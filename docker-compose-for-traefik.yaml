@@ -4,12 +4,19 @@ version: '2'
 services:
   node:
     image: system-pharos-node-go
-    ports:
-      - "48098:48098"
     container_name: node
     volumes:       
       - /var/run/docker.sock:/var/run/docker.sock
       - ~/pharos-node/data/db:/data/db
+    labels:
+      - "traefik.frontend.rule=PathPrefixStrip: /pharos-node"
+      - "traefik.port=48098"
     environment:
       - ANCHOR_ADDRESS=127.0.0.1 # Change it to actual Anchor's address
       - NODE_ADDRESS=127.0.0.1 # Change it to actual Node's address
+    networks:
+      - proxy
+
+networks:
+  proxy:
+    external: true

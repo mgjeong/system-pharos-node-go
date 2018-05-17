@@ -1,0 +1,36 @@
+## app containers spec
+
+version: '3.5'
+services:
+  traefik:
+    image: traefik:1.4-alpine
+    command: --web --docker --docker.domain=docker.localhost
+    networks:
+      - proxy
+    ports:
+      - 80:80
+      - 8080:8080
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+
+  node:
+    image: system-pharos-node-go
+    container_name: node
+    volumes:       
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ~/pharos-node/data/db:/data/db
+    labels:
+      - "traefik.frontend.rule=PathPrefixStrip: /pharos-node"
+      - "traefik.port=48098"
+    environment:
+      - ANCHOR_ADDRESS=127.0.0.1 # Change it to actual Anchor's address
+      - NODE_ADDRESS=127.0.0.1 # Change it to actual Node's address
+    networks:
+      - proxy
+    depends_on:
+      - traefik
+
+networks:
+  proxy:
+    driver: bridge
+    name: proxy
