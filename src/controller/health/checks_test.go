@@ -17,6 +17,7 @@
 package health
 
 import (
+	dbmocks "db/bolt/configuration/mocks"
 	"errors"
 	"github.com/golang/mock/gomock"
 	msgmocks "messenger/mocks"
@@ -28,15 +29,17 @@ func TestCalledSendPingRequestWhenFailedToSendHttpRequest_ExpectErrorReturn(t *t
 	defer ctrl.Finish()
 
 	msgMockObj := msgmocks.NewMockCommand(ctrl)
+	dbMockObj := dbmocks.NewMockCommand(ctrl)
 
 	gomock.InOrder(
+		dbMockObj.EXPECT().GetProperty("nodeid").Return(PROPERTY, nil),
 		msgMockObj.EXPECT().SendHttpRequest("POST", gomock.Any(), gomock.Any()).Return(500, "", errors.New("Error")),
 	)
-
+	configDbExecutor = dbMockObj
 	httpExecutor = msgMockObj
 
 	interval := "1"
-	_, err := sendPingRequest("id", interval)
+	_, err := sendPingRequest(interval)
 
 	if err == nil {
 		t.Errorf("Expected err: %s", err.Error())
@@ -48,14 +51,17 @@ func TestCalledSendPingRequest_ExpectSuccess(t *testing.T) {
 	defer ctrl.Finish()
 
 	msgMockObj := msgmocks.NewMockCommand(ctrl)
+	dbMockObj := dbmocks.NewMockCommand(ctrl)
 
 	gomock.InOrder(
+		dbMockObj.EXPECT().GetProperty("nodeid").Return(PROPERTY, nil),
 		msgMockObj.EXPECT().SendHttpRequest("POST", gomock.Any(), gomock.Any()).Return(200, "", nil),
 	)
+	configDbExecutor = dbMockObj
 	httpExecutor = msgMockObj
 
 	interval := "1"
-	_, err := sendPingRequest("id", interval)
+	_, err := sendPingRequest(interval)
 
 	if err != nil {
 		t.Errorf("Unexpected err: %s", err.Error())
