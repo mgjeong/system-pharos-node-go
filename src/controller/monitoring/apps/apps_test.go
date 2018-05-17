@@ -198,8 +198,8 @@ func TestUpdateAppstate_ExpectUpdateAppStateToRunning(t *testing.T) {
 
 	gomock.InOrder(
 		dbExecutorMockObj.EXPECT().GetApp(appId).Return(dbGetAppObj, nil),
-		dockerExecutorMockObj.EXPECT().Ps(appId, "docker-compose.yml", serviceName).Return(psWithUpObj, nil),
-		dockerExecutorMockObj.EXPECT().Ps(appId, "docker-compose.yml", serviceName2).Return(psWithUpObj, nil),
+		dockerExecutorMockObj.EXPECT().Ps(appId, "docker-compose.yml", gomock.Any()).Return(psWithUpObj, nil),
+		dockerExecutorMockObj.EXPECT().Ps(appId, "docker-compose.yml", gomock.Any()).Return(psWithUpObj, nil),
 		dbExecutorMockObj.EXPECT().UpdateAppState(appId, RUNNING_STATE),
 	)
 
@@ -222,8 +222,8 @@ func TestUpdateAppstate_ExpectUpdateAppStateToPartiallyExited(t *testing.T) {
 
 	gomock.InOrder(
 		dbExecutorMockObj.EXPECT().GetApp(appId).Return(dbGetAppObj, nil),
-		dockerExecutorMockObj.EXPECT().Ps(appId, "docker-compose.yml", serviceName).Return(psWithForcefullyExitedObj, nil),
-		dockerExecutorMockObj.EXPECT().Ps(appId, "docker-compose.yml", serviceName2).Return(psWithUpObj, nil),
+		dockerExecutorMockObj.EXPECT().Ps(appId, "docker-compose.yml", gomock.Any()).Return(psWithForcefullyExitedObj, nil),
+		dockerExecutorMockObj.EXPECT().Ps(appId, "docker-compose.yml", gomock.Any()).Return(psWithUpObj, nil),
 		dbExecutorMockObj.EXPECT().UpdateAppState(appId, PARTIALLY_EXITED_STATE),
 	)
 
@@ -246,8 +246,8 @@ func TestUpdateAppstate_ExpectUpdateAppStateToExited(t *testing.T) {
 
 	gomock.InOrder(
 		dbExecutorMockObj.EXPECT().GetApp(appId).Return(dbGetAppObj, nil),
-		dockerExecutorMockObj.EXPECT().Ps(appId, "docker-compose.yml", serviceName).Return(psWithForcefullyExitedObj, nil),
-		dockerExecutorMockObj.EXPECT().Ps(appId, "docker-compose.yml", serviceName2).Return(psWithForcefullyExitedObj, nil),
+		dockerExecutorMockObj.EXPECT().Ps(appId, "docker-compose.yml", gomock.Any()).Return(psWithForcefullyExitedObj, nil),
+		dockerExecutorMockObj.EXPECT().Ps(appId, "docker-compose.yml", gomock.Any()).Return(psWithForcefullyExitedObj, nil),
 		dbExecutorMockObj.EXPECT().UpdateAppState(appId, EXITED_STATE),
 	)
 
