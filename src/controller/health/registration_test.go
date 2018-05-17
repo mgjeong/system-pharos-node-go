@@ -18,6 +18,7 @@ package health
 
 import (
 	configmocks "controller/configuration/mocks"
+	dbmocks "db/bolt/configuration/mocks"
 	"errors"
 	"github.com/golang/mock/gomock"
 	msgmocks "messenger/mocks"
@@ -31,6 +32,11 @@ var (
 	}
 	CONFIGURATION = map[string]interface{}{
 		"properties": []map[string]interface{}{ANCHOR_ADDRESS},
+	}
+	PROPERTY = map[string]interface{}{
+		"name":     "nodeid",
+		"value":    "test_node_id",
+		"readonly": "true",
 	}
 )
 
@@ -51,7 +57,7 @@ func TestCalledRegisterWhenFailedToGetConfiguration_ExpectErrorReturn(t *testing
 	)
 	configurator = configMockObj
 
-	err := register()
+	err := register(false)
 
 	if err == nil {
 		t.Errorf("Expected err: %s, actual err: %s", "Unknown", "nil")
@@ -64,20 +70,23 @@ func TestCalledRegisterWhenFailedToSetConfiguration_ExpectErrorReturn(t *testing
 
 	configMockObj := configmocks.NewMockCommand(ctrl)
 	msgMockObj := msgmocks.NewMockCommand(ctrl)
+	dbMockObj := dbmocks.NewMockCommand(ctrl)
 
+	common.managerAddress = "192.168.0.1"
 	url := "http://192.168.0.1:48099/api/v1/management/nodes/register"
 	expectedResp := `{"id":"nodeid"}`
-	expectedNewConfig := `{"properties":[{"nodeid":"nodeid"}]}`
 
 	gomock.InOrder(
 		configMockObj.EXPECT().GetConfiguration().Return(CONFIGURATION, nil),
 		msgMockObj.EXPECT().SendHttpRequest("POST", url, gomock.Any()).Return(200, expectedResp, nil),
-		configMockObj.EXPECT().SetConfiguration(expectedNewConfig).Return(errors.New("Error")),
+		dbMockObj.EXPECT().GetProperty("nodeid").Return(PROPERTY, nil),
+		dbMockObj.EXPECT().SetProperty(gomock.Any()).Return(errors.New("Error")),
 	)
 	configurator = configMockObj
 	httpExecutor = msgMockObj
+	configDbExecutor = dbMockObj
 
-	err := register()
+	err := register(false)
 
 	if err == nil {
 		t.Errorf("Expected err: %s, actual err: %s", "Unknown", "nil")
@@ -89,13 +98,14 @@ func TestCalledUnregister_ExpectSuccess(t *testing.T) {
 	defer ctrl.Finish()
 
 	configMockObj := configmocks.NewMockCommand(ctrl)
-
-	expectedNewConfig := `{"properties":[{"nodeid":""}]}`
+	dbMockObj := dbmocks.NewMockCommand(ctrl)
 
 	gomock.InOrder(
-		configMockObj.EXPECT().SetConfiguration(expectedNewConfig).Return(nil),
+		dbMockObj.EXPECT().GetProperty("nodeid").Return(PROPERTY, nil),
+		dbMockObj.EXPECT().SetProperty(gomock.Any()).Return(nil),
 	)
 	configurator = configMockObj
+	configDbExecutor = dbMockObj
 
 	err := healthExecutor.Unregister()
 
@@ -110,6 +120,7 @@ func TestCalledSendRegisterRequestWhenFailedToSendHttpRequest_ExpectErrorReturn(
 
 	msgMockObj := msgmocks.NewMockCommand(ctrl)
 
+	common.managerAddress = "192.168.0.1"
 	url := "http://192.168.0.1:48099/api/v1/management/nodes/register"
 
 	gomock.InOrder(

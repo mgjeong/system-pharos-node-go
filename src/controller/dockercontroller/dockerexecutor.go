@@ -219,7 +219,10 @@ func (dockerExecutorImpl) GetAppStats(id, path string) ([]map[string]interface{}
 			memPercent := 0.0
 			memUsage := float64(statsJSON.MemoryStats.Usage)
 			memLimit := float64(statsJSON.MemoryStats.Limit)
-			memPercent = memUsage / memLimit * 100.0
+			if memLimit > 0.0 {
+				memPercent = memUsage / memLimit * 100.0
+			}
+
 			bi, bo := calcBlockIO(statsJSON.BlkioStats)
 			ni, no := calcNetworkIO(statsJSON.Networks)
 

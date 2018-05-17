@@ -21,12 +21,13 @@ package health
 import (
 	"commons/logger"
 	"commons/url"
+	"commons/errors"
 	"commons/util"
 	"strconv"
 	"time"
 )
 
-func startHealthCheck(nodeID string) {
+func startHealthCheck() {
 	logger.Logging(logger.DEBUG, "IN")
 	defer logger.Logging(logger.DEBUG, "OUT")
 
@@ -47,11 +48,21 @@ func startHealthCheck(nodeID string) {
 	intervalInt, _ := strconv.Atoi(interval)
 	common.ticker = time.NewTicker(time.Duration(intervalInt) * TIME_UNIT)
 	go func() {
-		sendPingRequest(nodeID, interval)
+		sendPingRequest(interval)
 		for {
 			select {
 			case <-common.ticker.C:
-				sendPingRequest(nodeID, interval)
+				code, _ := sendPingRequest(interval)
+				if code == 404 {
+					logger.Logging(logger.ERROR, "received 'not found' error, re-registration is required")
+					common.ticker.Stop()
+
+					err := register(false)
+					if err != nil {
+						logger.Logging(logger.ERROR, err.Error())
+					}
+					common.ticker = time.NewTicker(time.Duration(intervalInt) * TIME_UNIT)
+				}
 			case <-common.quit:
 				common.ticker.Stop()
 				stopHealthCheck()
@@ -66,9 +77,16 @@ func stopHealthCheck() {
 	common.quit = nil
 }
 
-func sendPingRequest(nodeID string, interval string) (int, error) {
+func sendPingRequest(interval string) (int, error) {
 	logger.Logging(logger.DEBUG, "IN")
 	defer logger.Logging(logger.DEBUG, "OUT")
+
+	property, err := configDbExecutor.GetProperty("nodeid")
+	if err != nil {
+		logger.Logging(logger.ERROR, err.Error())
+		return 500, errors.InvalidJSON{"not supported property"}
+	}
+	nodeID := property["value"].(string)
 
 	data := make(map[string]interface{})
 	data[INTERVAL] = interval
