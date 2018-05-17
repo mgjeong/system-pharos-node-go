@@ -69,6 +69,7 @@ type Command interface {
 	ImageTag(imageID string, repoTags string) error
 	Events(id, path string, evt chan Event, services ...string) error
 	UpWithEvent(id, path, eventID string, evt chan Event, services ...string) error
+	Info() (map[string]interface{}, error)
 }
 
 const (
@@ -99,6 +100,7 @@ type dockerExecutorImpl struct{}
 
 var client *docker.Client
 
+var getInfo func(*docker.Client, context.Context) (types.Info, error)
 var getImageList func(*docker.Client, context.Context, types.ImageListOptions) ([]types.ImageSummary, error)
 var getImagePull func(*docker.Client, context.Context, string, types.ImagePullOptions) (io.ReadCloser, error)
 var getImageTag func(*docker.Client, context.Context, string, string) error
@@ -132,6 +134,7 @@ func init() {
 	getComposeInstance = getComposeInstanceImpl
 
 	client, _ = docker.NewEnvClient()
+	getInfo = (*docker.Client).Info
 	getImageList = (*docker.Client).ImageList
 	getContainerList = (*docker.Client).ContainerList
 	getContainerInspect = (*docker.Client).ContainerInspect
@@ -141,6 +144,32 @@ func init() {
 	getPs = composePs
 	getPull = composePull
 	getUp = composeUp
+}
+
+func (dockerExecutorImpl) Info() (map[string]interface{}, error) {
+	logger.Logging(logger.DEBUG)
+	defer logger.Logging(logger.DEBUG, "OUT")
+
+	info, err := getInfo(client, context.Background())
+	if err != nil {
+		logger.Logging(logger.ERROR, "fail to execute docker info")
+		return nil, errors.Unknown{Msg: "fail to execute docker info"}
+	}
+
+	jsonInfo, err := json.Marshal(&info)
+	if err != nil {
+		logger.Logging(logger.ERROR, "json marshalling failed")
+		return nil, errors.Unknown{"json marshalling failed"}
+	}
+
+	infoMap := make(map[string]interface{})
+	err = json.Unmarshal([]byte(jsonInfo), &infoMap)
+	if err != nil {
+		logger.Logging(logger.ERROR, "json unmarshal failed")
+		return nil, errors.InvalidJSON{"json unmarshal failed"}
+	}
+
+	return infoMap, nil
 }
 
 func (dockerExecutorImpl) GetAppStats(id, path string) ([]map[string]interface{}, error) {

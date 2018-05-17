@@ -44,38 +44,15 @@ func TestGetOSInfo_ExpectSuccess(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	result, err := getOSInfo()
+	result1, result2, err := getOSInfo()
 
 	if err != nil {
 		t.Errorf("Unexpected err: %s", err.Error())
 	}
 
-	if result == "" {
+	if result1 == "" || result2 == "" {
 		t.Errorf("Unexpected err : os info is empty")
 
-	}
-}
-
-func TestGetPlatformInfo_ExpectSuccess(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	result, err := getPlatformInfo()
-
-	if err != nil {
-		t.Errorf("Unexpected err: %s", err.Error())
-	}
-
-	if _, ok := result["platform"]; !ok {
-		t.Errorf("Unexpected err: platform key does not exist")
-	}
-
-	if _, ok := result["family"]; !ok {
-		t.Errorf("Unexpected err: family key does not exist")
-	}
-
-	if _, ok := result["version"]; !ok {
-		t.Errorf("Unexpected err: version key does not exist")
 	}
 }
 

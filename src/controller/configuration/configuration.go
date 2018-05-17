@@ -22,9 +22,9 @@ import (
 	"commons/errors"
 	"commons/logger"
 	"commons/util"
+	"controller/dockercontroller"
 	"db/bolt/configuration"
 	"github.com/shirou/gopsutil/cpu"
-	"github.com/shirou/gopsutil/host"
 	"os"
 	"strconv"
 )
@@ -63,10 +63,11 @@ const (
 )
 
 var dbExecutor configuration.Command
+var dockerExecutor dockercontroller.Command
 
 func init() {
 	dbExecutor = configuration.Executor{}
-
+	dockerExecutor = dockercontroller.Executor
 	// Initialize configuration before loading pharos-node.
 	initConfiguration()
 }
@@ -75,12 +76,7 @@ func initConfiguration() {
 	anchoraddress := os.Getenv("ANCHOR_ADDRESS")
 	nodeaddress := os.Getenv("NODE_ADDRESS")
 
-	os, err := getOSInfo()
-	if err != nil {
-		logger.Logging(logger.ERROR, err.Error())
-	}
-
-	platform, err := getPlatformInfo()
+	os, platform, err := getOSInfo()
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
 	}
@@ -186,29 +182,14 @@ func makeProperty(name string, value interface{}, readOnly bool) map[string]inte
 	return prop
 }
 
-func getOSInfo() (string, error) {
-	info, err := host.Info()
+func getOSInfo() (string, string, error) {
+	infoMap, err := dockerExecutor.Info()
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
-		return "", errors.Unknown{"gopsutil host.PlatformInformation() error"}
+		return "", "", err
 	}
 
-	return info.OS, nil
-}
-
-func getPlatformInfo() (map[string]interface{}, error) {
-	platform, family, version, err := host.PlatformInformation()
-	if err != nil {
-		logger.Logging(logger.ERROR, err.Error())
-		return nil, errors.Unknown{"gopsutil host.PlatformInformation() error"}
-	}
-
-	info := platformInfo{}
-	info.Platform = platform
-	info.Family = family
-	info.Version = version
-
-	return convertToPlatformMap(info), nil
+	return infoMap["OSType"].(string), infoMap["OperatingSystem"].(string), nil
 }
 
 func getProcessorInfo() ([]map[string]interface{}, error) {
