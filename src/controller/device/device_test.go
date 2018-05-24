@@ -48,7 +48,7 @@ func TestReboot_ExpectSuccess(t *testing.T) {
 
 	httpExecutor = msgMockObj
 
-	systemContainerIP = testSCIP
+	scIP = testSCIP
 	err := deviceExecutor.Reboot()
 
 	if err != nil {
@@ -56,11 +56,11 @@ func TestReboot_ExpectSuccess(t *testing.T) {
 	}
 }
 
-func TestRebootWithNoSystemContainerIP_ExpectReturnError(t *testing.T) {
+func TestRebootWithNoscIP_ExpectReturnError(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	systemContainerIP = ""
+	scIP = ""
 	err := deviceExecutor.Reboot()
 
 	switch err.(type) {
@@ -84,7 +84,7 @@ func TestRebootWhenSendHttpRequestFailed_ExpectSuccess(t *testing.T) {
 
 	httpExecutor = msgMockObj
 
-	systemContainerIP = testSCIP
+	scIP = testSCIP
 	err := deviceExecutor.Reboot()
 
 	switch err.(type) {
@@ -108,7 +108,7 @@ func TestRestore_ExpectSuccess(t *testing.T) {
 
 	httpExecutor = msgMockObj
 
-	systemContainerIP = testSCIP
+	scIP = testSCIP
 	err := deviceExecutor.Restore()
 
 	if err != nil {
@@ -116,11 +116,11 @@ func TestRestore_ExpectSuccess(t *testing.T) {
 	}
 }
 
-func TestRestoreWithNoSystemContainerIP_ExpectReturnError(t *testing.T) {
+func TestRestoreWithNoscIP_ExpectReturnError(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	systemContainerIP = ""
+	scIP = ""
 	err := deviceExecutor.Restore()
 
 	switch err.(type) {
@@ -144,7 +144,7 @@ func TestRestoreWhenSendHttpRequestFailed_ExpectReturnError(t *testing.T) {
 
 	httpExecutor = msgMockObj
 
-	systemContainerIP = testSCIP
+	scIP = testSCIP
 	err := deviceExecutor.Restore()
 
 	switch err.(type) {

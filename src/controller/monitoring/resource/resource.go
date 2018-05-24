@@ -19,38 +19,42 @@ package resource
 import (
 	"commons/errors"
 	"commons/logger"
+	"commons/url"
+	"commons/util"
 	"controller/dockercontroller"
 	"db/bolt/service"
 	"encoding/json"
 	"github.com/shirou/gopsutil/cpu"
-	"github.com/shirou/gopsutil/disk"
 	"github.com/shirou/gopsutil/mem"
 	"github.com/shirou/gopsutil/net"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
+	"messenger"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 )
 
 const (
-	COMPOSE_FILE  = "docker-compose.yaml"
-	DESCRIPTION   = "description"
-	CPU           = "cpu"
-	MEM           = "mem"
-	DISK          = "disk"
-	NETWORK       = "network"
-	INTERFACENAME = "interfacename"
-	BYTESSENT     = "bytessent"
-	BYTESRECV     = "bytesrecv"
-	PACKETSSENT   = "packetssent"
-	PACKETSRECV   = "packetsrecv"
-	TOTAL         = "total"
-	FREE          = "free"
-	USED          = "used"
-	USEDPERCENT   = "usedpercent"
-	PATH          = "path"
-	SERVICES      = "services"
+	SYSTEMCONTAINER = "SYSTEMCONTAINER"
+	COMPOSE_FILE    = "docker-compose.yaml"
+	DESCRIPTION     = "description"
+	CPU             = "cpu"
+	MEM             = "mem"
+	DISK            = "disk"
+	NETWORK         = "network"
+	INTERFACENAME   = "interfacename"
+	BYTESSENT       = "bytessent"
+	BYTESRECV       = "bytesrecv"
+	PACKETSSENT     = "packetssent"
+	PACKETSRECV     = "packetsrecv"
+	TOTAL           = "total"
+	FREE            = "free"
+	USED            = "used"
+	USEDPERCENT     = "usedpercent"
+	PATH            = "path"
+	SERVICES        = "services"
 )
 
 type Command interface {
@@ -85,12 +89,14 @@ type resExecutorImpl struct{}
 
 var dockerExecutor dockercontroller.Command
 var dbExecutor service.Command
+var httpExecutor messenger.Command
 var Executor resExecutorImpl
 var fileMode = os.FileMode(0755)
 
 func init() {
 	dockerExecutor = dockercontroller.Executor
 	dbExecutor = service.Executor{}
+	httpExecutor = messenger.NewExecutor()
 }
 
 func (resExecutorImpl) GetAppResourceInfo(appId string) (map[string]interface{}, error) {
@@ -188,28 +194,31 @@ func getDiskUsage() ([]map[string]interface{}, error) {
 	logger.Logging(logger.DEBUG, "IN")
 	defer logger.Logging(logger.DEBUG, "OUT")
 
-	parts, err := disk.Partitions(false)
-	if err != nil {
-		logger.Logging(logger.DEBUG, "gopsutil disk.Partitions() error")
-		return nil, errors.Unknown{"gopsutil  disk.Partitions() error"}
-	}
-
-	result := make([]map[string]interface{}, 0)
-	for _, part := range parts {
-		du, err := disk.Usage(part.Mountpoint)
+	diskInfoList := make([]map[string]interface{}, 0)
+	if scIP, exists := os.LookupEnv(SYSTEMCONTAINER); exists {
+		scUrl := util.MakeSCRequestUrl(scIP, url.Disk())
+		_, disk, err := httpExecutor.SendHttpRequest("GET", scUrl)
 		if err != nil {
-			logger.Logging(logger.DEBUG, "gopsutil disk.Usage() error")
-			return nil, errors.Unknown{"gopsutil  disk.Usage() error"}
+			logger.Logging(logger.ERROR, err.Error())
+			return nil, err
 		}
-		disk := diskUsage{}
-		disk.Path = du.Path
-		disk.Free = strconv.FormatUint(du.Free/1024/1024/1024, 10) + "G"
-		disk.Total = strconv.FormatUint(du.Total/1024/1024/1024, 10) + "G"
-		disk.Used = strconv.FormatUint(du.Used/1024/1024/1024, 10) + "G"
-		disk.UsedPercent = strconv.FormatFloat(du.UsedPercent, 'f', 2, 64) + "%%"
-		result = append(result, convertToDiskUsageMap(disk))
+		disk = strings.Replace(disk, "%", "%%", -1)
+
+		diskMap := make(map[string]interface{})
+		err = json.Unmarshal([]byte(disk), &diskMap)
+		if err != nil {
+			logger.Logging(logger.ERROR, err.Error())
+			return nil, err
+		}
+
+		for _, info := range diskMap[DISK].([]interface{}) {
+			diskInfoList = append(diskInfoList, info.(map[string]interface{}))
+		}
+
+		return diskInfoList, err
+	} else {
+		return diskInfoList, nil
 	}
-	return result, err
 }
 
 func getNetworkTrafficInfo() ([]map[string]interface{}, error) {

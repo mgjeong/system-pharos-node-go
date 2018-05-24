@@ -17,10 +17,10 @@
 package device
 
 import (
-	"bytes"
 	"commons/errors"
 	"commons/logger"
 	"commons/url"
+	"commons/util"
 	"messenger"
 	"os"
 )
@@ -42,24 +42,24 @@ type Command interface {
 type Executor struct{}
 
 var httpExecutor messenger.Command
-var systemContainerIP string
+var scIP string
 
 func init() {
 	httpExecutor = messenger.NewExecutor()
-	systemContainerIP = os.Getenv(SYSTEMCONTAINER)
+	scIP = os.Getenv(SYSTEMCONTAINER)
 }
 
 func (Executor) Restore() error {
 	logger.Logging(logger.DEBUG, "IN")
 	defer logger.Logging(logger.DEBUG, "OUT")
 
-	if len(systemContainerIP) == 0 {
+	if len(scIP) == 0 {
 		logger.Logging(logger.ERROR, "sysetm container ip is not found")
 		return errors.NotFound{"system container ip"}
 	}
 
-	url := makeSCRequestUrl(url.Restore())
-	_, _, err := httpExecutor.SendHttpRequest(POST, url)
+	reqUrl := util.MakeSCRequestUrl(scIP, url.Restore())
+	_, _, err := httpExecutor.SendHttpRequest(POST, reqUrl)
 	if err != nil {
 		logger.Logging(logger.DEBUG, err.Error())
 	}
@@ -70,26 +70,15 @@ func (Executor) Reboot() error {
 	logger.Logging(logger.DEBUG, "IN")
 	defer logger.Logging(logger.DEBUG, "OUT")
 
-	if len(systemContainerIP) == 0 {
+	if len(scIP) == 0 {
 		logger.Logging(logger.ERROR, "system container ip is not found")
 		return errors.NotFound{"system container ip"}
 	}
 
-	url := makeSCRequestUrl(url.Reboot())
-	_, _, err := httpExecutor.SendHttpRequest(POST, url)
+	reqUrl := util.MakeSCRequestUrl(scIP, url.Reboot())
+	_, _, err := httpExecutor.SendHttpRequest(POST, reqUrl)
 	if err != nil {
 		logger.Logging(logger.DEBUG, err.Error())
 	}
 	return err
-}
-
-func makeSCRequestUrl(api_parts ...string) string {
-	var full_url bytes.Buffer
-	full_url.WriteString(HTTP_TAG + systemContainerIP + url.Base() + url.Device() + url.Management())
-	for _, api_part := range api_parts {
-		full_url.WriteString(api_part)
-	}
-
-	logger.Logging(logger.DEBUG, full_url.String())
-	return full_url.String()
 }

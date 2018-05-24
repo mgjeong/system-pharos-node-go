@@ -83,3 +83,6 @@ func Notification() string { return "/notification" }
 
 //Returning Watch url as string.
 func Watch() string { return "/watch" }
+
+//Returning Disk url as string.
+func Disk() string { return "/disk" }
