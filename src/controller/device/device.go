@@ -42,23 +42,23 @@ type Command interface {
 type Executor struct{}
 
 var httpExecutor messenger.Command
-var scIP string
+var systemContainerIP string
 
 func init() {
 	httpExecutor = messenger.NewExecutor()
-	scIP = os.Getenv(SYSTEMCONTAINER)
+	systemContainerIP = os.Getenv(SYSTEMCONTAINER)
 }
 
 func (Executor) Restore() error {
 	logger.Logging(logger.DEBUG, "IN")
 	defer logger.Logging(logger.DEBUG, "OUT")
 
-	if len(scIP) == 0 {
+	if len(systemContainerIP) == 0 {
 		logger.Logging(logger.ERROR, "sysetm container ip is not found")
 		return errors.NotFound{"system container ip"}
 	}
 
-	reqUrl := util.MakeSCRequestUrl(scIP, url.Restore())
+	reqUrl := util.MakeSCRequestUrl(systemContainerIP, url.Restore())
 	_, _, err := httpExecutor.SendHttpRequest(POST, reqUrl)
 	if err != nil {
 		logger.Logging(logger.DEBUG, err.Error())
@@ -70,12 +70,12 @@ func (Executor) Reboot() error {
 	logger.Logging(logger.DEBUG, "IN")
 	defer logger.Logging(logger.DEBUG, "OUT")
 
-	if len(scIP) == 0 {
+	if len(systemContainerIP) == 0 {
 		logger.Logging(logger.ERROR, "system container ip is not found")
 		return errors.NotFound{"system container ip"}
 	}
 
-	reqUrl := util.MakeSCRequestUrl(scIP, url.Reboot())
+	reqUrl := util.MakeSCRequestUrl(systemContainerIP, url.Reboot())
 	_, _, err := httpExecutor.SendHttpRequest(POST, reqUrl)
 	if err != nil {
 		logger.Logging(logger.DEBUG, err.Error())
