@@ -450,12 +450,6 @@ func (depExecutorImpl) UpdateApp(appId string, query map[string]interface{}) err
 	logger.Logging(logger.DEBUG, "IN", appId)
 	defer logger.Logging(logger.DEBUG, "OUT")
 
-	err := dbExecutor.UpdateAppState(appId, UPDATING_STATE)
-	if err != nil {
-		logger.Logging(logger.ERROR, err.Error())
-		return convertDBError(err, appId)
-	}
-
 	composeFile, err := setYamlFile(appId, "update")
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
@@ -469,6 +463,12 @@ func (depExecutorImpl) UpdateApp(appId string, query map[string]interface{}) err
 		return convertDBError(err, appId)
 	}
 
+	err = dbExecutor.UpdateAppState(appId, UPDATING_STATE)
+	if err != nil {
+		logger.Logging(logger.ERROR, err.Error())
+		return convertDBError(err, appId)
+	}
+	
 	imageList, err := getImageNames([]byte(app[DESCRIPTION].(string)))
 	if err != nil {
 		logger.Logging(logger.DEBUG, err.Error())
