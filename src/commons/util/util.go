@@ -19,8 +19,10 @@
 package util
 
 import (
+	"bytes"
 	"commons/errors"
 	"commons/logger"
+	"commons/url"
 	"encoding/json"
 	"strings"
 )
@@ -61,4 +63,18 @@ func IsContainedStringInList(list []string, str string) bool {
 		}
 	}
 	return false
+}
+
+// MakeSCRequestUrl makes url which is used to send request to system continaer to control device.
+func MakeSCRequestUrl(scIP string, api_parts ...string) string {
+	var httpTag string = "http://"
+	var full_url bytes.Buffer
+
+	full_url.WriteString(httpTag + scIP + url.Base() + url.Device() + url.Management())
+	for _, api_part := range api_parts {
+		full_url.WriteString(api_part)
+	}
+
+	logger.Logging(logger.DEBUG, full_url.String())
+	return full_url.String()
 }

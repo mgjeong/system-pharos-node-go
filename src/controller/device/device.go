@@ -17,10 +17,10 @@
 package device
 
 import (
-	"bytes"
 	"commons/errors"
 	"commons/logger"
 	"commons/url"
+	"commons/util"
 	"messenger"
 	"os"
 )
@@ -58,8 +58,8 @@ func (Executor) Restore() error {
 		return errors.NotFound{"system container ip"}
 	}
 
-	url := makeSCRequestUrl(url.Restore())
-	_, _, err := httpExecutor.SendHttpRequest(POST, url)
+	reqUrl := util.MakeSCRequestUrl(systemContainerIP, url.Restore())
+	_, _, err := httpExecutor.SendHttpRequest(POST, reqUrl)
 	if err != nil {
 		logger.Logging(logger.DEBUG, err.Error())
 	}
@@ -75,21 +75,10 @@ func (Executor) Reboot() error {
 		return errors.NotFound{"system container ip"}
 	}
 
-	url := makeSCRequestUrl(url.Reboot())
-	_, _, err := httpExecutor.SendHttpRequest(POST, url)
+	reqUrl := util.MakeSCRequestUrl(systemContainerIP, url.Reboot())
+	_, _, err := httpExecutor.SendHttpRequest(POST, reqUrl)
 	if err != nil {
 		logger.Logging(logger.DEBUG, err.Error())
 	}
 	return err
-}
-
-func makeSCRequestUrl(api_parts ...string) string {
-	var full_url bytes.Buffer
-	full_url.WriteString(HTTP_TAG + systemContainerIP + url.Base() + url.Device() + url.Management())
-	for _, api_part := range api_parts {
-		full_url.WriteString(api_part)
-	}
-
-	logger.Logging(logger.DEBUG, full_url.String())
-	return full_url.String()
 }

@@ -241,32 +241,10 @@ func TestGetDiskUsage_ExpectSuccess(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	result, err := getDiskUsage()
+	_, err := getDiskUsage()
 
 	if err != nil {
 		t.Errorf("Unexpected err: %s", err.Error())
-	}
-
-	for _, value := range result {
-		if _, exist := value[PATH]; !exist {
-			t.Errorf("Unexpected err: " + PATH + " key does not exist")
-		}
-
-		if _, exist := value[TOTAL]; !exist {
-			t.Errorf("Unexpected err: " + TOTAL + " key does not exist")
-		}
-
-		if _, exist := value[FREE]; !exist {
-			t.Errorf("Unexpected err: " + FREE + " key does not exist")
-		}
-
-		if _, exist := value[USED]; !exist {
-			t.Errorf("Unexpected err: " + USED + " key does not exist")
-		}
-
-		if _, exist := value[USEDPERCENT]; !exist {
-			t.Errorf("Unexpected err: " + USEDPERCENT + " key does not exist")
-		}
 	}
 }
 

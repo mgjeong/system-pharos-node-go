@@ -62,3 +62,7 @@ func ExamplePing() {
 	fmt.Println(Ping())
 	// Output: /ping
 }
+func ExampleDisk() {
+	fmt.Println(Disk())
+	// Output: /disk
+}
