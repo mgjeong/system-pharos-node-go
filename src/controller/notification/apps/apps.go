@@ -102,12 +102,14 @@ func (Executor) SendNotification(e dockercontroller.Event) {
 	defer logger.Logging(logger.DEBUG, "OUT")
 
 	cid := ""
+	timestamp := ""
 
 	if e.Type == dockercontroller.IMAGE {
 		logger.Logging(logger.DEBUG, "received event info: e.ID=", e.ID, "appId="+e.AppID+", serviceName="+e.ServiceName+", status="+e.Status)
 	} else if e.Type == dockercontroller.CONTAINER {
-		logger.Logging(logger.DEBUG, "received event info: e.ID=", e.ID, "appId="+e.AppID+", serviceName="+e.ServiceName+", cid="+e.CID+", status="+e.Status)
+		logger.Logging(logger.DEBUG, "received event info: e.ID=", e.ID, "appId="+e.AppID+", serviceName="+e.ServiceName+", cid="+e.CID+", status="+e.Status+", timestamp="+e.Timestamp)
 		cid = e.CID
+		timestamp = e.Timestamp
 	}
 
 	// Get docker image name from service name.
@@ -146,6 +148,7 @@ func (Executor) SendNotification(e dockercontroller.Event) {
 	eventInfo["status"] = e.Status
 	eventInfo["imagename"] = imageName
 	eventInfo["cid"] = cid
+	eventInfo["timestamp"] = timestamp
 
 	notiInfo := make(map[string]interface{})
 	notiInfo["eventid"] = ids
