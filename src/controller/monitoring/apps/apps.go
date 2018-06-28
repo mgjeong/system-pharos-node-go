@@ -115,7 +115,7 @@ func updateAppState(event dockercontroller.Event) {
 	}
 
 	if app["state"] == nil {
-		logger.Logging(logger.DEBUG, "There is no an app's state. It must be Deploy API events")
+		logger.Logging(logger.DEBUG, "There is no state information. It must be Deploy API events")
 		return
 	}
 
