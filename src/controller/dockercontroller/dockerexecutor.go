@@ -48,6 +48,7 @@ type Event struct {
 
 type ContainerEvent struct {
 	CID string
+	Timestamp string
 }
 
 type Command interface {
@@ -600,6 +601,7 @@ func (dockerExecutorImpl) Events(id, path string, evt chan Event, services ...st
 					Status:      event.Event,
 					ContainerEvent: ContainerEvent{
 						CID: event.ID,
+						Timestamp: event.Time.String(),
 					},
 				}
 				evt <- e
