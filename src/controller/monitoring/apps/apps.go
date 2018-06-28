@@ -114,6 +114,16 @@ func updateAppState(event dockercontroller.Event) {
 		return
 	}
 
+	if app["State"] == nil {
+		logger.Logging(logger.DEBUG, "There is no an app's state. It must be Deploy API events")
+		return
+	}
+
+	if app["State"].(string) == EXITED_STATE {
+		logger.Logging(logger.DEBUG, "App state is exited")
+		return
+	}
+
 	description := make(map[string]interface{})
 	err = json.Unmarshal([]byte(app["description"].(string)), &description)
 	if err != nil {
