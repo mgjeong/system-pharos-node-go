@@ -81,7 +81,7 @@ func sendPingRequest(interval string) (int, error) {
 	logger.Logging(logger.DEBUG, "IN")
 	defer logger.Logging(logger.DEBUG, "OUT")
 
-	property, err := configDbExecutor.GetProperty("nodeid")
+	property, err := configDbExecutor.GetProperty("deviceid")
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
 		return 500, errors.InvalidJSON{"not supported property"}
