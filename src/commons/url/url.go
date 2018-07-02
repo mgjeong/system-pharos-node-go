@@ -21,6 +21,9 @@ package url
 // Returning base url as string.
 func Base() string { return "/api/v1" }
 
+// Returning pharos anchor url as string.
+func PharosAnchor() string { return "/pharos-anchor" }
+
 // Returning management url as string.
 func Management() string { return "/management" }
 

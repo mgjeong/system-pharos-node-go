@@ -17,10 +17,10 @@
 package apps
 
 import (
-	"bytes"
 	"commons/errors"
 	"commons/logger"
 	"commons/url"
+	"commons/util"
 	"controller/configuration"
 	"controller/dockercontroller"
 	"db/bolt/event"
@@ -155,7 +155,11 @@ func (Executor) SendNotification(e dockercontroller.Event) {
 	notiInfo["event"] = eventInfo
 
 	// Notify container event to pharos-anchor.
-	url := makeRequestUrl(url.Notification(), url.Events())
+	url, err := util.MakeAnchorRequestUrl(url.Notification(), url.Events())
+	if err != nil {
+		logger.Logging(logger.ERROR, "failed to make anchor request url")
+		return
+	}
 	jsonData, _ := convertMapToJson(notiInfo)
 	httpExecutor.SendHttpRequest("POST", url, []byte(jsonData))
 }
@@ -222,24 +226,4 @@ func convertMapToJson(data map[string]interface{}) (string, error) {
 		return "", errors.Unknown{"json marshalling failed"}
 	}
 	return string(result), nil
-}
-
-func makeRequestUrl(api_parts ...string) string {
-	// Get pharos-anchor address from configuration.
-	anchoraddress := ""
-	config, _ := configurator.GetConfiguration()
-	for _, prop := range config["properties"].([]map[string]interface{}) {
-		if value, exists := prop["anchoraddress"]; exists {
-			anchoraddress = value.(string)
-		}
-	}
-
-	var full_url bytes.Buffer
-	full_url.WriteString(HTTP_TAG + anchoraddress + ":" + DEFAULT_ANCHOR_PORT + url.Base())
-	for _, api_part := range api_parts {
-		full_url.WriteString(api_part)
-	}
-
-	logger.Logging(logger.DEBUG, full_url.String())
-	return full_url.String()
 }

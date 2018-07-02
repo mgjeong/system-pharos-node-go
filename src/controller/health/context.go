@@ -19,10 +19,8 @@
 package health
 
 import (
-	"bytes"
 	"commons/errors"
 	"commons/logger"
-	"commons/url"
 	"commons/util"
 	"time"
 )
@@ -33,17 +31,6 @@ type context struct {
 	quit           chan bool
 	ticker         *time.Ticker
 	managerAddress string
-}
-
-func (ctx context) makeRequestUrl(api_parts ...string) string {
-	var full_url bytes.Buffer
-	full_url.WriteString(HTTP_TAG + ctx.managerAddress + ":" + DEFAULT_SDAM_PORT + url.Base() + url.Management())
-	for _, api_part := range api_parts {
-		full_url.WriteString(api_part)
-	}
-
-	logger.Logging(logger.DEBUG, full_url.String())
-	return full_url.String()
 }
 
 func (ctx context) convertRespToMap(respStr string) (map[string]interface{}, error) {
