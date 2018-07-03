@@ -46,12 +46,14 @@ Required options to run Docker image
 - environment variables
     - ANCHOR_ADDRESS='...'
     - NODE_ADDRESS='...'
+    - REVERSE_PROXY=true/false
+    - ANCHOR_REVERSE_PROXY=true/false
 - volume
     - "host folder"/data/db:/data/db (Note that you should replace "host folder" to a desired folder on your host machine)
 
 You can execute it with a Docker image as follows:
 ```shell
-$ docker run -it -p 48098:48098 -e ANCHOR_ADDRESS='...' -e NODE_ADDRESS='...' -v /data/db:/data/db -v /var/run/docker.sock:/var/run/docker.sock system-pharos-node-go-ubuntu
+$ docker run -it -p 48098:48098 -e ANCHOR_ADDRESS='...' -e NODE_ADDRESS='...' -e REVERSE_PROXY='true/false' -e ANCHOR_REVERSE_PROXY='true/false' -v /data/db:/data/db -v /var/run/docker.sock:/var/run/docker.sock system-pharos-node-go-ubuntu
 ```
 If it succeeds, you can see log messages on your screen as follows:
 ```shell
