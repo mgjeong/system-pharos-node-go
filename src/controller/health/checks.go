@@ -19,9 +19,9 @@
 package health
 
 import (
+	"commons/errors"
 	"commons/logger"
 	"commons/url"
-	"commons/errors"
 	"commons/util"
 	"strconv"
 	"time"
@@ -99,8 +99,13 @@ func sendPingRequest(interval string) (int, error) {
 
 	logger.Logging(logger.DEBUG, "try to send ping request")
 
-	url := common.makeRequestUrl(url.Nodes(), "/", nodeID, url.Ping())
-	code, _, err := httpExecutor.SendHttpRequest("POST", url, []byte(jsonData))
+	reqUrl, err := util.MakeAnchorRequestUrl(url.Nodes(), "/", nodeID, url.Ping())
+	if err != nil {
+		logger.Logging(logger.ERROR, "failed to make anchor request url")
+		return 500, err
+	}
+
+	code, _, err := httpExecutor.SendHttpRequest("POST", reqUrl, []byte(jsonData))
 	if err != nil {
 		logger.Logging(logger.ERROR, "failed to send ping request")
 		return code, err

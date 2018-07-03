@@ -76,6 +76,11 @@ func initConfiguration() {
 	anchoraddress := os.Getenv("ANCHOR_ADDRESS")
 	nodeaddress := os.Getenv("NODE_ADDRESS")
 
+	proxy, err := getProxyInfo()
+	if err != nil {
+		logger.Logging(logger.ERROR, err.Error())
+	}
+
 	os, platform, err := getOSInfo()
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
@@ -107,6 +112,7 @@ func initConfiguration() {
 	properties = append(properties, makeProperty("platform", platform, true))
 	properties = append(properties, makeProperty("processor", processor, true))
 	properties = append(properties, makeProperty("nodeid", "", false))
+	properties = append(properties, makeProperty("reverseproxy", proxy, false))
 
 	for _, prop := range properties {
 		err = dbExecutor.SetProperty(prop)
@@ -180,6 +186,19 @@ func makeProperty(name string, value interface{}, readOnly bool) map[string]inte
 	prop[VALUE] = value
 	prop[READONLY] = readOnly
 	return prop
+}
+
+func getProxyInfo() (map[string]interface{}, error) {
+	enabled := os.Getenv("REVERSE_PROXY")
+	if len(enabled) == 0 {
+		logger.Logging(logger.ERROR, "No reverse proxy environment")
+		return nil, errors.Unknown{"No reverse proxy environment"}
+	}
+
+	proxy := make(map[string]interface{}, 0)
+	proxy["enabled"] = enabled
+
+	return proxy, nil
 }
 
 func getOSInfo() (string, string, error) {

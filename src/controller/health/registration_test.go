@@ -22,16 +22,23 @@ import (
 	"errors"
 	"github.com/golang/mock/gomock"
 	msgmocks "messenger/mocks"
+	"os"
 	"testing"
 )
 
 var (
+	ANCHOR_IP      = "192.168.0.1"
 	ANCHOR_ADDRESS = map[string]interface{}{
-		"anchoraddress": "192.168.0.1",
+		"anchoraddress": ANCHOR_IP,
 		"policy":        []string{"readable"},
 	}
+	REVERSE_PROXY = map[string]interface{}{
+		"reverseproxy": map[string]interface{}{
+			"enabled": "false",
+		},
+	}
 	CONFIGURATION = map[string]interface{}{
-		"properties": []map[string]interface{}{ANCHOR_ADDRESS},
+		"properties": []map[string]interface{}{ANCHOR_ADDRESS, REVERSE_PROXY},
 	}
 	PROPERTY = map[string]interface{}{
 		"name":     "nodeid",
@@ -72,7 +79,6 @@ func TestCalledRegisterWhenFailedToSetConfiguration_ExpectErrorReturn(t *testing
 	msgMockObj := msgmocks.NewMockCommand(ctrl)
 	dbMockObj := dbmocks.NewMockCommand(ctrl)
 
-	common.managerAddress = "192.168.0.1"
 	url := "http://192.168.0.1:48099/api/v1/management/nodes/register"
 	expectedResp := `{"id":"nodeid"}`
 
@@ -86,7 +92,9 @@ func TestCalledRegisterWhenFailedToSetConfiguration_ExpectErrorReturn(t *testing
 	httpExecutor = msgMockObj
 	configDbExecutor = dbMockObj
 
+	os.Setenv("ANCHOR_ADDRESS", ANCHOR_IP)
 	err := register(false)
+	os.Unsetenv("ANCHOR_ADDRESS")
 
 	if err == nil {
 		t.Errorf("Expected err: %s, actual err: %s", "Unknown", "nil")
@@ -120,7 +128,6 @@ func TestCalledSendRegisterRequestWhenFailedToSendHttpRequest_ExpectErrorReturn(
 
 	msgMockObj := msgmocks.NewMockCommand(ctrl)
 
-	common.managerAddress = "192.168.0.1"
 	url := "http://192.168.0.1:48099/api/v1/management/nodes/register"
 
 	gomock.InOrder(
@@ -128,7 +135,9 @@ func TestCalledSendRegisterRequestWhenFailedToSendHttpRequest_ExpectErrorReturn(
 	)
 	httpExecutor = msgMockObj
 
+	os.Setenv("ANCHOR_ADDRESS", ANCHOR_IP)
 	_, _, err := sendRegisterRequest(CONFIGURATION)
+	os.Unsetenv("ANCHOR_ADDRESS")
 
 	if err == nil {
 		t.Errorf("Expected err: %s", err.Error())

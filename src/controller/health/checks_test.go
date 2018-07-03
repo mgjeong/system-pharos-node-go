@@ -18,9 +18,9 @@ package health
 
 import (
 	dbmocks "db/bolt/configuration/mocks"
-	"errors"
 	"github.com/golang/mock/gomock"
 	msgmocks "messenger/mocks"
+	"os"
 	"testing"
 )
 
@@ -33,7 +33,6 @@ func TestCalledSendPingRequestWhenFailedToSendHttpRequest_ExpectErrorReturn(t *t
 
 	gomock.InOrder(
 		dbMockObj.EXPECT().GetProperty("nodeid").Return(PROPERTY, nil),
-		msgMockObj.EXPECT().SendHttpRequest("POST", gomock.Any(), gomock.Any()).Return(500, "", errors.New("Error")),
 	)
 	configDbExecutor = dbMockObj
 	httpExecutor = msgMockObj
@@ -61,7 +60,9 @@ func TestCalledSendPingRequest_ExpectSuccess(t *testing.T) {
 	httpExecutor = msgMockObj
 
 	interval := "1"
+	os.Setenv("ANCHOR_ADDRESS", "127.0.0.1")
 	_, err := sendPingRequest(interval)
+	os.Unsetenv("ANCHOR_ADDRESS")
 
 	if err != nil {
 		t.Errorf("Unexpected err: %s", err.Error())

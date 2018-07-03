@@ -25,11 +25,12 @@ services:
     environment:
       - ANCHOR_ADDRESS=127.0.0.1 # Change it to actual Anchor's address
       - NODE_ADDRESS=127.0.0.1 # Change it to actual Node's address
+      - REVERSE_PROXY=true # Change it to false if Node is not behind reverse proxy
+      - ANCHOR_REVERSE_PROXY=false # Change it to true if Anchor is behind reverse proxy
     networks:
       - proxy
     depends_on:
       - traefik
-
 networks:
   proxy:
     driver: bridge

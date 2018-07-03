@@ -24,7 +24,14 @@ import (
 	"commons/logger"
 	"commons/url"
 	"encoding/json"
+	"net"
+	"os"
 	"strings"
+)
+
+const (
+	DEFAULT_ANCHOR_PORT = "48099"
+	UNSECURED_ANCHOR_PORT_WITH_REVERSE_PROXY = "80"
 )
 
 // convertJsonToMap converts JSON data into a map.
@@ -65,12 +72,42 @@ func IsContainedStringInList(list []string, str string) bool {
 	return false
 }
 
-// MakeSCRequestUrl makes url which is used to send request to system continaer to control device.
-func MakeSCRequestUrl(scIP string, api_parts ...string) string {
-	var httpTag string = "http://"
+// MakeAnchorRequestUrl makes url which is used to send request to Pharos Anchor.
+func MakeAnchorRequestUrl(api_parts ...string) (string, error) {
 	var full_url bytes.Buffer
 
-	full_url.WriteString(httpTag + scIP + url.Base() + url.Device() + url.Management())
+	anchorIP := os.Getenv("ANCHOR_ADDRESS")
+	if len(anchorIP) == 0 {
+		logger.Logging(logger.ERROR, "No anchor address environment")
+		return "", errors.NotFound{"No anchor address environment"}
+	}
+
+	ipTest := net.ParseIP(anchorIP)
+	if ipTest == nil {
+		logger.Logging(logger.ERROR, "Anchor address's validation check failed")
+		return "", errors.InvalidParam{"Anchor address's validation check failed"}
+	}
+
+	anchorProxy := os.Getenv("ANCHOR_REVERSE_PROXY")
+	if anchorProxy == "true" {
+		full_url.WriteString("http://" + anchorIP + ":" + UNSECURED_ANCHOR_PORT_WITH_REVERSE_PROXY + url.PharosAnchor() + url.Base() + url.Management())
+	} else {
+		full_url.WriteString("http://" + anchorIP + ":" + DEFAULT_ANCHOR_PORT + url.Base() + url.Management())
+	}
+
+	for _, api_part := range api_parts {
+		full_url.WriteString(api_part)
+	}
+
+	logger.Logging(logger.DEBUG, full_url.String())
+	return full_url.String(), nil
+}
+
+// MakeSCRequestUrl makes url which is used to send request to system continaer to control device.
+func MakeSCRequestUrl(scIP string, api_parts ...string) string {
+	var full_url bytes.Buffer
+
+	full_url.WriteString("http://" + scIP + url.Base() + url.Device() + url.Management())
 	for _, api_part := range api_parts {
 		full_url.WriteString(api_part)
 	}
