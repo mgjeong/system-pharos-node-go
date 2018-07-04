@@ -31,14 +31,14 @@ import (
 )
 
 const (
-	HTTP_TAG          = "http://"
-	IP                = "ip"
-	MANAGER           = "manager"
-	NODE              = "node"
-	INTERVAL          = "interval"
-	HEALTH_CHECK      = "healthCheck"
-	DEFAULT_SDAM_PORT = "48099"
-	TIME_UNIT         = time.Minute
+	HTTP_TAG              = "http://"
+	IP                    = "ip"
+	MANAGER               = "manager"
+	NODE                  = "node"
+	INTERVAL              = "interval"
+	HEALTH_CHECK          = "healthCheck"
+	DEFAUL_RETRY_INTERVAL = 1
+	TIME_UNIT             = time.Minute
 )
 
 type Command interface {
@@ -58,10 +58,27 @@ func init() {
 	srvDbExecutor = service.Executor{}
 	configDbExecutor = configDB.Executor{}
 
-	// Register
+	// Request to register new pharos node.
 	err := register(true)
 	if err != nil {
-		logger.Logging(logger.ERROR, err.Error())
+		quit := make(chan bool)
+		ticker := time.NewTicker(time.Duration(DEFAUL_RETRY_INTERVAL) * TIME_UNIT)
+		go func() {
+			for {
+				select {
+				case <-ticker.C:
+					err := register(true)
+					if err != nil {
+						logger.Logging(logger.ERROR, err.Error())
+					} else {
+						logger.Logging(logger.ERROR, "Successfully registered")
+						ticker.Stop()
+						close(quit)
+						return
+					}
+				}
+			}
+		}()
 	}
 }
 
