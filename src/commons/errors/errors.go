@@ -51,12 +51,17 @@ func (e InvalidJSON) Error() string {
 // Struct InvalidJSON will be used for return case of error
 // which value of invalid ObjectId.
 type InvalidObjectId struct {
-	Message string
+	Msg string
 }
 
 // Error sets an error message of InvalidObjectId.
 func (e InvalidObjectId) Error() string {
-	return "invalid objectId: " + e.Message
+	return "invalid objectId: " + e.Msg
+}
+
+// Set error message of InvalidObjectId.
+func (e *InvalidObjectId) SetMsg(msg string) {
+	e.Msg = msg
 }
 
 // Struct NotFound will be used for return case of error
@@ -295,6 +300,11 @@ func (e DBConnectionError) Error() string {
 	return "db connection failed: " + e.Msg
 }
 
+// Set error message of DBConnectionError.
+func (e *DBConnectionError) SetMsg(msg string) {
+	e.Msg = msg
+}
+
 // Struct DBOperationError will be used for return case of error
 // which db operation failed(e.g., insert, update, delete).
 type DBOperationError struct {
@@ -304,4 +314,9 @@ type DBOperationError struct {
 // Error sets an error message of DBOperationError.
 func (e DBOperationError) Error() string {
 	return "db operation failed: " + e.Msg
+}
+
+// Set error message of DBOperationError.
+func (e *DBOperationError) SetMsg(msg string) {
+	e.Msg = msg
 }

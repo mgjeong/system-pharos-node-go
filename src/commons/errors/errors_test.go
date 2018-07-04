@@ -42,6 +42,8 @@ func TestTError(t *testing.T) {
 			testError: &InvalidParam{}},
 		{testName: "InvalidJSON", testPrefix: "invalid json format",
 			testError: &InvalidJSON{}},
+		{testName: "InvalidObjectId", testPrefix: "invalid objectId",
+			testError: &InvalidObjectId{}},
 		{testName: "NotFound", testPrefix: "not find target",
 			testError: &NotFound{}},
 		{testName: "InvalidYamlError", testPrefix: "invalid yaml file",
@@ -66,6 +68,12 @@ func TestTError(t *testing.T) {
 			testError: &InvalidContainerName{}},
 		{testName: "AlreadyAllocatedPort", testPrefix: "already allocated port",
 			testError: &AlreadyAllocatedPort{}},
+		{testName: "InternalServerError", testPrefix: "internal server error",
+			testError: &InternalServerError{}},
+		{testName: "DBConnectionError", testPrefix: "db connection failed",
+			testError: &DBConnectionError{}},
+		{testName: "DBOperationError", testPrefix: "db operation failed",
+			testError: &DBOperationError{}},
 	}
 
 	testFunc := func(err commonsError, prefix string) {
