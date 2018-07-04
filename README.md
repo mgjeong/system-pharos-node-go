@@ -46,8 +46,8 @@ Required options to run Docker image
 - environment variables
     - [Mandatory] ANCHOR_ADDRESS='...'
     - [Mandatory] NODE_ADDRESS='...'
-    - [Optional] REVERSE_PROXY=true/false
-    - [Optional] ANCHOR_REVERSE_PROXY=true/false
+    - [Mandatory] REVERSE_PROXY=true/false
+    - [Mandatory] ANCHOR_REVERSE_PROXY=true/false
     - [Optional] DEVICE_ID='...'
     - [Optional] DEVICE_NAME='...'
 - volume
