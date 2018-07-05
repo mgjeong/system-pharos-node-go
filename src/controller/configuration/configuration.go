@@ -192,7 +192,7 @@ func getProxyInfo() (map[string]interface{}, error) {
 	enabled := os.Getenv("REVERSE_PROXY")
 	if len(enabled) == 0 {
 		logger.Logging(logger.ERROR, "No reverse proxy environment")
-		return nil, errors.Unknown{"No reverse proxy environment"}
+		return nil, errors.NotFound{"No reverse proxy environment"}
 	}
 
 	proxy := make(map[string]interface{}, 0)

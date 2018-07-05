@@ -30,7 +30,7 @@ import (
 )
 
 const (
-	DEFAULT_ANCHOR_PORT = "48099"
+	DEFAULT_ANCHOR_PORT                      = "48099"
 	UNSECURED_ANCHOR_PORT_WITH_REVERSE_PROXY = "80"
 )
 
@@ -89,6 +89,11 @@ func MakeAnchorRequestUrl(api_parts ...string) (string, error) {
 	}
 
 	anchorProxy := os.Getenv("ANCHOR_REVERSE_PROXY")
+	if len(anchorProxy) == 0 {
+		logger.Logging(logger.ERROR, "No anchor reverse proxy environment")
+		return "", errors.NotFound{"No anchor reverse proxy environment"}
+	}
+
 	if anchorProxy == "true" {
 		full_url.WriteString("http://" + anchorIP + ":" + UNSECURED_ANCHOR_PORT_WITH_REVERSE_PROXY + url.PharosAnchor() + url.Base() + url.Management())
 	} else {

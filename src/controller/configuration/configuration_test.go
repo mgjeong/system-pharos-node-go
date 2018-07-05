@@ -21,6 +21,8 @@ import (
 	dbmocks "db/bolt/configuration/mocks"
 	"encoding/json"
 	"github.com/golang/mock/gomock"
+	"os"
+	"reflect"
 	"testing"
 )
 
@@ -39,6 +41,44 @@ var (
 	}
 	notFoundError = errors.NotFound{}
 )
+
+func TestGetProxyInfo_ExpectSuccess(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	expectedRet := map[string]interface{}{
+		"enabled": "true",
+	}
+
+	os.Setenv("REVERSE_PROXY", "true")
+	ret, err := getProxyInfo()
+	os.Unsetenv("REVERSE_PROXY")
+
+	if err != nil {
+		t.Errorf("Expected err : nil, actual err : %s", err.Error())
+	}
+
+	if !reflect.DeepEqual(expectedRet, ret) {
+		t.Errorf("Expected result : %v, Actual Result : %v", expectedRet, ret)
+	}
+}
+
+func TestGetProxyInfoWithNoEnvironment_ExpectReturnError(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	_, err := getProxyInfo()
+
+	if err == nil {
+		t.Errorf("Expected err : nil, actual err : %s", err.Error())
+	}
+
+	switch err.(type) {
+	default:
+		t.Errorf("Expected err: %s, actual err: %s", "NotFound", err.Error())
+	case errors.NotFound:
+	}
+}
 
 func TestGetOSInfo_ExpectSuccess(t *testing.T) {
 	ctrl := gomock.NewController(t)
