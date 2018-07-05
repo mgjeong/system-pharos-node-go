@@ -140,7 +140,35 @@ func TestSetConfiguration_ExpectSuccess(t *testing.T) {
 	}
 }
 
-func TestSetConfigurationWhenDBReturnsError_ExpectErrorReturn(t *testing.T) {
+func TestSetConfigurationWhenGetPropertyReturnsError_ExpectErrorReturn(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	dbExecutorMockObj := dbmocks.NewMockCommand(ctrl)
+
+	prop := properties["properties"].([]map[string]interface{})[0]
+	gomock.InOrder(
+		dbExecutorMockObj.EXPECT().GetProperty(prop["name"].(string)).Return(nil, errors.InvalidJSON{}),
+	)
+
+	// pass mockObj to a real object.
+	dbExecutor = dbExecutorMockObj
+
+	jsonString, _ := json.Marshal(newProperties)
+	err := Executor{}.SetConfiguration(string(jsonString))
+
+	if err == nil {
+		t.Errorf("Expected err: %s, actual err: %s", "NotFound", "nil")
+	}
+
+	switch err.(type) {
+	default:
+		t.Errorf("Expected err: %s, actual err: %s", "InvalidJSON", err.Error())
+	case errors.InvalidJSON:
+	}
+}
+
+func TestSetConfigurationWhenSetPropertyReturnsError_ExpectErrorReturn(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
