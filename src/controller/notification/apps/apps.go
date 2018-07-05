@@ -137,7 +137,7 @@ func (Executor) SendNotification(e dockercontroller.Event) {
 	}
 
 	for _, prop := range config["properties"].([]map[string]interface{}) {
-		if value, exists := prop["nodeid"]; exists {
+		if value, exists := prop["deviceid"]; exists {
 			nodeId = value.(string)
 		}
 	}
