@@ -90,7 +90,9 @@ func TestMakeAnchorRequestUrlWithInvalidAnchorIPEnv_ExpectReturnError(t *testing
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
+	os.Setenv("ANCHOR_ADDRESS", "192.2")
 	_, err := MakeAnchorRequestUrl("")
+	os.Unsetenv("ANCHOR_ADDRESS")
 
 	if err == nil {
 		t.Errorf("Expected error : InvalidParam, actual error : nil")
@@ -98,7 +100,7 @@ func TestMakeAnchorRequestUrlWithInvalidAnchorIPEnv_ExpectReturnError(t *testing
 
 	switch err.(type) {
 	default:
-		t.Errorf("Expected err: %s, actual err: %s", "InvalidParam", err.Error())
+		t.Errorf("Expected error : %s, actual error : %s", "InvalidParam", err.Error())
 	case errors.InvalidParam:
 	}
 }
@@ -116,28 +118,26 @@ func TestMakeAnchorRequestUrlWithNoAnchorIPEnv_ExpectReturnError(t *testing.T) {
 
 	switch err.(type) {
 	default:
-		t.Errorf("Expected err: %s, actual err: %s", "NotFound", err.Error())
+		t.Errorf("Expected error : %s, actual error : %s", "NotFound", err.Error())
 	case errors.NotFound:
 	}
 }
 
-func TestMakeAnchorRequestUrlWithNoAnchorRPEnv_ExpectReturnError(t *testing.T) {
+func TestMakeAnchorRequestUrlWithNoAnchorRPEnv_ExpectSuccess(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
 	testUrlPart := "/testurl"
-
+	expectedRet := "http://" + ip + ":" + DEFAULT_ANCHOR_PORT + "/api/v1/management" + testUrlPart
 	os.Setenv(anchorAddressEnv, ip)
-	_, err := MakeAnchorRequestUrl(testUrlPart)
+	ret, err := MakeAnchorRequestUrl(testUrlPart)
 	os.Unsetenv(anchorAddressEnv)
 
-	if err == nil {
-		t.Errorf("Expected error : NotFound, actual error : nil")
+	if err != nil {
+		t.Errorf("Expected error : nil, actual error : %s", err.Error())
 	}
 
-	switch err.(type) {
-	default:
-		t.Errorf("Expected err: %s, actual err: %s", "NotFound", err.Error())
-	case errors.NotFound:
+	if expectedRet != ret {
+		t.Errorf("Expected return : %s, actual return : %s", expectedRet, ret)
 	}
 }
