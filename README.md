@@ -39,6 +39,24 @@ system-pharos-node-go-ubuntu       latest     fcbbd4c401c2    31 seconds ago    
 ```
 Note that, you can find other Dockerfiles, **Dockerfile_arm** and **Dockerfile_arm64**, which can be used to dockerize for ARM and ARM64 machines, respectively.
 
+## How to download docker image without building project ##
+This provides how to download pre-built Docker image.
+
+#### 1. Download Docker image ####
+Please visit [Downloads-ubuntu](https://github.sec.samsung.net/RS7-EdgeComputing/system-pharos-node-go/releases/download/alpha-1.1_rel/pharos_node_ubuntu_x86_64.tar)
+
+#### 2. Load Docker image from tar file ####
+```shell
+$ docker load -i pharos_node_ubuntu_x86_64.tar
+```
+If it succeeds, you can see the Docker image as follows:
+```shell
+$ sudo docker images
+REPOSITORY                                                                TAG      IMAGE ID        CREATED        SIZE
+docker.sec.samsung.net:5000/edge/system-pharos-node-go/ubuntu_x86_64      alpha    534169f4035c    7 weeks ago    166MB
+```
+Note that, you can find other docker image, [Downloads-rpi_arm64](https://github.sec.samsung.net/RS7-EdgeComputing/system-pharos-node-go/releases/download/alpha-1.1_rel/pharos-node-rpi3-beluga.tar) and [Downloads-rpi-arm32](https://github.sec.samsung.net/RS7-EdgeComputing/system-pharos-node-go/releases/download/alpha-1.1_rel/pharos-node-artik530-beluga.tar)
+
 ## How to run with Docker image ##
 Required options to run Docker image
 - port
@@ -57,48 +75,76 @@ $ docker run -it -p 48098:48098 -e ANCHOR_ADDRESS='...' -e NODE_ADDRESS='...' -e
 ```
 If it succeeds, you can see log messages on your screen as follows:
 ```shell
-$ docker run -it -p 48098:48098 -v /data/db:/data/db system-pharos-node-go-ubuntu
-[DEBUG][MA]2018/01/17 10:20:31 controller/health registration.go register : 66 [IN]
-[DEBUG][MA]2018/01/17 10:20:31 controller/configuration.Executor configuration.go GetConfiguration : 76 [Configuration file is not found.]
-[ERROR][MA]2018/01/17 10:20:31 controller/health registration.go register : 71 [not find target : ./configuration.json]
-[DEBUG][MA]2018/01/17 10:20:31 controller/health registration.go register : 72 [OUT]
-[ERROR][MA]2018/01/17 10:20:31 controller/health.init registration.go 0 : 57 [not find target : ./configuration.json]
-[DEBUG][MA]2018/01/17 10:20:31 main main.go main : 25 [Start Pharos Node]
-[DEBUG][MA]2018/01/17 10:20:31 api restapi.go RunNodeWebServer : 37 [Start Pharos Node Web Server]
-[DEBUG][MA]2018/01/17 10:20:31 api restapi.go RunNodeWebServer : 38 [Listening 0.0.0.0:48098]
-2018-01-17T10:20:31.902+0000 I CONTROL  [initandlisten] MongoDB starting : pid=7 port=27017 dbpath=/data/db 64-bit host=0c083c53cb38
-2018-01-17T10:20:31.902+0000 I CONTROL  [initandlisten] db version v3.4.4
-2018-01-17T10:20:31.902+0000 I CONTROL  [initandlisten] git version: 888390515874a9debd1b6c5d36559ca86b44babd
-2018-01-17T10:20:31.902+0000 I CONTROL  [initandlisten] OpenSSL version: LibreSSL 2.5.5
-2018-01-17T10:20:31.902+0000 I CONTROL  [initandlisten] allocator: system
-2018-01-17T10:20:31.902+0000 I CONTROL  [initandlisten] modules: none
-2018-01-17T10:20:31.902+0000 I CONTROL  [initandlisten] build environment:
-2018-01-17T10:20:31.902+0000 I CONTROL  [initandlisten]     distarch: x86_64
-2018-01-17T10:20:31.902+0000 I CONTROL  [initandlisten]     target_arch: x86_64
-2018-01-17T10:20:31.902+0000 I CONTROL  [initandlisten] options: { storage: { journal: { enabled: true }, mmapv1: { smallFiles: true } } }
-2018-01-17T10:20:31.902+0000 W -        [initandlisten] Detected unclean shutdown - /data/db/mongod.lock is not empty.
-2018-01-17T10:20:31.911+0000 I -        [initandlisten] Detected data files in /data/db created by the 'wiredTiger' storage engine, so setting the active storage engine to 'wiredTiger'.
-2018-01-17T10:20:31.911+0000 W STORAGE  [initandlisten] Recovering data from the last clean checkpoint.
-2018-01-17T10:20:31.911+0000 I STORAGE  [initandlisten] 
-2018-01-17T10:20:31.911+0000 I STORAGE  [initandlisten] ** WARNING: Using the XFS filesystem is strongly recommended with the WiredTiger storage engine
-2018-01-17T10:20:31.911+0000 I STORAGE  [initandlisten] **          See http://dochub.mongodb.org/core/prodnotes-filesystem
-2018-01-17T10:20:31.911+0000 I STORAGE  [initandlisten] wiredtiger_open config: create,cache_size=11515M,session_max=20000,eviction=(threads_min=4,threads_max=4),config_base=false,statistics=(fast),log=(enabled=true,archive=true,path=journal,compressor=snappy),file_manager=(close_idle_time=100000),checkpoint=(wait=60,log_size=2GB),statistics_log=(wait=0),
-2018-01-17T10:20:32.359+0000 W STORAGE  [initandlisten] Detected configuration for non-active storage engine mmapv1 when current storage engine is wiredTiger
-2018-01-17T10:20:32.359+0000 I CONTROL  [initandlisten] 
-2018-01-17T10:20:32.359+0000 I CONTROL  [initandlisten] ** WARNING: Access control is not enabled for the database.
-2018-01-17T10:20:32.359+0000 I CONTROL  [initandlisten] **          Read and write access to data and configuration is unrestricted.
-2018-01-17T10:20:32.359+0000 I CONTROL  [initandlisten] ** WARNING: You are running this process as the root user, which is not recommended.
-2018-01-17T10:20:32.359+0000 I CONTROL  [initandlisten] 
-2018-01-17T10:20:32.363+0000 I FTDC     [initandlisten] Initializing full-time diagnostic data capture with directory '/data/db/diagnostic.data'
-2018-01-17T10:20:32.363+0000 I NETWORK  [thread1] waiting for connections on port 27017
-2018-01-17T10:20:33.017+0000 I FTDC     [ftdc] Unclean full-time diagnostic data capture shutdown detected, found interim file, some metrics may have been lost. OK
-^C2018-01-17T10:20:39.716+0000 I CONTROL  [signalProcessingThread] got signal 2 (Interrupt), will terminate after current cmd ends
-2018-01-17T10:20:39.716+0000 I NETWORK  [signalProcessingThread] shutdown: going to close listening sockets...
-2018-01-17T10:20:39.717+0000 I NETWORK  [signalProcessingThread] closing listening socket: 6
-2018-01-17T10:20:39.717+0000 I NETWORK  [signalProcessingThread] closing listening socket: 7
-2018-01-17T10:20:39.717+0000 I NETWORK  [signalProcessingThread] removing socket file: /tmp/mongodb-27017.sock
-2018-01-17T10:20:39.717+0000 I NETWORK  [signalProcessingThread] shutdown: going to flush diaglog...
-2018-01-17T10:20:39.717+0000 I FTDC     [signalProcessingThread] Shutting down full-time diagnostic data capture
+$ docker run -it -p 48088:48098 -e ANCHOR_ADDRESS=10.113.64.134 -e NODE_ADDRESS=10.113.64.134 -v /pharos-node/data/db:/data/db -v /var/run/docker.sock:/var/run/docker.sock system-pharos-node-go-ubuntu
+[DEBUG][NODE]2018/07/04 07:38:40 db/bolt/configuration.Executor configuration.go GetProperty : 135 [IN]
+[DEBUG][NODE]2018/07/04 07:38:40 db/bolt/configuration.Executor configuration.go GetProperty : 140 [OUT]
+[DEBUG][NODE]2018/07/04 07:38:40 db/bolt/configuration.Executor configuration.go GetProperty : 135 [IN]
+[DEBUG][NODE]2018/07/04 07:38:40 db/bolt/configuration.Executor configuration.go GetProperty : 140 [OUT]
+[ERROR][NODE]2018/07/04 07:38:40 controller/configuration configuration.go getProxyInfo : 216 [No reverse proxy environment]
+[ERROR][NODE]2018/07/04 07:38:40 controller/configuration configuration.go initConfiguration : 109 [unknown error : No reverse proxy environment]
+[DEBUG][NODE]2018/07/04 07:38:40 controller/dockercontroller.dockerExecutorImpl dockerexecutor.go Info : 151 []
+[DEBUG][NODE]2018/07/04 07:38:40 controller/dockercontroller.dockerExecutorImpl dockerexecutor.go Info : 173 [OUT]
+[DEBUG][NODE]2018/07/04 07:38:40 db/bolt/configuration.Executor configuration.go GetProperty : 135 [IN]
+[DEBUG][NODE]2018/07/04 07:38:40 db/bolt/configuration.Executor configuration.go GetProperty : 140 [OUT]
+[DEBUG][NODE]2018/07/04 07:38:40 db/bolt/configuration.Executor configuration.go SetProperty : 89 [IN]
+[DEBUG][NODE]2018/07/04 07:38:40 db/bolt/configuration.Executor configuration.go SetProperty : 113 [OUT]
+[DEBUG][NODE]2018/07/04 07:38:40 db/bolt/configuration.Executor configuration.go SetProperty : 89 [IN]
+[DEBUG][NODE]2018/07/04 07:38:40 db/bolt/configuration.Executor configuration.go SetProperty : 113 [OUT]
+[DEBUG][NODE]2018/07/04 07:38:40 db/bolt/configuration.Executor configuration.go SetProperty : 89 [IN]
+[DEBUG][NODE]2018/07/04 07:38:40 db/bolt/configuration.Executor configuration.go SetProperty : 113 [OUT]
+[DEBUG][NODE]2018/07/04 07:38:40 db/bolt/configuration.Executor configuration.go SetProperty : 89 [IN]
+[DEBUG][NODE]2018/07/04 07:38:40 db/bolt/configuration.Executor configuration.go SetProperty : 113 [OUT]
+[DEBUG][NODE]2018/07/04 07:38:40 db/bolt/configuration.Executor configuration.go SetProperty : 89 [IN]
+[DEBUG][NODE]2018/07/04 07:38:40 db/bolt/configuration.Executor configuration.go SetProperty : 113 [OUT]
+[DEBUG][NODE]2018/07/04 07:38:40 db/bolt/configuration.Executor configuration.go SetProperty : 89 [IN]
+[DEBUG][NODE]2018/07/04 07:38:40 db/bolt/configuration.Executor configuration.go SetProperty : 113 [OUT]
+[DEBUG][NODE]2018/07/04 07:38:40 db/bolt/configuration.Executor configuration.go SetProperty : 89 [IN]
+[DEBUG][NODE]2018/07/04 07:38:40 db/bolt/configuration.Executor configuration.go SetProperty : 113 [OUT]
+[DEBUG][NODE]2018/07/04 07:38:40 db/bolt/configuration.Executor configuration.go SetProperty : 89 [IN]
+[DEBUG][NODE]2018/07/04 07:38:40 db/bolt/configuration.Executor configuration.go SetProperty : 113 [OUT]
+[DEBUG][NODE]2018/07/04 07:38:40 db/bolt/configuration.Executor configuration.go SetProperty : 89 [IN]
+[DEBUG][NODE]2018/07/04 07:38:40 db/bolt/configuration.Executor configuration.go SetProperty : 113 [OUT]
+[DEBUG][NODE]2018/07/04 07:38:40 controller/deployment deploymentcontroller.go restoreAllAppsState : 986 [IN]
+[DEBUG][NODE]2018/07/04 07:38:40 db/bolt/service.Executor service.go GetAppList : 155 [IN]
+[DEBUG][NODE]2018/07/04 07:38:40 db/bolt/service.Executor service.go GetAppList : 171 [OUT]
+[DEBUG][NODE]2018/07/04 07:38:40 controller/deployment deploymentcontroller.go restoreAllAppsState : 1014 [OUT]
+[DEBUG][NODE]2018/07/04 07:38:40 controller/health registration.go register : 96 [IN]
+[DEBUG][NODE]2018/07/04 07:38:40 controller/configuration.Executor configuration.go GetConfiguration : 148 [IN]
+[DEBUG][NODE]2018/07/04 07:38:40 db/bolt/configuration.Executor configuration.go GetProperties : 155 [IN]
+[DEBUG][NODE]2018/07/04 07:38:40 db/bolt/configuration.Executor configuration.go GetProperties : 171 [OUT]
+[DEBUG][NODE]2018/07/04 07:38:40 controller/configuration.Executor configuration.go GetConfiguration : 168 [OUT]
+[DEBUG][NODE]2018/07/04 07:38:40 db/bolt/service.Executor service.go GetAppList : 155 [IN]
+[DEBUG][NODE]2018/07/04 07:38:40 db/bolt/service.Executor service.go GetAppList : 171 [OUT]
+[DEBUG][NODE]2018/07/04 07:38:40 controller/health registration.go sendRegisterRequest : 182 [IN]
+[DEBUG][NODE]2018/07/04 07:38:40 commons/util util.go MakeAnchorRequestUrl : 102 [http://10.113.64.134:48099/api/v1/management/nodes/register]
+[DEBUG][NODE]2018/07/04 07:38:40 commons/util util.go ConvertMapToJson : 56 [IN]
+[DEBUG][NODE]2018/07/04 07:38:40 commons/util util.go ConvertMapToJson : 63 [OUT]
+[DEBUG][NODE]2018/07/04 07:38:40 controller/health registration.go sendRegisterRequest : 195 [OUT]
+[DEBUG][NODE]2018/07/04 07:38:40 commons/util util.go ConvertJsonToMap : 41 [IN]
+[DEBUG][NODE]2018/07/04 07:38:40 commons/util util.go ConvertJsonToMap : 49 [OUT]
+[DEBUG][NODE]2018/07/04 07:38:40 db/bolt/configuration.Executor configuration.go GetProperty : 135 [IN]
+[DEBUG][NODE]2018/07/04 07:38:40 db/bolt/configuration.Executor configuration.go GetProperty : 148 [OUT]
+[DEBUG][NODE]2018/07/04 07:38:40 db/bolt/configuration.Executor configuration.go SetProperty : 89 [IN]
+[DEBUG][NODE]2018/07/04 07:38:40 db/bolt/configuration.Executor configuration.go SetProperty : 128 [OUT]
+[DEBUG][NODE]2018/07/04 07:38:40 controller/health checks.go startHealthCheck : 31 [IN]
+[DEBUG][NODE]2018/07/04 07:38:40 controller/configuration.Executor configuration.go GetConfiguration : 148 [IN]
+[DEBUG][NODE]2018/07/04 07:38:40 db/bolt/configuration.Executor configuration.go GetProperties : 155 [IN]
+[DEBUG][NODE]2018/07/04 07:38:40 db/bolt/configuration.Executor configuration.go GetProperties : 171 [OUT]
+[DEBUG][NODE]2018/07/04 07:38:40 controller/configuration.Executor configuration.go GetConfiguration : 168 [OUT]
+[DEBUG][NODE]2018/07/04 07:38:40 controller/health checks.go startHealthCheck : 73 [OUT]
+[DEBUG][NODE]2018/07/04 07:38:40 controller/health registration.go register : 150 [OUT]
+[DEBUG][NODE]2018/07/04 07:38:40 main main.go main : 25 [Start Pharos Node]
+[DEBUG][NODE]2018/07/04 07:38:40 api restapi.go RunNodeWebServer : 39 [Start Pharos Node Web Server]
+[DEBUG][NODE]2018/07/04 07:38:40 api restapi.go RunNodeWebServer : 40 [Listening 0.0.0.0:48098]
+[DEBUG][NODE]2018/07/04 07:38:40 controller/health checks.go sendPingRequest : 81 [IN]
+[DEBUG][NODE]2018/07/04 07:38:40 db/bolt/configuration.Executor configuration.go GetProperty : 135 [IN]
+[DEBUG][NODE]2018/07/04 07:38:40 db/bolt/configuration.Executor configuration.go GetProperty : 148 [OUT]
+[DEBUG][NODE]2018/07/04 07:38:40 commons/util util.go ConvertMapToJson : 56 [IN]
+[DEBUG][NODE]2018/07/04 07:38:40 commons/util util.go ConvertMapToJson : 63 [OUT]
+[DEBUG][NODE]2018/07/04 07:38:40 controller/health checks.go sendPingRequest : 100 [try to send ping request]
+[DEBUG][NODE]2018/07/04 07:38:40 commons/util util.go MakeAnchorRequestUrl : 102 [http://10.113.64.134:48099/api/v1/management/nodes/4bd8554a-c9d2-4b06-82d9-c4231fb326af/ping]
+[DEBUG][NODE]2018/07/04 07:38:40 controller/health checks.go sendPingRequest : 114 [receive pong response, code[200]]
+[DEBUG][NODE]2018/07/04 07:38:40 controller/health checks.go sendPingRequest : 115 [OUT]
 
 ```
 
