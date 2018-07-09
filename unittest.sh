@@ -1,5 +1,7 @@
 #!/bin/bash
 export GOPATH=$PWD
+export ANCHOR_ADDRESS=127.0.0.1
+export NODE_ADDRESS=127.0.0.1
 
 go get github.com/golang/mock/gomock
 go get github.com/ghodss/yaml

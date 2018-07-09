@@ -76,11 +76,13 @@ func initConfiguration() {
 	anchoraddress := os.Getenv("ANCHOR_ADDRESS")
 	if len(anchoraddress) == 0 {
 		logger.Logging(logger.ERROR, "No anchor address environment")
+		panic("No anchor address environment")
 	}
 
 	nodeaddress := os.Getenv("NODE_ADDRESS")
 	if len(nodeaddress) == 0 {
 		logger.Logging(logger.ERROR, "No node address environment")
+		panic("No node address environment")
 	}
 
 	deviceid := os.Getenv("DEVICE_ID")
