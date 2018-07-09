@@ -61,8 +61,10 @@ func TestCalledSendPingRequest_ExpectSuccess(t *testing.T) {
 
 	interval := "1"
 	os.Setenv("ANCHOR_ADDRESS", "127.0.0.1")
+	os.Setenv("ANCHOR_REVERSE_PROXY", "false")
 	_, err := sendPingRequest(interval)
 	os.Unsetenv("ANCHOR_ADDRESS")
+	os.Unsetenv("ANCHOR_REVERSE_PROXY")
 
 	if err != nil {
 		t.Errorf("Unexpected err: %s", err.Error())

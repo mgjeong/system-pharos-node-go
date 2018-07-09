@@ -21,6 +21,8 @@ import (
 	dbmocks "db/bolt/configuration/mocks"
 	"encoding/json"
 	"github.com/golang/mock/gomock"
+	"os"
+	"reflect"
 	"testing"
 )
 
@@ -39,6 +41,65 @@ var (
 	}
 	notFoundError = errors.NotFound{}
 )
+
+func TestGetProxyInfo_ExpectSuccess(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	expectedRet := map[string]interface{}{
+		"enabled": "true",
+	}
+
+	os.Setenv("REVERSE_PROXY", "true")
+	ret, err := getProxyInfo()
+	os.Unsetenv("REVERSE_PROXY")
+
+	if err != nil {
+		t.Errorf("Expected err : nil, actual err : %s", err.Error())
+	}
+
+	if !reflect.DeepEqual(expectedRet, ret) {
+		t.Errorf("Expected result : %v, Actual Result : %v", expectedRet, ret)
+	}
+}
+
+func TestGetProxyInfoWithNoEnvironment_ExpectSuccess(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	expectedRet := map[string]interface{}{
+		"enabled": "false",
+	}
+
+	ret, err := getProxyInfo()
+
+	if err != nil {
+		t.Errorf("Expected err : nil, actual err : %s", err.Error())
+	}
+
+	if !reflect.DeepEqual(expectedRet, ret) {
+		t.Errorf("Expected result : %v, Actual Result : %v", expectedRet, ret)
+	}
+}
+
+func TestGetProxyInfoWithInvalidEnvValue_ExpectReturnError(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	os.Setenv("REVERSE_PROXY", "test")
+	_, err := getProxyInfo()
+	os.Unsetenv("REVERSER_PROXY")
+
+	if err == nil {
+		t.Errorf("Expected err : InvalidParam, actual err : %s", err.Error())
+	}
+
+	switch err.(type) {
+	default:
+		t.Errorf("Expected err: %s, actual err: %s", "InvalidParam", err.Error())
+	case errors.InvalidParam:
+	}
+}
 
 func TestGetOSInfo_ExpectSuccess(t *testing.T) {
 	ctrl := gomock.NewController(t)
