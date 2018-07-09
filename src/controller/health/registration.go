@@ -27,6 +27,7 @@ import (
 	configDB "db/bolt/configuration"
 	"db/bolt/service"
 	"messenger"
+	"runtime"
 	"time"
 )
 
@@ -77,6 +78,7 @@ func init() {
 						return
 					}
 				}
+				runtime.Gosched()
 			}
 		}()
 	}
