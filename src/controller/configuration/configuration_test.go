@@ -138,7 +138,7 @@ func TestGetProxyInfoWithInvalidEnvValue_ExpectReturnError(t *testing.T) {
 	default:
 		t.Errorf("Expected err: %s, actual err: %s", "InvalidParam", err.Error())
 	case errors.InvalidParam:
-  }
+	}
 }
 
 func TestGetOSInfo_ExpectSuccess(t *testing.T) {
