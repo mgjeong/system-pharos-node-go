@@ -31,14 +31,14 @@ import (
 )
 
 const (
-	HTTP_TAG              = "http://"
-	IP                    = "ip"
-	MANAGER               = "manager"
-	NODE                  = "node"
-	INTERVAL              = "interval"
-	HEALTH_CHECK          = "healthCheck"
-	DEFAUL_RETRY_INTERVAL = 1
-	TIME_UNIT             = time.Minute
+	HTTP_TAG               = "http://"
+	IP                     = "ip"
+	MANAGER                = "manager"
+	NODE                   = "node"
+	INTERVAL               = "interval"
+	HEALTH_CHECK           = "healthCheck"
+	DEFAULT_RETRY_INTERVAL = 1
+	TIME_UNIT              = time.Minute
 )
 
 type Command interface {
@@ -62,7 +62,7 @@ func init() {
 	err := register(true)
 	if err != nil {
 		quit := make(chan bool)
-		ticker := time.NewTicker(time.Duration(DEFAUL_RETRY_INTERVAL) * TIME_UNIT)
+		ticker := time.NewTicker(time.Duration(DEFAULT_RETRY_INTERVAL) * TIME_UNIT)
 		go func() {
 			for {
 				select {
