@@ -227,8 +227,10 @@ func getAnchorEndPoint() (string, error) {
 func getProxyInfo() (map[string]interface{}, error) {
 	enabled := os.Getenv("REVERSE_PROXY")
 	if len(enabled) == 0 {
-		logger.Logging(logger.ERROR, "No reverse proxy environment")
-		return nil, errors.Unknown{"No reverse proxy environment"}
+		enabled = "false"
+	} else if enabled != "true" && enabled != "false" {
+		logger.Logging(logger.ERROR, "Invalid value for REVERSE_PROXY")
+		return nil, errors.InvalidParam{"Invalid value for REVERSE_PROXY"}
 	}
 
 	proxy := make(map[string]interface{}, 0)

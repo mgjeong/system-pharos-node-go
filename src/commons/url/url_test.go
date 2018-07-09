@@ -22,6 +22,18 @@ func ExampleBase() {
 	fmt.Println(Base())
 	// Output: /api/v1
 }
+func ExamplePharosAnchor() {
+	fmt.Println(PharosAnchor())
+	// Output: /pharos-anchor
+}
+func ExampleManagement() {
+	fmt.Println(Management())
+	// Output: /management
+}
+func ExampleMonitoring() {
+	fmt.Println(Monitoring())
+	// Output: /monitoring
+}
 func ExampleDeploy() {
 	fmt.Println(Deploy())
 	// Output: /deploy
@@ -65,4 +77,40 @@ func ExamplePing() {
 func ExampleDisk() {
 	fmt.Println(Disk())
 	// Output: /disk
+}
+func ExampleResource() {
+	fmt.Println(Resource())
+	// Output: /resource
+}
+func ExamplePerformance() {
+	fmt.Println(Performance())
+	// Output: /performance
+}
+func ExampleConfiguration() {
+	fmt.Println(Configuration())
+	// Output: /configuration
+}
+func ExampleDevice() {
+	fmt.Println(Device())
+	// Output: /device
+}
+func ExampleReboot() {
+	fmt.Println(Reboot())
+	// Output: /reboot
+}
+func ExampleRestore() {
+	fmt.Println(Restore())
+	// Output: /restore
+}
+func ExampleControl() {
+	fmt.Println(Control())
+	// Output: /control
+}
+func ExampleNotification() {
+	fmt.Println(Notification())
+	// Output: /notification
+}
+func ExampleWatch() {
+	fmt.Println(Watch())
+	// Output: /watch
 }

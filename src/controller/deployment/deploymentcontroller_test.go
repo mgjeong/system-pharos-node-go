@@ -331,6 +331,64 @@ func TestCalledDeployAppWithEventQuery_ExpectSuccess(t *testing.T) {
 	os.RemoveAll(COMPOSE_FILE)
 }
 
+func TestCalledDeployAppWhenAlreadyInstalled_ExpectSuccess(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	dockerExecutorMockObj := dockermocks.NewMockCommand(ctrl)
+	dbExecutorMockObj := dbmocks.NewMockCommand(ctrl)
+	appExecutorMockObj := appmocks.NewMockCommand(ctrl)
+
+	gomock.InOrder(
+		dbExecutorMockObj.EXPECT().InsertComposeFile(DESCRIPTION_JSON, RUNNING_STATE).Return(DB_GET_APP_OBJ, errors.AlreadyReported{}),
+		dbExecutorMockObj.EXPECT().GetApp(APP_ID).Return(DB_GET_APP_OBJ, nil),
+		dockerExecutorMockObj.EXPECT().Ps(APP_ID, gomock.Any(), SERVICE_NAME).Return(PS_EXPECT_RETURN, nil),
+		dockerExecutorMockObj.EXPECT().GetContainerConfigByName(gomock.Any()).Return(INSPECT_RETURN_MSG, nil),
+	)
+
+	// pass mockObj to a real object.
+	dockerExecutor = dockerExecutorMockObj
+	dbExecutor = dbExecutorMockObj
+	appsMonitor = appExecutorMockObj
+
+	res, err := Executor.DeployApp(DESCRIPTION_YAML, nil)
+
+	if err != nil {
+		t.Errorf("Unexpected err: %s", err.Error())
+	}
+	compareReturnVal := map[string]interface{}{
+		"id":          APP_ID,
+		"state":       RUNNING_STATE,
+		"description": DESCRIPTION_YAML,
+		"images": []map[string]interface{}{
+			{
+				"name": REPOSITORY_WITH_PORT_IMAGE,
+				"changes": map[string]interface{}{
+					"tag":   NEW_TAG,
+					"state": "update",
+				},
+			},
+		},
+		"services": []map[string]interface{}{
+			{
+				"name":  SERVICE,
+				"cid":   CONTAINER_ID,
+				"ports": SERVICE_PORT,
+				"state": map[string]interface{}{
+					"status":   SERVICE_STATUS,
+					"exitcode": EXIT_CODE_VALUE,
+				},
+			},
+		},
+	}
+
+	if !reflect.DeepEqual(res, compareReturnVal) {
+		t.Errorf("Expected result : %v, Actual Result : %v", compareReturnVal, res)
+	}
+
+	os.RemoveAll(COMPOSE_FILE)
+}
+
 func TestCalledDeployAppWhenFailedToSetEventChannelFailed_ExpectErrorReturn(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
