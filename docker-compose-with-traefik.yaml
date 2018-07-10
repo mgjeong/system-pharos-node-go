@@ -15,7 +15,7 @@ services:
 
   node:
     image: system-pharos-node-go
-    container_name: node
+    container_name: pharos-node
     volumes:       
       - /var/run/docker.sock:/var/run/docker.sock
       - ~/pharos-node/data/db:/data/db
