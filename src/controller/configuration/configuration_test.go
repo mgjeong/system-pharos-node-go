@@ -42,6 +42,46 @@ var (
 	notFoundError = errors.NotFound{}
 )
 
+func TestGetAnchorEndPointWithNoAnchorRPEnv_ExpectSuccess(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	expectedRet := "http://127.0.0.1:48099/api/v1"
+
+	os.Setenv("ANCHOR_ADDRESS", "127.0.0.1")
+	ret, err := getAnchorEndPoint()
+	os.Unsetenv("ANCHOR_ADDRESS")
+
+	if err != nil {
+		t.Errorf("Expected error : nil, actual error : %s", err.Error())
+	}
+
+	if ret != expectedRet {
+		t.Error("Expected result : %s, actual result : %s", expectedRet, ret)
+	}
+}
+
+func TestGetAnchorEndPointWithAnchorRPEnvTrue_ExpectSuccess(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	expectedRet := "http://127.0.0.1:80/pharos-anchor/api/v1"
+
+	os.Setenv("ANCHOR_ADDRESS", "127.0.0.1")
+	os.Setenv("ANCHOR_REVERSE_PROXY", "true")
+	ret, err := getAnchorEndPoint()
+	os.Unsetenv("ANCHOR_ADDRESS")
+	os.Unsetenv("ANCHOR_REVERSE_PROXY")
+
+	if err != nil {
+		t.Errorf("Expected error : nil, actual error : %s", err.Error())
+	}
+
+	if ret != expectedRet {
+		t.Error("Expected result : %s, actual result : %s", expectedRet, ret)
+	}
+}
+
 func TestGetProxyInfo_ExpectSuccess(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -113,7 +153,6 @@ func TestGetOSInfo_ExpectSuccess(t *testing.T) {
 
 	if result1 == "" || result2 == "" {
 		t.Errorf("Unexpected err : os info is empty")
-
 	}
 }
 

@@ -21,10 +21,12 @@ package configuration
 import (
 	"commons/errors"
 	"commons/logger"
+	"commons/url"
 	"commons/util"
 	"controller/dockercontroller"
 	"db/bolt/configuration"
 	"github.com/shirou/gopsutil/cpu"
+	"net"
 	"os"
 	"strconv"
 )
@@ -54,12 +56,14 @@ type (
 )
 
 const (
-	PROPERTIES            = "properties"
-	NAME                  = "name"
-	VALUE                 = "value"
-	READONLY              = "readOnly"
-	DEFAULT_DEVICE_NAME   = "EdgeDevice"
-	DEFAULT_PING_INTERVAL = "10"
+	PROPERTIES                               = "properties"
+	NAME                                     = "name"
+	VALUE                                    = "value"
+	READONLY                                 = "readOnly"
+	DEFAULT_DEVICE_NAME                      = "EdgeDevice"
+	DEFAULT_PING_INTERVAL                    = "10"
+	UNSECURED_ANCHOR_PORT_WITH_REVERSE_PROXY = "80"
+	DEFAULT_ANCHOR_PORT                      = "48099"
 )
 
 var dbExecutor configuration.Command
@@ -73,8 +77,12 @@ func init() {
 }
 
 func initConfiguration() {
-	anchoraddress := os.Getenv("ANCHOR_ADDRESS")
 	nodeaddress := os.Getenv("NODE_ADDRESS")
+
+	anchorEndPoint, err := getAnchorEndPoint()
+	if err != nil {
+		logger.Logging(logger.ERROR, err.Error())
+	}
 
 	proxy, err := getProxyInfo()
 	if err != nil {
@@ -104,7 +112,7 @@ func initConfiguration() {
 	}
 
 	properties := make([]map[string]interface{}, 0)
-	properties = append(properties, makeProperty("anchoraddress", anchoraddress, true))
+	properties = append(properties, makeProperty("anchorendpoint", anchorEndPoint, true))
 	properties = append(properties, makeProperty("nodeaddress", nodeaddress, true))
 	properties = append(properties, makeProperty("devicename", deviceName, false))
 	properties = append(properties, makeProperty("pinginterval", interval, false))
@@ -188,6 +196,34 @@ func makeProperty(name string, value interface{}, readOnly bool) map[string]inte
 	return prop
 }
 
+func getAnchorEndPoint() (string, error) {
+	anchorIP := os.Getenv("ANCHOR_ADDRESS")
+	if len(anchorIP) == 0 {
+		logger.Logging(logger.ERROR, "No anchor address environment")
+		return "", errors.NotFound{"No anchor address environment"}
+	}
+
+	ipTest := net.ParseIP(anchorIP)
+	if ipTest == nil {
+		logger.Logging(logger.ERROR, "Anchor address's validation check failed")
+		return "", errors.InvalidParam{"Anchor address's validation check failed"}
+	}
+
+	anchorProxy := os.Getenv("ANCHOR_REVERSE_PROXY")
+	anchorEndPoint := ""
+
+	if len(anchorProxy) == 0 || anchorProxy == "false" {
+		anchorEndPoint = "http://" + anchorIP + ":" + DEFAULT_ANCHOR_PORT + url.Base()
+	} else if anchorProxy == "true" {
+		anchorEndPoint = "http://" + anchorIP + ":" + UNSECURED_ANCHOR_PORT_WITH_REVERSE_PROXY + url.PharosAnchor() + url.Base()
+	} else {
+		logger.Logging(logger.ERROR, "Invalid value for ANCHOR_REVERSE_PROXY")
+		return "", errors.InvalidParam{"Invalid value for ANCHOR_REVERSE_PROXY"}
+	}
+
+	return anchorEndPoint, nil
+}
+
 func getProxyInfo() (map[string]interface{}, error) {
 	enabled := os.Getenv("REVERSE_PROXY")
 	if len(enabled) == 0 {
@@ -229,14 +265,6 @@ func getProcessorInfo() ([]map[string]interface{}, error) {
 	}
 
 	return result, err
-}
-
-func convertToPlatformMap(info platformInfo) map[string]interface{} {
-	return map[string]interface{}{
-		"platform": info.Platform,
-		"family":   info.Family,
-		"version":  info.Version,
-	}
 }
 
 func convertToProcessorMap(info processorInfo) map[string]interface{} {
