@@ -15,7 +15,7 @@ services:
 
   node:
     image: system-pharos-node-go
-    container_name: node
+    container_name: pharos-node
     volumes:       
       - /var/run/docker.sock:/var/run/docker.sock
       - ~/pharos-node/data/db:/data/db
@@ -25,8 +25,8 @@ services:
     environment:
       - ANCHOR_ADDRESS=127.0.0.1 # Change it to actual Anchor's address
       - NODE_ADDRESS=127.0.0.1 # Change it to actual Node's address
-      - REVERSE_PROXY=true # Change it to false if Node is not behind reverse proxy
-      - ANCHOR_REVERSE_PROXY=false # Change it to true if Anchor is behind reverse proxy
+      - REVERSE_PROXY=true # Change it to false if Node is not behind reverse proxy. Default is false
+      - ANCHOR_REVERSE_PROXY=true # Change it to false if Anchor is not behind reverse proxy. Default is false
     networks:
       - proxy
     depends_on:
