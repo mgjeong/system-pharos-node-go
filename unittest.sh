@@ -21,6 +21,8 @@ function func_cleanup(){
     rm -rf $GOPATH/src/docker.io
     rm -rf $GOPATH/src/golang.org
     rm -rf $GOPATH/src/github.com
+    unset ANCHOR_ADDRESS
+    unset NODE_ADDRESS
 }
 
 count=0
