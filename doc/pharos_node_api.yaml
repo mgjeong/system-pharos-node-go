@@ -8,6 +8,17 @@ info:
     distribution and control of microservices on an app-by-app basis.
 
     In addition, It provides resource information API.
+    
+    
+    Pharos Node's base url should be changed depending on whether Pharos Node is behind the proxy.
+    
+    
+   Case)
+    
+    1. Default Pharos Node's base url  - http://'IP':48098/api/v1/~
+    
+    2. Pharos Node's base url behind reverse proxy - http://'IP':80/pharos-node/api/v1/~
+    
   version: v1-20180110
 schemes:
   - http
@@ -433,7 +444,8 @@ definitions:
       properties:
         type: array
         example:
-          - {"anchoraddress":"192.168.0.1", "readOnly":true}
+          - {"anchorendpoint":"http://192.168.0.1:80/pharos-anchor", "readOnly":true}
+          - {"reverseproxy":{"enabled":true}, "readOnly":true}
           - {"nodeaddress":"192.168.0.1", "readOnly":true}
           - {"devicename":"EdgeDevice", "readOnly":false}
           - {"pinginterval":"10", "readOnly":false}
