@@ -1,5 +1,7 @@
 #!/bin/bash
 export GOPATH=$PWD
+export ANCHOR_ADDRESS=127.0.0.1
+export NODE_ADDRESS=127.0.0.1
 
 go get github.com/golang/mock/gomock
 go get github.com/ghodss/yaml
@@ -19,6 +21,8 @@ function func_cleanup(){
     rm -rf $GOPATH/src/docker.io
     rm -rf $GOPATH/src/golang.org
     rm -rf $GOPATH/src/github.com
+    unset ANCHOR_ADDRESS
+    unset NODE_ADDRESS
 }
 
 count=0

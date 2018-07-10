@@ -125,8 +125,8 @@ func register(enableHealthCheck bool) error {
 		return errors.Unknown{"received error message from system-edge-manager" + message}
 	}
 
-	// Insert node id in configuration db.
-	property, err := configDbExecutor.GetProperty("nodeid")
+	// Insert deviceId in configuration db.
+	property, err := configDbExecutor.GetProperty("deviceid")
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
 		return errors.InvalidJSON{"not supported property"}
@@ -154,7 +154,7 @@ func (Executor) Unregister() error {
 	defer logger.Logging(logger.DEBUG, "OUT")
 
 	// Reset node id.
-	property, err := configDbExecutor.GetProperty("nodeid")
+	property, err := configDbExecutor.GetProperty("deviceid")
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
 		return errors.InvalidJSON{"not supported property"}
@@ -217,9 +217,6 @@ func makeRegistrationBody(config map[string]interface{}) map[string]interface{} 
 	// Remove unnecessary property from configuration.
 	filteredProps := make([]map[string]interface{}, 0)
 	for _, prop := range properties {
-		if _, exists := prop["nodeid"]; exists {
-			continue
-		}
 		if _, exists := prop["anchoraddress"]; exists {
 			continue
 		}

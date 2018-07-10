@@ -77,7 +77,34 @@ func init() {
 }
 
 func initConfiguration() {
+	anchoraddress := os.Getenv("ANCHOR_ADDRESS")
+	if len(anchoraddress) == 0 {
+		logger.Logging(logger.ERROR, "No anchor address environment")
+		panic("No anchor address environment")
+	}
+
 	nodeaddress := os.Getenv("NODE_ADDRESS")
+	if len(nodeaddress) == 0 {
+		logger.Logging(logger.ERROR, "No node address environment")
+		panic("No node address environment")
+	}
+
+	deviceid := os.Getenv("DEVICE_ID")
+	if len(deviceid) == 0 {
+		prop, err := dbExecutor.GetProperty("deviceid")
+		if err == nil {
+			deviceid = prop["value"].(string)
+		}
+	}
+
+	deviceName := os.Getenv("DEVICE_NAME")
+	if len(deviceName) == 0 {
+		deviceName = DEFAULT_DEVICE_NAME
+		prop, err := dbExecutor.GetProperty("devicename")
+		if err == nil {
+			deviceName = prop["value"].(string)
+		}
+	}
 
 	anchorEndPoint, err := getAnchorEndPoint()
 	if err != nil {
@@ -99,14 +126,8 @@ func initConfiguration() {
 		logger.Logging(logger.ERROR, err.Error())
 	}
 
-	deviceName := DEFAULT_DEVICE_NAME
-	prop, err := dbExecutor.GetProperty("devicename")
-	if err == nil {
-		deviceName = prop["value"].(string)
-	}
-
 	interval := DEFAULT_PING_INTERVAL
-	prop, err = dbExecutor.GetProperty("pinginterval")
+	prop, err := dbExecutor.GetProperty("pinginterval")
 	if err == nil {
 		interval = prop["value"].(string)
 	}
@@ -119,7 +140,7 @@ func initConfiguration() {
 	properties = append(properties, makeProperty("os", os, true))
 	properties = append(properties, makeProperty("platform", platform, true))
 	properties = append(properties, makeProperty("processor", processor, true))
-	properties = append(properties, makeProperty("nodeid", "", false))
+	properties = append(properties, makeProperty("deviceid", deviceid, true))
 	properties = append(properties, makeProperty("reverseproxy", proxy, false))
 
 	for _, prop := range properties {

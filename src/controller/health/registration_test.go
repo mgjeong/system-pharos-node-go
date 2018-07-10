@@ -41,8 +41,8 @@ var (
 		"properties": []map[string]interface{}{ANCHOR_ADDRESS, REVERSE_PROXY},
 	}
 	PROPERTY = map[string]interface{}{
-		"name":     "nodeid",
-		"value":    "test_node_id",
+		"name":     "deviceid",
+		"value":    "test_device_id",
 		"readonly": "true",
 	}
 )
@@ -80,12 +80,12 @@ func TestCalledRegisterWhenFailedToSetConfiguration_ExpectErrorReturn(t *testing
 	dbMockObj := dbmocks.NewMockCommand(ctrl)
 
 	url := "http://192.168.0.1:48099/api/v1/management/nodes/register"
-	expectedResp := `{"id":"nodeid"}`
+	expectedResp := `{"id":"deviceid"}`
 
 	gomock.InOrder(
 		configMockObj.EXPECT().GetConfiguration().Return(CONFIGURATION, nil),
 		msgMockObj.EXPECT().SendHttpRequest("POST", url, gomock.Any()).Return(200, expectedResp, nil),
-		dbMockObj.EXPECT().GetProperty("nodeid").Return(PROPERTY, nil),
+		dbMockObj.EXPECT().GetProperty("deviceid").Return(PROPERTY, nil),
 		dbMockObj.EXPECT().SetProperty(gomock.Any()).Return(errors.New("Error")),
 	)
 	configurator = configMockObj
@@ -111,7 +111,7 @@ func TestCalledUnregister_ExpectSuccess(t *testing.T) {
 	dbMockObj := dbmocks.NewMockCommand(ctrl)
 
 	gomock.InOrder(
-		dbMockObj.EXPECT().GetProperty("nodeid").Return(PROPERTY, nil),
+		dbMockObj.EXPECT().GetProperty("deviceid").Return(PROPERTY, nil),
 		dbMockObj.EXPECT().SetProperty(gomock.Any()).Return(nil),
 	)
 	configurator = configMockObj
