@@ -93,8 +93,10 @@ func TestCalledRegisterWhenFailedToSetConfiguration_ExpectErrorReturn(t *testing
 	configDbExecutor = dbMockObj
 
 	os.Setenv("ANCHOR_ADDRESS", ANCHOR_IP)
+	os.Setenv("ANCHOR_REVERSE_PROXY", "false")
 	err := register(false)
 	os.Unsetenv("ANCHOR_ADDRESS")
+	os.Unsetenv("ANCHOR_REVERSE_PROXY")
 
 	if err == nil {
 		t.Errorf("Expected err: %s, actual err: %s", "Unknown", "nil")
@@ -136,8 +138,10 @@ func TestCalledSendRegisterRequestWhenFailedToSendHttpRequest_ExpectErrorReturn(
 	httpExecutor = msgMockObj
 
 	os.Setenv("ANCHOR_ADDRESS", ANCHOR_IP)
+	os.Setenv("ANCHOR_REVERSE_PROXY", "false")
 	_, _, err := sendRegisterRequest(CONFIGURATION)
 	os.Unsetenv("ANCHOR_ADDRESS")
+	os.Unsetenv("ANCHOR_REVERSE_PROXY")
 
 	if err == nil {
 		t.Errorf("Expected err: %s", err.Error())
