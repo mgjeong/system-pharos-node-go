@@ -87,7 +87,7 @@ func TestGetProxyInfo_ExpectSuccess(t *testing.T) {
 	defer ctrl.Finish()
 
 	expectedRet := map[string]interface{}{
-		"enabled": "true",
+		"enabled": true,
 	}
 
 	os.Setenv("REVERSE_PROXY", "true")
@@ -108,7 +108,7 @@ func TestGetProxyInfoWithNoEnvironment_ExpectSuccess(t *testing.T) {
 	defer ctrl.Finish()
 
 	expectedRet := map[string]interface{}{
-		"enabled": "false",
+		"enabled": false,
 	}
 
 	ret, err := getProxyInfo()
