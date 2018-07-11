@@ -13,7 +13,7 @@ info:
     Pharos Node's base url should be changed depending on whether Pharos Node is behind a reverse proxy.
     
     
-   Case)
+    Case)
     
     1. Default Pharos Node's base url  - http://'IP':48098/api/v1/~
     
@@ -450,5 +450,5 @@ definitions:
           - {"devicename":"EdgeDevice", "readOnly":false}
           - {"pinginterval":"10", "readOnly":false}
           - {"os":"linux", "readOnly":true}
-          - {"platform":{"family":"debian","platform":"ubuntu","version":"14.04"}, "readOnly":true}
+          - {"platform":"Ubuntu 16.04.3 LTS", "readOnly":true}
           - {"processor":[{"cpu":"0", "modelname":"Intel(R) Core(TM) i7-2600 CPU @ 3.40GHz"}], "readOnly":true}
