@@ -10,14 +10,14 @@ info:
     In addition, It provides resource information API.
     
     
-    Pharos Node's base url should be changed depending on whether Pharos Node is behind the proxy.
+    Pharos Node's base url should be changed depending on whether Pharos Node is behind a reverse proxy.
     
     
    Case)
     
     1. Default Pharos Node's base url  - http://'IP':48098/api/v1/~
     
-    2. Pharos Node's base url behind reverse proxy - http://'IP':80/pharos-node/api/v1/~
+    2. Pharos Node's base url behind a reverse proxy - http://'IP':80/pharos-node/api/v1/~
     
   version: v1-20180110
 schemes:
