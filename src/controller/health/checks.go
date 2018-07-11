@@ -99,7 +99,7 @@ func sendPingRequest(interval string) (int, error) {
 
 	logger.Logging(logger.DEBUG, "try to send ping request")
 
-	reqUrl, err := util.MakeAnchorRequestUrl(url.Nodes(), "/", nodeID, url.Ping())
+	reqUrl, err := util.MakeAnchorRequestUrl(url.Management(), url.Nodes(), "/", nodeID, url.Ping())
 	if err != nil {
 		logger.Logging(logger.ERROR, "failed to make anchor request url")
 		return 500, err
