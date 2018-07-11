@@ -178,7 +178,7 @@ func sendRegisterRequest(body map[string]interface{}) (int, string, error) {
 	logger.Logging(logger.DEBUG, "IN")
 	defer logger.Logging(logger.DEBUG, "OUT")
 
-	url, err := util.MakeAnchorRequestUrl(url.Nodes(), url.Register())
+	url, err := util.MakeAnchorRequestUrl(url.Management(), url.Nodes(), url.Register())
 	if err != nil {
 		logger.Logging(logger.ERROR, "failed to make anchor request url")
 	}
@@ -195,7 +195,7 @@ func sendUnregisterRequest(nodeID string) (int, string, error) {
 	logger.Logging(logger.DEBUG, "IN")
 	defer logger.Logging(logger.DEBUG, "OUT")
 
-	url, err := util.MakeAnchorRequestUrl(url.Nodes(), "/", nodeID, url.Unregister())
+	url, err := util.MakeAnchorRequestUrl(url.Management(), url.Nodes(), "/", nodeID, url.Unregister())
 	if err != nil {
 		logger.Logging(logger.ERROR, "failed to make anchor request url")
 		return 500, "", err
