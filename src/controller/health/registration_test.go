@@ -34,7 +34,7 @@ var (
 	}
 	REVERSE_PROXY = map[string]interface{}{
 		"reverseproxy": map[string]interface{}{
-			"enabled": "false",
+			"enabled": false,
 		},
 	}
 	CONFIGURATION = map[string]interface{}{
