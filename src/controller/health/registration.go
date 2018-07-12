@@ -98,13 +98,6 @@ func register(enableHealthCheck bool) error {
 		return err
 	}
 
-	// Get pharos-anchor address from configuration.
-	for _, prop := range config["properties"].([]map[string]interface{}) {
-		if value, exists := prop["anchoraddress"]; exists {
-			common.managerAddress = value.(string)
-		}
-	}
-
 	// Make a request body for registration.
 	body := makeRegistrationBody(config)
 
@@ -217,7 +210,7 @@ func makeRegistrationBody(config map[string]interface{}) map[string]interface{} 
 	// Remove unnecessary property from configuration.
 	filteredProps := make([]map[string]interface{}, 0)
 	for _, prop := range properties {
-		if _, exists := prop["anchoraddress"]; exists {
+		if _, exists := prop["anchorendpoint"]; exists {
 			continue
 		}
 		if _, exists := prop["nodeaddress"]; exists {

@@ -51,7 +51,7 @@ func TestMakeAnchorRequestUrlWhenRPEnvTrue_ExpectSuccess(t *testing.T) {
 
 	os.Setenv(anchorAddressEnv, ip)
 	os.Setenv(anchorReverseProxyEnv, "true")
-	ret, err := MakeAnchorRequestUrl(testUrlPart)
+	ret, err := MakeAnchorRequestUrl("/management", testUrlPart)
 	os.Unsetenv(anchorAddressEnv)
 	os.Unsetenv(anchorReverseProxyEnv)
 
@@ -73,7 +73,7 @@ func TestMakeAnchorRequestUrlWhenRPEnvFalse_ExpectSuccess(t *testing.T) {
 
 	os.Setenv(anchorAddressEnv, ip)
 	os.Setenv(anchorReverseProxyEnv, "false")
-	ret, err := MakeAnchorRequestUrl(testUrlPart)
+	ret, err := MakeAnchorRequestUrl("/management", testUrlPart)
 	os.Unsetenv(anchorAddressEnv)
 	os.Unsetenv(anchorReverseProxyEnv)
 
@@ -130,7 +130,7 @@ func TestMakeAnchorRequestUrlWithNoAnchorRPEnv_ExpectSuccess(t *testing.T) {
 	testUrlPart := "/testurl"
 	expectedRet := "http://" + ip + ":" + DEFAULT_ANCHOR_PORT + "/api/v1/management" + testUrlPart
 	os.Setenv(anchorAddressEnv, ip)
-	ret, err := MakeAnchorRequestUrl(testUrlPart)
+	ret, err := MakeAnchorRequestUrl("/management", testUrlPart)
 	os.Unsetenv(anchorAddressEnv)
 
 	if err != nil {
