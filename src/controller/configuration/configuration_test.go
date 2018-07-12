@@ -57,7 +57,7 @@ func TestGetAnchorEndPointWithNoAnchorRPEnv_ExpectSuccess(t *testing.T) {
 	}
 
 	if ret != expectedRet {
-		t.Error("Expected result : %s, actual result : %s", expectedRet, ret)
+		t.Errorf("Expected result : %v, actual result : %v", expectedRet, ret)
 	}
 }
 
@@ -78,7 +78,7 @@ func TestGetAnchorEndPointWithAnchorRPEnvTrue_ExpectSuccess(t *testing.T) {
 	}
 
 	if ret != expectedRet {
-		t.Error("Expected result : %s, actual result : %s", expectedRet, ret)
+		t.Errorf("Expected result : %v, actual result : %v", expectedRet, ret)
 	}
 }
 
