@@ -136,7 +136,7 @@ func TestIsDeployEvent(t *testing.T) {
 		for event, expectedRet := range eventWithExpectedResult {
 			ret := isDeployEventType(event)
 			if ret != expectedRet {
-				t.Errorf("Expected err: %s, actual err: %s", expectedRet, ret)
+				t.Errorf("Expected err: %v, actual err: %v", expectedRet, ret)
 			}
 		}
 	})
