@@ -13,7 +13,7 @@ go get github.com/boltdb/bolt
 
 rm -rf $GOPATH/src/github.com/docker/distribution/vendor/github.com/opencontainers
 
-pkg_list=("api" "api/common" "api/deployment" "api/health" "api/monitoring/resource" "api/configuration" "api/notification" "api/notification/apps" "commons/errors" "commons/logger" "commons/url" "controller/deployment" "controller/dockercontroller" "controller/health" "controller/monitoring/resource" "controller/monitoring/apps" "controller/configuration" "controller/shellcommand" "controller/monitoring/apps" "controller/notification/apps" "db/bolt/event" "db/bolt/configuration" "db/bolt/service" "messenger")
+pkg_list=("api" "api/common" "api/deployment" "api/health" "api/monitoring/resource" "api/configuration" "api/notification" "api/notification/apps" "commons/errors" "commons/logger" "commons/url" "commons/util" "controller/deployment" "controller/dockercontroller" "controller/health" "controller/monitoring/resource" "controller/monitoring/apps" "controller/configuration" "controller/shellcommand" "controller/monitoring/apps" "controller/notification/apps" "db/bolt/event" "db/bolt/configuration" "db/bolt/service" "messenger")
 
 function func_cleanup(){
     rm *.out *.test
