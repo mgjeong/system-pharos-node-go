@@ -27,8 +27,10 @@ tags:
     description: Distribution & Control Apps
   - name: Health
     description: Registration & Health check of Pharos Node
-  - name: InfoCollecting
+  - name: Resource Monitoring
     description: Resource information collector
+  - name: Device Control
+    description: Control a device with Pharos Node. These are available when there is a system container which can control devices
   - name: To Anchor
     description: >-
       These APIs will not be used by users. It is used by Node to send request
@@ -40,7 +42,7 @@ paths:
   '/api/v1/monitoring/apps/{app_id}/resource':
     get:
       tags:
-        - InfoCollecting
+        - Resource Monitoring
       description: >-
         Returns each service's resource usage in an app.
       parameters:
@@ -57,7 +59,7 @@ paths:
   '/api/v1/monitoring/resource':
     get:
       tags:
-        - InfoCollecting
+        - Resource Monitoring
       description: >-
         Returns device information (cpu/memory/disk/network usage).
       consumes:
@@ -307,6 +309,22 @@ paths:
       responses:
         '200':
           description: Configuration update succeeds
+  '/api/v1/management/device/reboot':
+    post:
+      tags:
+        - Device Control
+      description: Reboot a device
+      responses:
+        '200':
+          description: Successful operation.
+  '/api/v1/management/device/restore':
+    post:
+      tags:
+        - Device Control
+      description: Reset a device to initial state
+      responses:
+        '200':
+          description: Successful operation.
 definitions:
   cpu:
     description: Information about cpu usage of edge device where Pharos Node exists
@@ -452,4 +470,4 @@ definitions:
           - {"os":"linux", "readOnly":true}
           - {"platform":"Ubuntu 16.04.3 LTS", "readOnly":true}
           - {"processor":[{"cpu":"0", "modelname":"Intel(R) Core(TM) i7-2600 CPU @ 3.40GHz"}], "readOnly":true}
-          - {"nodeid":"0000000000000000000000", "readOnly":true}
+          - {"deviceid":"00000000-0000-0000-0000-000000000000", "readOnly":true}
