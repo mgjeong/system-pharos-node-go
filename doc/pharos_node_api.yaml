@@ -470,4 +470,4 @@ definitions:
           - {"os":"linux", "readOnly":true}
           - {"platform":"Ubuntu 16.04.3 LTS", "readOnly":true}
           - {"processor":[{"cpu":"0", "modelname":"Intel(R) Core(TM) i7-2600 CPU @ 3.40GHz"}], "readOnly":true}
-          - {"deviceid":"0000000000000000000000", "readOnly":true}
+          - {"deviceid":"00000000-0000-0000-0000-000000000000", "readOnly":true}
