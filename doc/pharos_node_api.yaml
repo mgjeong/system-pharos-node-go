@@ -462,6 +462,7 @@ definitions:
       properties:
         type: array
         example:
+          - {"anchoraddress":"192.168.0.1", "readOnly":true}
           - {"anchorendpoint":"http://192.168.0.1:80/pharos-anchor", "readOnly":true}
           - {"reverseproxy":{"enabled":true}, "readOnly":true}
           - {"nodeaddress":"192.168.0.1", "readOnly":true}

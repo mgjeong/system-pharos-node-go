@@ -213,6 +213,9 @@ func makeRegistrationBody(config map[string]interface{}) map[string]interface{} 
 		if _, exists := prop["anchorendpoint"]; exists {
 			continue
 		}
+		if _, exists := prop["anchoraddress"]; exists {
+			continue
+		}
 		if _, exists := prop["nodeaddress"]; exists {
 			continue
 		}
