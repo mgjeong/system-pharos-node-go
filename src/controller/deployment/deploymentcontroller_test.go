@@ -1835,7 +1835,7 @@ func TestUpdateServiceWhenUpFailed_ExpectReturnError(t *testing.T) {
 
 	gomock.InOrder(
 		dockerExecutorMockObj.EXPECT().Pull(APP_ID, COMPOSE_FILE, SERVICE).Return(nil),
-		dockerExecutorMockObj.EXPECT().Up(APP_ID, COMPOSE_FILE, SERVICE).Return(UnknownError),
+		dockerExecutorMockObj.EXPECT().Up(APP_ID, COMPOSE_FILE, true, SERVICE).Return(UnknownError),
 		dockerExecutorMockObj.EXPECT().ImagePull(REPODIGEST).Return(nil),
 		dockerExecutorMockObj.EXPECT().GetImageIDByRepoDigest(REPODIGEST).Return(IMAGE_ID, nil),
 		dockerExecutorMockObj.EXPECT().ImageTag(IMAGE_ID, REPOSITORY_WITH_PORT_IMAGE).Return(nil),
