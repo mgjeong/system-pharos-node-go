@@ -1781,7 +1781,7 @@ func TestUpdateService_ExpectSuccess(t *testing.T) {
 
 	gomock.InOrder(
 		dockerExecutorMockObj.EXPECT().Pull(APP_ID, COMPOSE_FILE, SERVICE).Return(nil),
-		dockerExecutorMockObj.EXPECT().Up(APP_ID, COMPOSE_FILE, SERVICE).Return(nil),
+		dockerExecutorMockObj.EXPECT().Up(APP_ID, COMPOSE_FILE, true, SERVICE).Return(nil),
 	)
 
 	dockerExecutor = dockerExecutorMockObj
