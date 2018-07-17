@@ -670,7 +670,7 @@ func TestComposeFunctionality(t *testing.T) {
 	checkError(t, err)
 	err = Executor.Unpause("", "")
 	checkError(t, err)
-	err = Executor.Up("", "")
+	err = Executor.Up("", "", true)
 	checkError(t, err)
 }
 

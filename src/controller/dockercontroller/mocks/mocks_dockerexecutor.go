@@ -62,8 +62,8 @@ func (mr *MockCommandMockRecorder) Create(id, path interface{}) *gomock.Call {
 }
 
 // Up mocks base method
-func (m *MockCommand) Up(id, path string, services ...string) error {
-	varargs := []interface{}{id, path}
+func (m *MockCommand) Up(id, path string, forceRecreate bool, services ...string) error {
+	varargs := []interface{}{id, path, forceRecreate}
 	for _, a := range services {
 		varargs = append(varargs, a)
 	}
@@ -73,8 +73,8 @@ func (m *MockCommand) Up(id, path string, services ...string) error {
 }
 
 // Up indicates an expected call of Up
-func (mr *MockCommandMockRecorder) Up(id, path interface{}, services ...interface{}) *gomock.Call {
-	varargs := append([]interface{}{id, path}, services...)
+func (mr *MockCommandMockRecorder) Up(id, path, forceRecreate interface{}, services ...interface{}) *gomock.Call {
+	varargs := append([]interface{}{id, path, forceRecreate}, services...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Up", reflect.TypeOf((*MockCommand)(nil).Up), varargs...)
 }
 
