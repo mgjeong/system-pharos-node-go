@@ -155,7 +155,7 @@ func (executor depExecutorImpl) DeployApp(body string, query map[string]interfac
 	if eventIds, exists := query[EVENTID]; exists {
 		err = dockerExecutor.UpWithEvent(data[ID].(string), composeFile, eventIds.([]string)[0], appsMonitor.GetEventChannel())
 	} else {
-		err = dockerExecutor.Up(data[ID].(string), composeFile)
+		err = dockerExecutor.Up(data[ID].(string), composeFile, true)
 	}
 
 	if err != nil {
@@ -334,7 +334,7 @@ func (depExecutorImpl) StartApp(appId string) error {
 	err = dockerExecutor.Start(appId, composeFile)
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
-		e := restoreState(appId, composeFile, state)
+		e := restoreState(appId, composeFile, state, true)
 		if e != nil {
 			logger.Logging(logger.ERROR, err.Error())
 		}
@@ -378,7 +378,7 @@ func (depExecutorImpl) StopApp(appId string) error {
 	err = dockerExecutor.Stop(appId, composeFile)
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
-		e := restoreState(appId, composeFile, state)
+		e := restoreState(appId, composeFile, state, true)
 		if e != nil {
 			logger.Logging(logger.ERROR, err.Error())
 		}
@@ -468,7 +468,7 @@ func (depExecutorImpl) UpdateApp(appId string, query map[string]interface{}) err
 		logger.Logging(logger.ERROR, err.Error())
 		return convertDBError(err, appId)
 	}
-	
+
 	imageList, err := getImageNames([]byte(app[DESCRIPTION].(string)))
 	if err != nil {
 		logger.Logging(logger.DEBUG, err.Error())
@@ -576,7 +576,7 @@ func (depExecutorImpl) DeleteApp(appId string) error {
 		}
 
 		state := app["state"].(string)
-		e = restoreState(appId, composeFile, state)
+		e = restoreState(appId, composeFile, state, true)
 		if e != nil {
 			logger.Logging(logger.ERROR, e.Error())
 		}
@@ -618,7 +618,7 @@ func restoreRepoDigests(appId, composeFile string, repoDigests map[string]string
 		}
 	}
 
-	err := restoreState(appId, composeFile, state)
+	err := restoreState(appId, composeFile, state, true)
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
 		return err
@@ -636,7 +636,7 @@ func updateApp(appId, composeFile string, app map[string]interface{}, repoDigest
 		}
 		return err
 	}
-	err = dockerExecutor.Up(appId, composeFile)
+	err = dockerExecutor.Up(appId, composeFile, true)
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
 		e := restoreRepoDigests(appId, composeFile, repoDigests, app[STATE].(string))
@@ -658,7 +658,7 @@ func updateService(appId, composeFile string, app map[string]interface{}, repoDi
 		}
 		return err
 	}
-	err = dockerExecutor.Up(appId, composeFile, services...)
+	err = dockerExecutor.Up(appId, composeFile, true, services...)
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
 		e := restoreRepoDigests(appId, composeFile, repoDigests, app[STATE].(string))
@@ -674,7 +674,7 @@ func updateService(appId, composeFile string, app map[string]interface{}, repoDi
 // See also controller.StartApp(), controller.StopApp()
 // if succeed to restore, return error as nil
 // otherwise, return error.
-func restoreState(appId, composeFile, state string) error {
+func restoreState(appId, composeFile, state string, forceRecreate bool) error {
 	var err error
 
 	if len(state) == 0 {
@@ -694,10 +694,14 @@ func restoreState(appId, composeFile, state string) error {
 			logger.Logging(logger.ERROR, err.Error())
 		}
 	case RUNNING_STATE:
-		err = dockerExecutor.Up(appId, composeFile)
+		err = dockerExecutor.Up(appId, composeFile, forceRecreate)
 		if err != nil {
-			logger.Logging(logger.ERROR, err.Error())
-			return err
+			if strings.Contains(err.Error(), "already exists in network") && forceRecreate == false {
+				logger.Logging(logger.INFO, "It occurs when a service is already restarted by itself and expected result")
+			} else {
+				logger.Logging(logger.ERROR, err.Error())
+				return err
+			}
 		}
 		err = dbExecutor.UpdateAppState(appId, RUNNING_STATE)
 		if err != nil {
@@ -1009,7 +1013,7 @@ func restoreAllAppsState() {
 		}
 
 		state := app["state"].(string)
-		restoreState(appId, composeFile, state)
+		restoreState(appId, composeFile, state, false)
 	}
 }
 

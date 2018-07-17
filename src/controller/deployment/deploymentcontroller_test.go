@@ -216,7 +216,7 @@ func TestCalledDeployApp_ExpectSuccess(t *testing.T) {
 	gomock.InOrder(
 		dbExecutorMockObj.EXPECT().InsertComposeFile(DESCRIPTION_JSON, RUNNING_STATE).Return(DB_GET_APP_OBJ, nil),
 		appExecutorMockObj.EXPECT().EnableEventMonitoring(gomock.Any(), gomock.Any()).Return(nil),
-		dockerExecutorMockObj.EXPECT().Up(gomock.Any(), gomock.Any()).Return(nil),
+		dockerExecutorMockObj.EXPECT().Up(gomock.Any(), gomock.Any(), true).Return(nil),
 		dbExecutorMockObj.EXPECT().GetApp(APP_ID).Return(DB_GET_APP_OBJ, nil),
 		dockerExecutorMockObj.EXPECT().Ps(APP_ID, gomock.Any(), SERVICE_NAME).Return(PS_EXPECT_RETURN, nil),
 		dockerExecutorMockObj.EXPECT().GetContainerConfigByName(gomock.Any()).Return(INSPECT_RETURN_MSG, nil),
@@ -428,7 +428,7 @@ func TestCalledDeployAppWhenComposeUpFailed_ExpectErrorReturn(t *testing.T) {
 	gomock.InOrder(
 		dbExecutorMockObj.EXPECT().InsertComposeFile(DESCRIPTION_JSON, RUNNING_STATE).Return(DB_OBJ, nil),
 		appExecutorMockObj.EXPECT().EnableEventMonitoring(gomock.Any(), gomock.Any()).Return(nil),
-		dockerExecutorMockObj.EXPECT().Up(gomock.Any(), gomock.Any()).Return(UnknownError),
+		dockerExecutorMockObj.EXPECT().Up(gomock.Any(), gomock.Any(), true).Return(UnknownError),
 		dockerExecutorMockObj.EXPECT().DownWithRemoveImages(gomock.Any(), gomock.Any()).Return(nil),
 		dbExecutorMockObj.EXPECT().DeleteApp(gomock.Any()).Return(nil),
 	)
@@ -965,7 +965,7 @@ func TestCalledStopAppWhenComposeStopFailed_ExpectErrorReturn(t *testing.T) {
 		dbExecutorMockObj.EXPECT().GetApp(APP_ID).Return(DB_GET_APP_OBJ, nil),
 		dbExecutorMockObj.EXPECT().GetApp(APP_ID).Return(DB_GET_APP_OBJ, nil),
 		dockerExecutorMockObj.EXPECT().Stop(gomock.Any(), gomock.Any()).Return(UnknownError),
-		dockerExecutorMockObj.EXPECT().Up(gomock.Any(), gomock.Any()).Return(nil),
+		dockerExecutorMockObj.EXPECT().Up(gomock.Any(), gomock.Any(), true).Return(nil),
 		dbExecutorMockObj.EXPECT().UpdateAppState(APP_ID, RUNNING_STATE).Return(nil),
 	)
 
@@ -1037,7 +1037,7 @@ func TestCalledDeleteAppWhenComposeDeleteFailed_ExpectErrorReturn(t *testing.T) 
 		dbExecutorMockObj.EXPECT().GetApp(APP_ID).Return(DB_GET_OBJ, nil),
 		dockerExecutorMockObj.EXPECT().DownWithRemoveImages(gomock.Any(), gomock.Any()).Return(UnknownError),
 		dbExecutorMockObj.EXPECT().GetApp(APP_ID).Return(DB_GET_OBJ, nil),
-		dockerExecutorMockObj.EXPECT().Up(gomock.Any(), gomock.Any()).Return(nil),
+		dockerExecutorMockObj.EXPECT().Up(gomock.Any(), gomock.Any(), true).Return(nil),
 		dbExecutorMockObj.EXPECT().UpdateAppState(APP_ID, RUNNING_STATE).Return(nil),
 	)
 
@@ -1119,7 +1119,7 @@ func TestUpdateAppWithoutQuery_ExpectSuccess(t *testing.T) {
 		dbExecutorMockObj.EXPECT().UpdateAppState(APP_ID, UPDATING_STATE).Return(nil),
 		dockerExecutorMockObj.EXPECT().GetImageDigestByName(REPOSITORY_WITH_PORT_IMAGE_WITH_TAG).Return(REPODIGEST, nil),
 		dockerExecutorMockObj.EXPECT().Pull(gomock.Any(), gomock.Any()).Return(nil),
-		dockerExecutorMockObj.EXPECT().Up(gomock.Any(), gomock.Any()).Return(nil),
+		dockerExecutorMockObj.EXPECT().Up(gomock.Any(), gomock.Any(), true).Return(nil),
 		dbExecutorMockObj.EXPECT().UpdateAppState(APP_ID, RUNNING_STATE).Return(nil),
 		dbExecutorMockObj.EXPECT().GetApp(APP_ID).Return(DB_GET_APP_UPDATED_OBJ, nil),
 		dbExecutorMockObj.EXPECT().UpdateAppEvent(APP_ID, gomock.Any(), gomock.Any(), gomock.Any()).Return(nil),
@@ -1215,7 +1215,7 @@ func TestUpdateAppWithoutQueryWhenPullFailed_ExpectReturnError(t *testing.T) {
 		dockerExecutorMockObj.EXPECT().ImagePull(REPODIGEST).Return(nil),
 		dockerExecutorMockObj.EXPECT().GetImageIDByRepoDigest(REPODIGEST).Return(IMAGE_ID, nil),
 		dockerExecutorMockObj.EXPECT().ImageTag(IMAGE_ID, REPOSITORY_WITH_PORT_IMAGE_WITH_TAG).Return(nil),
-		dockerExecutorMockObj.EXPECT().Up(APP_ID, gomock.Any()).Return(nil),
+		dockerExecutorMockObj.EXPECT().Up(APP_ID, gomock.Any(), true).Return(nil),
 		dbExecutorMockObj.EXPECT().UpdateAppState(APP_ID, RUNNING_STATE).Return(nil),
 	)
 
@@ -1332,7 +1332,7 @@ func TestUpdateAppWithoutQueryWhenPullAndUpFailed_ExpectReturnError(t *testing.T
 		dockerExecutorMockObj.EXPECT().ImagePull(REPODIGEST).Return(nil),
 		dockerExecutorMockObj.EXPECT().GetImageIDByRepoDigest(REPODIGEST).Return(IMAGE_ID, nil),
 		dockerExecutorMockObj.EXPECT().ImageTag(IMAGE_ID, REPOSITORY_WITH_PORT_IMAGE_WITH_TAG).Return(nil),
-		dockerExecutorMockObj.EXPECT().Up(APP_ID, gomock.Any()).Return(NotFoundError),
+		dockerExecutorMockObj.EXPECT().Up(APP_ID, gomock.Any(), true).Return(NotFoundError),
 	)
 
 	dockerExecutor = dockerExecutorMockObj
@@ -1360,11 +1360,11 @@ func TestUpdateAppWithoutQueryWhenUpFailed_ExpectReturnError(t *testing.T) {
 		dbExecutorMockObj.EXPECT().UpdateAppState(APP_ID, UPDATING_STATE).Return(nil),
 		dockerExecutorMockObj.EXPECT().GetImageDigestByName(REPOSITORY_WITH_PORT_IMAGE_WITH_TAG).Return(REPODIGEST, nil),
 		dockerExecutorMockObj.EXPECT().Pull(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil),
-		dockerExecutorMockObj.EXPECT().Up(gomock.Any(), gomock.Any(), gomock.Any()).Return(UnknownError),
+		dockerExecutorMockObj.EXPECT().Up(gomock.Any(), gomock.Any(), true).Return(UnknownError),
 		dockerExecutorMockObj.EXPECT().ImagePull(REPODIGEST).Return(nil),
 		dockerExecutorMockObj.EXPECT().GetImageIDByRepoDigest(REPODIGEST).Return(IMAGE_ID, nil),
 		dockerExecutorMockObj.EXPECT().ImageTag(IMAGE_ID, REPOSITORY_WITH_PORT_IMAGE_WITH_TAG).Return(nil),
-		dockerExecutorMockObj.EXPECT().Up(APP_ID, gomock.Any()).Return(nil),
+		dockerExecutorMockObj.EXPECT().Up(APP_ID, gomock.Any(), true).Return(nil),
 		dbExecutorMockObj.EXPECT().UpdateAppState(APP_ID, RUNNING_STATE).Return(nil),
 	)
 
@@ -1391,7 +1391,7 @@ func TestUpdateAppWithoutQueryWhenUpdateAppStateTorunningFailed_ExpectReturnErro
 		dbExecutorMockObj.EXPECT().UpdateAppState(APP_ID, UPDATING_STATE).Return(nil),
 		dockerExecutorMockObj.EXPECT().GetImageDigestByName(REPOSITORY_WITH_PORT_IMAGE_WITH_TAG).Return(REPODIGEST, nil),
 		dockerExecutorMockObj.EXPECT().Pull(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil),
-		dockerExecutorMockObj.EXPECT().Up(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil),
+		dockerExecutorMockObj.EXPECT().Up(gomock.Any(), gomock.Any(), true).Return(nil),
 		dbExecutorMockObj.EXPECT().UpdateAppState(APP_ID, RUNNING_STATE).Return(UnknownError),
 	)
 
@@ -1418,7 +1418,7 @@ func TestUpdateAppWithoutQueryWhenUpdateAppEventFailed_ExpectReturnError(t *test
 		dbExecutorMockObj.EXPECT().UpdateAppState(APP_ID, UPDATING_STATE).Return(nil),
 		dockerExecutorMockObj.EXPECT().GetImageDigestByName(REPOSITORY_WITH_PORT_IMAGE_WITH_TAG).Return(REPODIGEST, nil),
 		dockerExecutorMockObj.EXPECT().Pull(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil),
-		dockerExecutorMockObj.EXPECT().Up(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil),
+		dockerExecutorMockObj.EXPECT().Up(gomock.Any(), gomock.Any(), true).Return(nil),
 		dbExecutorMockObj.EXPECT().UpdateAppState(APP_ID, RUNNING_STATE).Return(nil),
 		dbExecutorMockObj.EXPECT().GetApp(APP_ID).Return(DB_GET_APP_UPDATED_OBJ, nil),
 		dbExecutorMockObj.EXPECT().UpdateAppEvent(APP_ID, REPOSITORY_WITH_PORT_IMAGE, NEW_TAG, NONE_EVENT).Return(UnknownError),
@@ -1452,7 +1452,7 @@ func TestUpdateAppWithQueryWithTag_ExpectSuccess(t *testing.T) {
 		dbExecutorMockObj.EXPECT().UpdateAppState(APP_ID, UPDATING_STATE).Return(nil),
 		dockerExecutorMockObj.EXPECT().GetImageDigestByName(REPOSITORY_WITH_PORT_IMAGE_WITH_TAG).Return(REPODIGEST, nil),
 		dockerExecutorMockObj.EXPECT().Pull(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil),
-		dockerExecutorMockObj.EXPECT().Up(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil),
+		dockerExecutorMockObj.EXPECT().Up(gomock.Any(), gomock.Any(), true).Return(nil),
 		dbExecutorMockObj.EXPECT().UpdateAppInfo(APP_ID, UPDATED_DESCRIPTION_JSON).Return(nil),
 		dbExecutorMockObj.EXPECT().UpdateAppState(APP_ID, RUNNING_STATE).Return(nil),
 		dbExecutorMockObj.EXPECT().GetApp(APP_ID).Return(DB_GET_APP_UPDATED_OBJ, nil),
@@ -1487,7 +1487,7 @@ func TestUpdateAppWithQueryWithTagWhenUpdateAppInfoFailed_ExpectReturnError(t *t
 		dbExecutorMockObj.EXPECT().UpdateAppState(APP_ID, UPDATING_STATE).Return(nil),
 		dockerExecutorMockObj.EXPECT().GetImageDigestByName(REPOSITORY_WITH_PORT_IMAGE_WITH_TAG).Return(REPODIGEST, nil),
 		dockerExecutorMockObj.EXPECT().Pull(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil),
-		dockerExecutorMockObj.EXPECT().Up(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil),
+		dockerExecutorMockObj.EXPECT().Up(gomock.Any(), gomock.Any(), true).Return(nil),
 		dbExecutorMockObj.EXPECT().UpdateAppInfo(APP_ID, UPDATED_DESCRIPTION_JSON).Return(UnknownError),
 	)
 
@@ -1574,7 +1574,7 @@ func TestRestoreRepoDigests_ExpectSuccess(t *testing.T) {
 		dockerExecutorMockObj.EXPECT().ImagePull(REPODIGEST).Return(nil),
 		dockerExecutorMockObj.EXPECT().GetImageIDByRepoDigest(REPODIGEST).Return(IMAGE_ID, nil),
 		dockerExecutorMockObj.EXPECT().ImageTag(IMAGE_ID, REPOSITORY_WITH_PORT_IMAGE).Return(nil),
-		dockerExecutorMockObj.EXPECT().Up(APP_ID, COMPOSE_FILE).Return(nil),
+		dockerExecutorMockObj.EXPECT().Up(APP_ID, COMPOSE_FILE, true).Return(nil),
 		dbExecutorMockObj.EXPECT().UpdateAppState(APP_ID, RUNNING_STATE).Return(nil),
 	)
 
@@ -1673,7 +1673,7 @@ func TestRestoreRepoDigestsWhenUpFailed_ExpectReturnError(t *testing.T) {
 		dockerExecutorMockObj.EXPECT().ImagePull(REPODIGEST).Return(nil),
 		dockerExecutorMockObj.EXPECT().GetImageIDByRepoDigest(REPODIGEST).Return(IMAGE_ID, nil),
 		dockerExecutorMockObj.EXPECT().ImageTag(IMAGE_ID, REPOSITORY_WITH_PORT_IMAGE).Return(nil),
-		dockerExecutorMockObj.EXPECT().Up(APP_ID, COMPOSE_FILE).Return(UnknownError),
+		dockerExecutorMockObj.EXPECT().Up(APP_ID, COMPOSE_FILE, true).Return(UnknownError),
 	)
 
 	dockerExecutor = dockerExecutorMockObj
@@ -1697,7 +1697,7 @@ func TestInnerUpdateApp_ExpectSuccess(t *testing.T) {
 
 	gomock.InOrder(
 		dockerExecutorMockObj.EXPECT().Pull(APP_ID, COMPOSE_FILE).Return(nil),
-		dockerExecutorMockObj.EXPECT().Up(APP_ID, COMPOSE_FILE).Return(nil),
+		dockerExecutorMockObj.EXPECT().Up(APP_ID, COMPOSE_FILE, true).Return(nil),
 	)
 
 	dockerExecutor = dockerExecutorMockObj
@@ -1723,7 +1723,7 @@ func TestInnerUpdateAppWhenPullFailed_ExpectReturnErrror(t *testing.T) {
 		dockerExecutorMockObj.EXPECT().ImagePull(REPODIGEST).Return(nil),
 		dockerExecutorMockObj.EXPECT().GetImageIDByRepoDigest(REPODIGEST).Return(IMAGE_ID, nil),
 		dockerExecutorMockObj.EXPECT().ImageTag(IMAGE_ID, REPOSITORY_WITH_PORT_IMAGE).Return(nil),
-		dockerExecutorMockObj.EXPECT().Up(APP_ID, COMPOSE_FILE).Return(nil),
+		dockerExecutorMockObj.EXPECT().Up(APP_ID, COMPOSE_FILE, true).Return(nil),
 		dbExecutorMockObj.EXPECT().UpdateAppState(APP_ID, RUNNING_STATE).Return(nil),
 	)
 
@@ -1750,11 +1750,11 @@ func TestInnerUpdateAppWhenUpFailed_ExpectSuccess(t *testing.T) {
 
 	gomock.InOrder(
 		dockerExecutorMockObj.EXPECT().Pull(APP_ID, COMPOSE_FILE).Return(nil),
-		dockerExecutorMockObj.EXPECT().Up(APP_ID, COMPOSE_FILE).Return(UnknownError),
+		dockerExecutorMockObj.EXPECT().Up(APP_ID, COMPOSE_FILE, true).Return(UnknownError),
 		dockerExecutorMockObj.EXPECT().ImagePull(REPODIGEST).Return(nil),
 		dockerExecutorMockObj.EXPECT().GetImageIDByRepoDigest(REPODIGEST).Return(IMAGE_ID, nil),
 		dockerExecutorMockObj.EXPECT().ImageTag(IMAGE_ID, REPOSITORY_WITH_PORT_IMAGE).Return(nil),
-		dockerExecutorMockObj.EXPECT().Up(APP_ID, COMPOSE_FILE).Return(nil),
+		dockerExecutorMockObj.EXPECT().Up(APP_ID, COMPOSE_FILE, true).Return(nil),
 		dbExecutorMockObj.EXPECT().UpdateAppState(APP_ID, RUNNING_STATE).Return(nil),
 	)
 
@@ -1808,7 +1808,7 @@ func TestUpdateServiceWhenPullFailed_ExpectReturnError(t *testing.T) {
 		dockerExecutorMockObj.EXPECT().ImagePull(REPODIGEST).Return(nil),
 		dockerExecutorMockObj.EXPECT().GetImageIDByRepoDigest(REPODIGEST).Return(IMAGE_ID, nil),
 		dockerExecutorMockObj.EXPECT().ImageTag(IMAGE_ID, REPOSITORY_WITH_PORT_IMAGE).Return(nil),
-		dockerExecutorMockObj.EXPECT().Up(APP_ID, COMPOSE_FILE).Return(nil),
+		dockerExecutorMockObj.EXPECT().Up(APP_ID, COMPOSE_FILE, true).Return(nil),
 		dbExecutorMockObj.EXPECT().UpdateAppState(APP_ID, RUNNING_STATE).Return(nil),
 	)
 
@@ -1839,7 +1839,7 @@ func TestUpdateServiceWhenUpFailed_ExpectReturnError(t *testing.T) {
 		dockerExecutorMockObj.EXPECT().ImagePull(REPODIGEST).Return(nil),
 		dockerExecutorMockObj.EXPECT().GetImageIDByRepoDigest(REPODIGEST).Return(IMAGE_ID, nil),
 		dockerExecutorMockObj.EXPECT().ImageTag(IMAGE_ID, REPOSITORY_WITH_PORT_IMAGE).Return(nil),
-		dockerExecutorMockObj.EXPECT().Up(APP_ID, COMPOSE_FILE).Return(nil),
+		dockerExecutorMockObj.EXPECT().Up(APP_ID, COMPOSE_FILE, true).Return(nil),
 		dbExecutorMockObj.EXPECT().UpdateAppState(APP_ID, RUNNING_STATE).Return(nil),
 	)
 
@@ -1865,14 +1865,14 @@ func TestRestoreStateWithRUNNING_STATE_ExpectSuccess(t *testing.T) {
 	dbExecutorMockObj := dbmocks.NewMockCommand(ctrl)
 
 	gomock.InOrder(
-		dockerExecutorMockObj.EXPECT().Up(APP_ID, COMPOSE_FILE).Return(nil),
+		dockerExecutorMockObj.EXPECT().Up(APP_ID, COMPOSE_FILE, true).Return(nil),
 		dbExecutorMockObj.EXPECT().UpdateAppState(APP_ID, RUNNING_STATE).Return(nil),
 	)
 
 	dockerExecutor = dockerExecutorMockObj
 	dbExecutor = dbExecutorMockObj
 
-	err := restoreState(APP_ID, COMPOSE_FILE, RUNNING_STATE)
+	err := restoreState(APP_ID, COMPOSE_FILE, RUNNING_STATE, true)
 	if err != nil {
 		t.Errorf("Unexpected err: %s", err.Error())
 	}
@@ -1885,12 +1885,12 @@ func TestRestoreStateWhenUpFailed_ExpectReturnError(t *testing.T) {
 	dockerExecutorMockObj := dockermocks.NewMockCommand(ctrl)
 
 	gomock.InOrder(
-		dockerExecutorMockObj.EXPECT().Up(APP_ID, COMPOSE_FILE).Return(UnknownError),
+		dockerExecutorMockObj.EXPECT().Up(APP_ID, COMPOSE_FILE, true).Return(UnknownError),
 	)
 
 	dockerExecutor = dockerExecutorMockObj
 
-	err := restoreState(APP_ID, COMPOSE_FILE, RUNNING_STATE)
+	err := restoreState(APP_ID, COMPOSE_FILE, RUNNING_STATE, true)
 	switch err.(type) {
 	default:
 		t.Errorf("Expected err: UnknownError, actual err: %s", err.Error())
@@ -1906,14 +1906,14 @@ func TestRestoreStateWhenUpdateAppStateToRunningFailed_ExpectReturnError(t *test
 	dbExecutorMockObj := dbmocks.NewMockCommand(ctrl)
 
 	gomock.InOrder(
-		dockerExecutorMockObj.EXPECT().Up(APP_ID, COMPOSE_FILE).Return(nil),
+		dockerExecutorMockObj.EXPECT().Up(APP_ID, COMPOSE_FILE, true).Return(nil),
 		dbExecutorMockObj.EXPECT().UpdateAppState(APP_ID, RUNNING_STATE).Return(errors.Unknown{}),
 	)
 
 	dockerExecutor = dockerExecutorMockObj
 	dbExecutor = dbExecutorMockObj
 
-	err := restoreState(APP_ID, COMPOSE_FILE, RUNNING_STATE)
+	err := restoreState(APP_ID, COMPOSE_FILE, RUNNING_STATE, true)
 	switch err.(type) {
 	default:
 		t.Errorf("Expected err: UnknownError, actual err: %s", err.Error())
@@ -1936,7 +1936,7 @@ func TestRestoreStateWithEXITED_STATE_ExpectSuccess(t *testing.T) {
 	dockerExecutor = dockerExecutorMockObj
 	dbExecutor = dbExecutorMockObj
 
-	err := restoreState(APP_ID, COMPOSE_FILE, EXITED_STATE)
+	err := restoreState(APP_ID, COMPOSE_FILE, EXITED_STATE, true)
 	if err != nil {
 		t.Errorf("Unexpected err: %s", err.Error())
 	}
@@ -1954,7 +1954,7 @@ func TestRestoreStateWhenStopFailed_ExpectReturnError(t *testing.T) {
 
 	dockerExecutor = dockerExecutorMockObj
 
-	err := restoreState(APP_ID, COMPOSE_FILE, EXITED_STATE)
+	err := restoreState(APP_ID, COMPOSE_FILE, EXITED_STATE, true)
 
 	switch err.(type) {
 	default:
@@ -1971,14 +1971,14 @@ func TestRestoreStateWhenUpdateAppStateToExitedFailed_ExpectReturnError(t *testi
 	dbExecutorMockObj := dbmocks.NewMockCommand(ctrl)
 
 	gomock.InOrder(
-		dockerExecutorMockObj.EXPECT().Up(APP_ID, COMPOSE_FILE).Return(nil),
+		dockerExecutorMockObj.EXPECT().Up(APP_ID, COMPOSE_FILE, true).Return(nil),
 		dbExecutorMockObj.EXPECT().UpdateAppState(APP_ID, RUNNING_STATE).Return(errors.Unknown{}),
 	)
 
 	dockerExecutor = dockerExecutorMockObj
 	dbExecutor = dbExecutorMockObj
 
-	err := restoreState(APP_ID, COMPOSE_FILE, RUNNING_STATE)
+	err := restoreState(APP_ID, COMPOSE_FILE, RUNNING_STATE, true)
 	switch err.(type) {
 	default:
 		t.Errorf("Expected err: UnknownError, actual err: %s", err.Error())
@@ -2268,7 +2268,7 @@ func TestRestoreAllAppsState(t *testing.T) {
 		dbExecutorMockObj.EXPECT().GetAppList().Return(DB_OBJs, nil),
 		dbExecutorMockObj.EXPECT().GetApp(APP_ID).Return(DB_GET_APP_OBJ, nil),
 		dbExecutorMockObj.EXPECT().GetApp(APP_ID).Return(DB_GET_APP_OBJ, nil),
-		dockerExecutorMockObj.EXPECT().Up(APP_ID, gomock.Any()).Return(nil),
+		dockerExecutorMockObj.EXPECT().Up(APP_ID, gomock.Any(), false).Return(nil),
 		dbExecutorMockObj.EXPECT().UpdateAppState(APP_ID, RUNNING_STATE),
 	)
 
@@ -2322,7 +2322,7 @@ func TestRestoreAllAppsStateUpFailed_ExpectReturn(t *testing.T) {
 		dbExecutorMockObj.EXPECT().GetAppList().Return(DB_OBJs, nil),
 		dbExecutorMockObj.EXPECT().GetApp(APP_ID).Return(DB_GET_APP_OBJ, nil),
 		dbExecutorMockObj.EXPECT().GetApp(APP_ID).Return(DB_GET_APP_OBJ, nil),
-		dockerExecutorMockObj.EXPECT().Up(APP_ID, gomock.Any()).Return(errors.Unknown{}),
+		dockerExecutorMockObj.EXPECT().Up(APP_ID, gomock.Any(), false).Return(errors.Unknown{}),
 	)
 
 	dbExecutor = dbExecutorMockObj

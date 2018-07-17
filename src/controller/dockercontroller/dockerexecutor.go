@@ -47,13 +47,13 @@ type Event struct {
 }
 
 type ContainerEvent struct {
-	CID string
+	CID       string
 	Timestamp string
 }
 
 type Command interface {
 	Create(id, path string) error
-	Up(id, path string, services ...string) error
+	Up(id, path string, forceRecreate bool, services ...string) error
 	Down(id, path string) error
 	DownWithRemoveImages(id, path string) error
 	Start(id, path string) error
@@ -264,7 +264,7 @@ func (dockerExecutorImpl) Create(id, path string) error {
 // of service list in the yaml description.
 // if succeed to up, return error as nil
 // otherwise, return error.
-func (dockerExecutorImpl) Up(id, path string, services ...string) error {
+func (dockerExecutorImpl) Up(id, path string, forceRecreate bool, services ...string) error {
 	logger.Logging(logger.DEBUG)
 	defer logger.Logging(logger.DEBUG, "OUT")
 
@@ -272,7 +272,7 @@ func (dockerExecutorImpl) Up(id, path string, services ...string) error {
 	if err != nil {
 		return err
 	}
-	return compose.Up(context.Background(), options.Up{Create: options.Create{ForceRecreate: true}}, services...)
+	return compose.Up(context.Background(), options.Up{Create: options.Create{ForceRecreate: forceRecreate}}, services...)
 }
 
 func (dockerExecutorImpl) UpWithEvent(id, path, eventID string, evt chan Event, services ...string) error {
@@ -600,7 +600,7 @@ func (dockerExecutorImpl) Events(id, path string, evt chan Event, services ...st
 					ServiceName: event.Service,
 					Status:      event.Event,
 					ContainerEvent: ContainerEvent{
-						CID: event.ID,
+						CID:       event.ID,
 						Timestamp: event.Time.String(),
 					},
 				}
