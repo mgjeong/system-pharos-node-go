@@ -133,7 +133,7 @@ func initConfiguration() {
 	}
 
 	properties := make([]map[string]interface{}, 0)
-	properties = append(properties, makeProperty("anchoraddress", anchoraddress, true)
+	properties = append(properties, makeProperty("anchoraddress", anchoraddress, true))
 	properties = append(properties, makeProperty("anchorendpoint", anchorEndPoint, true))
 	properties = append(properties, makeProperty("nodeaddress", nodeaddress, true))
 	properties = append(properties, makeProperty("devicename", deviceName, false))
