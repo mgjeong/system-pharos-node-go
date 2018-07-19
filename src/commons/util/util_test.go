@@ -20,6 +20,7 @@ import (
 	"commons/errors"
 	"github.com/golang/mock/gomock"
 	"os"
+	"reflect"
 	"testing"
 )
 
@@ -41,6 +42,74 @@ var (
 	}
 	notFoundError = errors.NotFound{}
 )
+
+func TestConvertJsonToMap(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	expectedRet := make(map[string]interface{}, 0)
+	expectedRet["test"] = "1"
+	testStr := `{"test":"1"}`
+
+	ret, err := ConvertJsonToMap(testStr)
+
+	if err != nil {
+		t.Error("Expected error : nil, actual error : %s", err.Error())
+	}
+
+	if !reflect.DeepEqual(ret, expectedRet) {
+		t.Errorf("Expected result : %v, Actual Result : %v", expectedRet, ret)
+	}
+}
+
+func TestConvertMapToJson(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	testMap := make(map[string]interface{}, 0)
+	testMap["test"] = "1"
+	expectedRet := `{"test":"1"}`
+
+	ret, err := ConvertMapToJson(testMap)
+
+	if err != nil {
+		t.Error("Expected error : nil, actual error : %s", err.Error())
+	}
+
+	if expectedRet != ret {
+		t.Errorf("Expected result : %s, actual result : %s", expectedRet, ret)
+	}
+}
+
+func TestIsContainedStringInList(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	testList := make([]string, 0)
+	testList = append(testList, "test0")
+	testList = append(testList, "test1")
+	testList = append(testList, "test2")
+
+	if IsContainedStringInList(testList, "test1") == false {
+		t.Error("Expected result : true, actual result : false")
+	}
+
+	if IsContainedStringInList(testList, "unexpectedValue") == true {
+		t.Error("Expected result : false, actual result : true")
+	}
+}
+
+func TestMakeSCRequestUrlWhenRPEnvTrue_ExpectSuccess(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	expectedUrl := "http://127.0.0.1/api/v1/device/management/test"
+	ret := MakeSCRequestUrl("127.0.0.1", "/test")
+
+	if ret != expectedUrl {
+		t.Errorf("Expected result : %s, actual result : %s", expectedUrl, ret)
+	}
+}
 
 func TestMakeAnchorRequestUrlWhenRPEnvTrue_ExpectSuccess(t *testing.T) {
 	ctrl := gomock.NewController(t)
