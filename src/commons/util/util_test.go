@@ -54,7 +54,7 @@ func TestConvertJsonToMap(t *testing.T) {
 	ret, err := ConvertJsonToMap(testStr)
 
 	if err != nil {
-		t.Error("Expected error : nil, actual error : %s", err.Error())
+		t.Errorf("Expected error : nil, actual error : %s", err.Error())
 	}
 
 	if !reflect.DeepEqual(ret, expectedRet) {
