@@ -73,6 +73,26 @@ func (mr *MockCommandMockRecorder) DisableEventMonitoring(appId, path interface{
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DisableEventMonitoring", reflect.TypeOf((*MockCommand)(nil).DisableEventMonitoring), appId, path)
 }
 
+// LockUpdateAppState mocks base method
+func (m *MockCommand) LockUpdateAppState() {
+	m.ctrl.Call(m, "LockUpdateAppState")
+}
+
+// LockUpdateAppState indicates an expected call of LockUpdateAppState
+func (mr *MockCommandMockRecorder) LockUpdateAppState() *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LockUpdateAppState", reflect.TypeOf((*MockCommand)(nil).LockUpdateAppState))
+}
+
+// UnlockUpdateAppState mocks base method
+func (m *MockCommand) UnlockUpdateAppState() {
+	m.ctrl.Call(m, "UnlockUpdateAppState")
+}
+
+// UnlockUpdateAppState indicates an expected call of UnlockUpdateAppState
+func (mr *MockCommandMockRecorder) UnlockUpdateAppState() *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UnlockUpdateAppState", reflect.TypeOf((*MockCommand)(nil).UnlockUpdateAppState))
+}
+
 // GetEventChannel mocks base method
 func (m *MockCommand) GetEventChannel() chan dockercontroller.Event {
 	ret := m.ctrl.Call(m, "GetEventChannel")

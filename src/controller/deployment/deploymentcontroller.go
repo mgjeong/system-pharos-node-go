@@ -331,6 +331,9 @@ func (depExecutorImpl) StartApp(appId string) error {
 	}
 	defer os.RemoveAll(composeFile)
 
+	appsMonitor.LockUpdateAppState()
+	defer appsMonitor.UnlockUpdateAppState()
+
 	err = dockerExecutor.Start(appId, composeFile)
 	if err != nil {
 		logger.Logging(logger.ERROR, err.Error())
@@ -374,6 +377,9 @@ func (depExecutorImpl) StopApp(appId string) error {
 		return err
 	}
 	defer os.RemoveAll(composeFile)
+
+	appsMonitor.LockUpdateAppState()
+	defer appsMonitor.UnlockUpdateAppState()
 
 	err = dockerExecutor.Stop(appId, composeFile)
 	if err != nil {
@@ -462,6 +468,9 @@ func (depExecutorImpl) UpdateApp(appId string, query map[string]interface{}) err
 		logger.Logging(logger.DEBUG, err.Error())
 		return convertDBError(err, appId)
 	}
+
+	appsMonitor.LockUpdateAppState()
+	defer appsMonitor.UnlockUpdateAppState()
 
 	err = dbExecutor.UpdateAppState(appId, UPDATING_STATE)
 	if err != nil {

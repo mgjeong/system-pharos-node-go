@@ -28,6 +28,7 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"sync"
 )
 
 const (
@@ -41,6 +42,8 @@ const (
 type Command interface {
 	EnableEventMonitoring(appId, path string) error
 	DisableEventMonitoring(appId, path string) error
+	LockUpdateAppState()
+	UnlockUpdateAppState()
 	GetEventChannel() chan dockercontroller.Event
 }
 
@@ -50,6 +53,7 @@ var dbExecutor service.Command
 var dockerExecutor dockercontroller.Command
 var notiExecutor apps.Command
 var events chan dockercontroller.Event
+var appStateMutex = &sync.Mutex{}
 
 func init() {
 	dockerExecutor = dockercontroller.Executor
@@ -67,6 +71,14 @@ func (Executor) GetEventChannel() chan dockercontroller.Event {
 	return events
 }
 
+func (Executor) LockUpdateAppState() {
+	appStateMutex.Lock()
+}
+
+func (Executor) UnlockUpdateAppState() {
+	appStateMutex.Unlock()
+}
+
 func (Executor) EnableEventMonitoring(appId, path string) error {
 	logger.Logging(logger.DEBUG, "IN")
 	defer logger.Logging(logger.DEBUG, "OUT")
@@ -76,7 +88,6 @@ func (Executor) EnableEventMonitoring(appId, path string) error {
 		logger.Logging(logger.ERROR, err.Error())
 		return err
 	}
-
 	return nil
 }
 
@@ -100,7 +111,9 @@ func startEventMonitoring() {
 				notiExecutor.SendNotification(event)
 				if event.Status == START ||
 					event.Status == DIE {
+					appStateMutex.Lock()
 					updateAppState(event)
+					appStateMutex.Unlock()
 				}
 			}
 		}
@@ -171,7 +184,6 @@ func updateAppState(event dockercontroller.Event) {
 	}
 
 	if exitedServiceCnt == 0 {
-		dbExecutor.UpdateAppState(event.AppID, RUNNING_STATE)
 	} else if exitedServiceCnt < serviceCnt {
 		dbExecutor.UpdateAppState(event.AppID, PARTIALLY_EXITED_STATE)
 	} else if exitedServiceCnt == serviceCnt {
