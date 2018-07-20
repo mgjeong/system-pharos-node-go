@@ -34,7 +34,6 @@ WORKDIR $APP_DIR
 # make boltdb volume
 RUN mkdir /data
 RUN mkdir /data/db
-VOLUME /data/db
 
 #kick off the pharos-node container
 CMD ["sh", "run.sh"]
