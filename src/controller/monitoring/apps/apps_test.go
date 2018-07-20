@@ -203,7 +203,7 @@ func TestExtractStringInParenthesis(t *testing.T) {
 	}
 }
 
-func TestUpdateAppstate_ExpectReturn(t *testing.T) {
+func TestUpdateAppStateWhenGetAppFailed_ExpectReturnAfterGetApp(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
