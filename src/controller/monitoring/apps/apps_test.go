@@ -189,29 +189,6 @@ func TestExtractStringInParenthesis(t *testing.T) {
 	}
 }
 
-func TestUpdateAppstate_ExpectUpdateAppStateToRunning(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	dbExecutorMockObj := dbmocks.NewMockCommand(ctrl)
-	dockerExecutorMockObj := dockermocks.NewMockCommand(ctrl)
-
-	gomock.InOrder(
-		dbExecutorMockObj.EXPECT().GetApp(appId).Return(dbGetAppObj, nil),
-		dockerExecutorMockObj.EXPECT().Ps(appId, "docker-compose.yml", gomock.Any()).Return(psWithUpObj, nil),
-		dockerExecutorMockObj.EXPECT().Ps(appId, "docker-compose.yml", gomock.Any()).Return(psWithUpObj, nil),
-		dbExecutorMockObj.EXPECT().UpdateAppState(appId, RUNNING_STATE),
-	)
-
-	// pass mockObj to a real object.
-	dockerExecutor = dockerExecutorMockObj
-	dbExecutor = dbExecutorMockObj
-
-	testEvent := dockercontroller.Event{
-		AppID: appId,
-	}
-	updateAppState(testEvent)
-}
 
 func TestUpdateAppstate_ExpectUpdateAppStateToPartiallyExited(t *testing.T) {
 	ctrl := gomock.NewController(t)
