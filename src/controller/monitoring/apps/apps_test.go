@@ -164,6 +164,20 @@ func TestDisableEventMonitoringWhenFailedToSetEventChannel_ExpectErrorReturn(t *
 	}
 }
 
+func TestLockUpdateState(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	Executor{}.LockUpdateAppState()
+}
+
+func TestUnLockUpdateState(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	Executor{}.UnlockUpdateAppState()
+}
+
 func TestGetEventChannel(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -189,6 +203,24 @@ func TestExtractStringInParenthesis(t *testing.T) {
 	}
 }
 
+func TestUpdateAppstate_ExpectReturn(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	dbExecutorMockObj := dbmocks.NewMockCommand(ctrl)
+
+	gomock.InOrder(
+		dbExecutorMockObj.EXPECT().GetApp(appId).Return(nil, unknownError),
+	)
+
+	// pass mockObj to a real object.
+	dbExecutor = dbExecutorMockObj
+
+	testEvent := dockercontroller.Event{
+		AppID: appId,
+	}
+	updateAppState(testEvent)
+}
 
 func TestUpdateAppstate_ExpectUpdateAppStateToPartiallyExited(t *testing.T) {
 	ctrl := gomock.NewController(t)
