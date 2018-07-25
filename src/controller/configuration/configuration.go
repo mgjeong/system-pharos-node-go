@@ -142,7 +142,7 @@ func initConfiguration() {
 	properties = append(properties, makeProperty("platform", platform, true))
 	properties = append(properties, makeProperty("processor", processor, true))
 	properties = append(properties, makeProperty("deviceid", deviceid, true))
-	properties = append(properties, makeProperty("reverseproxy", proxy, false))
+	properties = append(properties, makeProperty("reverseproxy", proxy, true))
 
 	for _, prop := range properties {
 		err = dbExecutor.SetProperty(prop)
