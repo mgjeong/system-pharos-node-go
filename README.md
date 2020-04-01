@@ -69,7 +69,7 @@ $ docker run -it \
 ```
 If it succeeds, you can see log messages on your screen as follows:
 ```shell
-$ docker run -it -p 48088:48098 -e ANCHOR_ADDRESS=10.113.64.134 -e NODE_ADDRESS=10.113.64.134 -v /pharos-node/data/db:/data/db -v /var/run/docker.sock:/var/run/docker.sock system-pharos-node-go-ubuntu
+$ docker run -it -p 48088:48098 -e ANCHOR_ADDRESS={IP} -e NODE_ADDRESS={IP} -v /pharos-node/data/db:/data/db -v /var/run/docker.sock:/var/run/docker.sock system-pharos-node-go-ubuntu
 [DEBUG][NODE]2018/07/04 07:38:40 db/bolt/configuration.Executor configuration.go GetProperty : 135 [IN]
 [DEBUG][NODE]2018/07/04 07:38:40 db/bolt/configuration.Executor configuration.go GetProperty : 140 [OUT]
 [DEBUG][NODE]2018/07/04 07:38:40 db/bolt/configuration.Executor configuration.go GetProperty : 135 [IN]
@@ -110,7 +110,7 @@ $ docker run -it -p 48088:48098 -e ANCHOR_ADDRESS=10.113.64.134 -e NODE_ADDRESS=
 [DEBUG][NODE]2018/07/04 07:38:40 db/bolt/service.Executor service.go GetAppList : 155 [IN]
 [DEBUG][NODE]2018/07/04 07:38:40 db/bolt/service.Executor service.go GetAppList : 171 [OUT]
 [DEBUG][NODE]2018/07/04 07:38:40 controller/health registration.go sendRegisterRequest : 182 [IN]
-[DEBUG][NODE]2018/07/04 07:38:40 commons/util util.go MakeAnchorRequestUrl : 102 [http://10.113.64.134:48099/api/v1/management/nodes/register]
+[DEBUG][NODE]2018/07/04 07:38:40 commons/util util.go MakeAnchorRequestUrl : 102 [http://{IP}:48099/api/v1/management/nodes/register]
 [DEBUG][NODE]2018/07/04 07:38:40 commons/util util.go ConvertMapToJson : 56 [IN]
 [DEBUG][NODE]2018/07/04 07:38:40 commons/util util.go ConvertMapToJson : 63 [OUT]
 [DEBUG][NODE]2018/07/04 07:38:40 controller/health registration.go sendRegisterRequest : 195 [OUT]
@@ -136,7 +136,7 @@ $ docker run -it -p 48088:48098 -e ANCHOR_ADDRESS=10.113.64.134 -e NODE_ADDRESS=
 [DEBUG][NODE]2018/07/04 07:38:40 commons/util util.go ConvertMapToJson : 56 [IN]
 [DEBUG][NODE]2018/07/04 07:38:40 commons/util util.go ConvertMapToJson : 63 [OUT]
 [DEBUG][NODE]2018/07/04 07:38:40 controller/health checks.go sendPingRequest : 100 [try to send ping request]
-[DEBUG][NODE]2018/07/04 07:38:40 commons/util util.go MakeAnchorRequestUrl : 102 [http://10.113.64.134:48099/api/v1/management/nodes/4bd8554a-c9d2-4b06-82d9-c4231fb326af/ping]
+[DEBUG][NODE]2018/07/04 07:38:40 commons/util util.go MakeAnchorRequestUrl : 102 [http://{IP}:48099/api/v1/management/nodes/4bd8554a-c9d2-4b06-82d9-c4231fb326af/ping]
 [DEBUG][NODE]2018/07/04 07:38:40 controller/health checks.go sendPingRequest : 114 [receive pong response, code[200]]
 [DEBUG][NODE]2018/07/04 07:38:40 controller/health checks.go sendPingRequest : 115 [OUT]
 
