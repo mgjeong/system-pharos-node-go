@@ -3,41 +3,6 @@ System Management - Pharos Node
 
 This is intented to be installed in each of Edge devices, which communicates with centralized service deployment management, called Pharos Anchor, running in a management server. Once Pharos Anchor sends a request of service deployment to a certain Edge device, the corresponding Pharos Node performs one of Docker operations to pull, run, and stop containers as requested.
 
-## Quick start ##
-This provides how to download and run pre-built Docker image without building project.
-
-#### 1. Install docker-ce ####
-- docker-ce
-  - Version: 17.09
-  - [How to install](https://docs.docker.com/engine/installation/linux/docker-ce/ubuntu/)
-
-#### 2. Download Docker image ####
-Please visit [Downloads-ubuntu](https://github.sec.samsung.net/RS7-EdgeComputing/system-pharos-node-go/releases/download/alpha-1.1_rel/pharos_node_ubuntu_x86_64.tar)
-
-#### 3. Load Docker image from tar file ####
-```shell
-$ docker load -i pharos_node_ubuntu_x86_64.tar
-```
-If it succeeds, you can see the Docker image as follows:
-```shell
-$ sudo docker images
-REPOSITORY                                                                TAG      IMAGE ID        CREATED        SIZE
-docker.sec.samsung.net:5000/edge/system-pharos-node-go/ubuntu_x86_64      alpha    534169f4035c    7 weeks ago    166MB
-```
-Note that, you can find other docker image, [Downloads-rpi_arm64](https://github.sec.samsung.net/RS7-EdgeComputing/system-pharos-node-go/releases/download/alpha-1.1_rel/pharos-node-rpi3-beluga.tar) and [Downloads-rpi-arm32](https://github.sec.samsung.net/RS7-EdgeComputing/system-pharos-node-go/releases/download/alpha-1.1_rel/pharos-node-artik530-beluga.tar)
-
-#### 4. Run with Docker image ####
-You can execute it with a Docker image as follows:
-```shell
-$ docker run -it \
-	-p 48098:48098 \
-	-e ANCHOR_ADDRESS='change_it_to_actual_anchor_address' \
-	-e NODE_ADDRESS='change_it_to_actual_node_address' \
-	-v /data/db:/data/db \
-	-v /var/run/docker.sock:/var/run/docker.sock \
-	docker.sec.samsung.net:5000/edge/system-pharos-node-go/ubuntu_x86_64:alpha
-```
-
 ## Build Prerequisites ##
 - docker-ce
   - Version: 17.09
@@ -104,7 +69,7 @@ $ docker run -it \
 ```
 If it succeeds, you can see log messages on your screen as follows:
 ```shell
-$ docker run -it -p 48088:48098 -e ANCHOR_ADDRESS=10.113.64.134 -e NODE_ADDRESS=10.113.64.134 -v /pharos-node/data/db:/data/db -v /var/run/docker.sock:/var/run/docker.sock system-pharos-node-go-ubuntu
+$ docker run -it -p 48088:48098 -e ANCHOR_ADDRESS={IP} -e NODE_ADDRESS={IP} -v /pharos-node/data/db:/data/db -v /var/run/docker.sock:/var/run/docker.sock system-pharos-node-go-ubuntu
 [DEBUG][NODE]2018/07/04 07:38:40 db/bolt/configuration.Executor configuration.go GetProperty : 135 [IN]
 [DEBUG][NODE]2018/07/04 07:38:40 db/bolt/configuration.Executor configuration.go GetProperty : 140 [OUT]
 [DEBUG][NODE]2018/07/04 07:38:40 db/bolt/configuration.Executor configuration.go GetProperty : 135 [IN]
@@ -145,7 +110,7 @@ $ docker run -it -p 48088:48098 -e ANCHOR_ADDRESS=10.113.64.134 -e NODE_ADDRESS=
 [DEBUG][NODE]2018/07/04 07:38:40 db/bolt/service.Executor service.go GetAppList : 155 [IN]
 [DEBUG][NODE]2018/07/04 07:38:40 db/bolt/service.Executor service.go GetAppList : 171 [OUT]
 [DEBUG][NODE]2018/07/04 07:38:40 controller/health registration.go sendRegisterRequest : 182 [IN]
-[DEBUG][NODE]2018/07/04 07:38:40 commons/util util.go MakeAnchorRequestUrl : 102 [http://10.113.64.134:48099/api/v1/management/nodes/register]
+[DEBUG][NODE]2018/07/04 07:38:40 commons/util util.go MakeAnchorRequestUrl : 102 [http://{IP}:48099/api/v1/management/nodes/register]
 [DEBUG][NODE]2018/07/04 07:38:40 commons/util util.go ConvertMapToJson : 56 [IN]
 [DEBUG][NODE]2018/07/04 07:38:40 commons/util util.go ConvertMapToJson : 63 [OUT]
 [DEBUG][NODE]2018/07/04 07:38:40 controller/health registration.go sendRegisterRequest : 195 [OUT]
@@ -171,7 +136,7 @@ $ docker run -it -p 48088:48098 -e ANCHOR_ADDRESS=10.113.64.134 -e NODE_ADDRESS=
 [DEBUG][NODE]2018/07/04 07:38:40 commons/util util.go ConvertMapToJson : 56 [IN]
 [DEBUG][NODE]2018/07/04 07:38:40 commons/util util.go ConvertMapToJson : 63 [OUT]
 [DEBUG][NODE]2018/07/04 07:38:40 controller/health checks.go sendPingRequest : 100 [try to send ping request]
-[DEBUG][NODE]2018/07/04 07:38:40 commons/util util.go MakeAnchorRequestUrl : 102 [http://10.113.64.134:48099/api/v1/management/nodes/4bd8554a-c9d2-4b06-82d9-c4231fb326af/ping]
+[DEBUG][NODE]2018/07/04 07:38:40 commons/util util.go MakeAnchorRequestUrl : 102 [http://{IP}:48099/api/v1/management/nodes/4bd8554a-c9d2-4b06-82d9-c4231fb326af/ping]
 [DEBUG][NODE]2018/07/04 07:38:40 controller/health checks.go sendPingRequest : 114 [receive pong response, code[200]]
 [DEBUG][NODE]2018/07/04 07:38:40 controller/health checks.go sendPingRequest : 115 [OUT]
 
